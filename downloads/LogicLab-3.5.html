@@ -409,7 +409,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
   #top{left:8px;right:8px;top:8px;grid-template-columns:auto 1fr;grid-template-rows:40px 40px;height:88px;gap:8px}
   #formula{grid-column:1/-1;grid-row:2;justify-self:center;font-size:17px;height:38px}
   .tbtn{height:38px;padding:0 12px;font-size:14px}
-  #redo,#btnClear,#hud .hr{display:none}
+  #btnClear,#hud .hr{display:none}
   #palette{left:8px;top:104px;padding:4px}
   .pi{width:58px}
   #sheet{left:8px;right:8px;bottom:8px}
@@ -770,6 +770,30 @@ body.treeMob #treeList{display:block}
   #sheetTog{width:40px;height:40px}
   #selPop{height:42px;padding:0 20px;font-size:15px}
 }
+
+/* ================= v3.6 ================= */
+/* undo, redo and scissors: one icon group next to Menu */
+.tgrp{display:flex;align-items:center;gap:2px;height:40px;padding:0 4px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+.ib{width:36px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:0 0 auto}
+.ib svg,#chatX svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover{background:var(--card2)}
+.ib:disabled{opacity:.3;pointer-events:none}
+.tsep{width:1px;height:20px;background:var(--line);margin:0 4px}
+#knifeBtn.on{background:var(--coral);color:#fff}
+/* Bit's folded tab is a square window, like the comm link it opens into */
+#bitTab{border-radius:16px}
+/* close sits first in the header, bare until hovered */
+.chd{padding-left:8px}
+.chd #chatX{width:30px;height:30px;padding:0;border-radius:8px;background:none;color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-right:2px}
+.chd #chatX:hover{background:var(--card2);color:var(--ink)}
+#chatX svg{width:16px;height:16px}
+#chatLogBtn{margin-left:auto}
+@media (max-width:760px){
+  .tgrp{height:38px;padding:0 3px}
+  .ib{width:36px;height:32px}
+  .chd #chatX{width:40px;height:40px}
+  #chatX svg{width:20px;height:20px}
+}
 </style>
 </head>
 <body>
@@ -787,14 +811,19 @@ body.treeMob #treeList{display:block}
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><button class="tbtn" id="undo" data-t="undo"></button><button class="tbtn" id="redo" data-t="redo"></button></div>
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="tools" role="toolbar">
+    <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="ib" id="redo" data-tl="redo"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <i class="tsep"></i>
+    <button class="ib" id="knifeBtn" data-tl="knife" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88"/><path d="M14.47 14.48L20 20"/><path d="M8.12 8.12L12 12"/></svg></button>
+  </div></div>
   <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 
 <div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
 <aside id="palette" class="zz"></aside>
-<div id="zoom" class="zz"><button class="tbtn" id="knifeBtn" data-t="knife" aria-pressed="false"></button><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
+<div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
 
 <section id="sheet" class="zz">
   <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button><button id="sheetTog" aria-label="−"><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button></div>
@@ -869,7 +898,7 @@ body.treeMob #treeList{display:block}
   <div id="chat" role="log" aria-live="polite">
     <div id="bitStage"><svg id="bit" viewBox="0 0 80 100" aria-label="Bit"></svg></div>
     <div id="chatMain">
-      <div class="chd"><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button><button id="chatX" aria-label="×">×</button></div>
+      <div class="chd"><button id="chatX" data-tl="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button></div>
       <div id="chatBody"><div id="chatText"></div><div id="chatCh"></div><div id="chatMore"></div></div>
       <div id="chatLog"></div>
     </div>
@@ -945,13 +974,13 @@ const UIS={
   fsDenied:['Полный экран не разрешён','Fullscreen was refused'],fsNA:['Полный экран здесь недоступен','Fullscreen is not available here'],
   gScreen:['Экран','Display'],gSound:['Звук','Sound'],gGame:['Игра','Game'],
   sLang:['Язык','Language'],sUi:['Масштаб интерфейса','Interface scale'],sWin:['Размер окна','Window size'],sFs:['Полный экран','Fullscreen'],
-  sWw:['Толщина проводов','Wire thickness'],sGrid:['Сетка','Grid'],sHc:['Контраст','Contrast'],sCalm:['Анимации','Animations'],sHc2:['Высокий контраст','High contrast'],knife:['Нож','Knife'],tlNew:['новый','new'],tlLock:['закрыт','locked'],delete:['Удалить','Delete'],knifeOn:['Нож включён: проведите пальцем по проводам и элементам','Knife on: swipe across wires and gates'],
-  sbMore:['Ещё {n} откроются в уровнях','{n} more unlock in levels'],touchTip:['Удалить элемент или провод: коснитесь его и нажмите «Удалить». Или включите «Нож» и проведите пальцем.','To delete a gate or wire, tap it and press “Delete”, or turn on the knife and swipe.'],
+  sWw:['Толщина проводов','Wire thickness'],sGrid:['Сетка','Grid'],sHc:['Контраст','Contrast'],sCalm:['Анимации','Animations'],sHc2:['Высокий контраст','High contrast'],knife:['Ножницы','Scissors'],close:['Закрыть','Close'],tlNew:['новый','new'],tlLock:['закрыт','locked'],delete:['Удалить','Delete'],knifeOn:['Ножницы включены: проведите по проводам и элементам','Scissors on: swipe across wires and gates'],
+  sbMore:['Ещё {n} откроются в уровнях','{n} more unlock in levels'],touchTip:['Удалить элемент или провод: коснитесь его и нажмите «Удалить». Или включите ножницы и проведите пальцем.','To delete a gate or wire, tap it and press “Delete”, or turn on the scissors and swipe.'],
   gKeys:['Управление','Controls'],kPress:['нажмите клавишу…','press a key…'],kReset:['Сбросить клавиши','Reset keys'],kTaken:['Клавиша {k} уже занята: «{a}»','{k} is already used by “{a}”'],
   kMouse:['Мышь и касания','Mouse and touch'],
   k_undo:['Отменить','Undo'],k_redo:['Вернуть','Redo'],k_del:['Удалить выбранное','Delete selection'],k_verify:['Проверить схему','Test the circuit'],k_menu:['Меню / отмена','Menu / cancel'],
-  k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Нож','Knife'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
-  m_wire:['Провод: протяните от выхода к входу','Wire: drag from an output to an input'],m_cut:['Резать: правая кнопка с протяжкой, на телефоне — «Нож»','Cut: drag with the right button, on a phone use the knife'],
+  k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
+  m_wire:['Провод: протяните от выхода к входу','Wire: drag from an output to an input'],m_cut:['Резать: правая кнопка с протяжкой, на телефоне — ножницы','Cut: drag with the right button, on a phone use the scissors'],
   m_del:['Удалить: правый клик или «Удалить» у выбранного','Delete: right-click, or “Delete” next to the selection'],m_pan:['Двигать поле: тянуть по пустому месту, масштаб — колесо или два пальца','Pan: drag empty space; zoom: wheel or two fingers'],
   m_gate:['Вставить в провод: бросьте элемент на провод','Splice: drop a gate onto a wire'],sCalm2:['Меньше анимации','Reduce motion'],
   sMusic:['Музыка','Music'],sSfx:['Звуки','Effects'],sVoice:['Голос Бита','Bit’s voice'],sDev:['Разраб.','Drawn'],sChk:['Пров.','Checked'],sSheet:['Лист','Sheet'],sSheets:['Листов','Sheets'],mGates:['элементов','gates'],cSolved:['Схема работает','The circuit works'],cNoHint:['Без подсказок','No hints'],cPar:['Не больше {p} элементов','{p} gates or fewer'],whyHint:['была подсказка','hint used'],whyPar:['у вас {n}','you used {n}'],mRows:['строк в таблице','rows in total'],mRowsBad:['не совпали','failed'],mRowsOk:['совпали','passed'],qReady:['можно сдавать','ready to take'],mPar:['рекорд Бита','Bit’s record'],mYours:['ваш {n}','yours {n}'],mmLevel:['уровень {n}','level {n}'],mmDone:['{n} из {N}','{n} of {N}'],subjNo:['Испытуемый № 0001','Subject No. 0001'],machine:['Машина','The Machine'],machineCap:['Узлов включено: {n} из {N}','Units online: {n} of {N}'],sBit:['Бит','Bit'],sTxt:['Скорость текста','Text speed'],sDemo:['Скорость проверки','Test speed'],sGost:['Обозначения','Gate symbols'],
@@ -2103,6 +2132,8 @@ window.addEventListener('keydown',e=>{
   e.preventDefault();KEYACT[act_]();
 });
 $('#undo').onclick=undo;$('#redo').onclick=redo;
+// icon buttons: name and current hotkey in the tooltip
+function toolTips(){for(const el of $$('[data-tl]')){const a=el.dataset.tl,k=KEYDEF[a]?keysFor(a)[0]:'',t=ui(a);el.setAttribute('aria-label',t);el.title=k?t+' ('+keyLabel(k)+')':t}}
 $('#btnClear').onclick=()=>{if(!C.gates.length&&!C.wires.length)return;snapshot();C={gates:[],wires:[]};changed()};
 
 let tT;function toast(t,ms=2600){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('on'),ms)}
@@ -3073,7 +3104,7 @@ function keyBind(btn){
     window.keyCapture=null;
     const other=KEYORDER.find(x=>x!==a&&keysFor(x).includes(c));
     if(other){toast(ui('kTaken',{k:keyLabel(c),a:ui('k_'+other)}));drawSettings();return}
-    settings.keys=Object.assign({},settings.keys,{[a]:c});save();sfx('ui');drawSettings();
+    settings.keys=Object.assign({},settings.keys,{[a]:c});save();sfx('ui');drawSettings();toolTips();
   };
 }
 function setVal(k,val){
@@ -3087,7 +3118,7 @@ function setVal(k,val){
 }
 $('#setList').addEventListener('click',e=>{
   const kb=e.target.closest('[data-key]');if(kb){keyBind(kb);return}
-  if(e.target.closest('#keyReset')){settings.keys={};save();sfx('ui');drawSettings();return}
+  if(e.target.closest('#keyReset')){settings.keys={};save();sfx('ui');drawSettings();toolTips();return}
   const dd=e.target.closest('[data-dd]');
   if(dd){const w=dd.parentElement,open=w.classList.contains('open');$$('.dd.open').forEach(x=>x.classList.remove('open'));if(!open){w.classList.add('open');const on=w.querySelector('.dd-o.on');if(on)on.scrollIntoView({block:'nearest'})}return}
   const b=e.target.closest('[data-k]');if(!b||b.type==='range')return;
@@ -3138,7 +3169,7 @@ $('#setReset').onclick=()=>{const b=$('#setReset');
 /* ========== language ========== */
 function applyLang(){
   document.documentElement.lang=LANG;
-  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();
   $('#quitBtn').style.display=isDesk?'':'none';
   $('#verify').textContent=demoOn?ui('skip'):ui('verify');
   updHud();drawMachine();

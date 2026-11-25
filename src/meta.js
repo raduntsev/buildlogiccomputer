@@ -307,7 +307,7 @@ function keyBind(btn){
     window.keyCapture=null;
     const other=KEYORDER.find(x=>x!==a&&keysFor(x).includes(c));
     if(other){toast(ui('kTaken',{k:keyLabel(c),a:ui('k_'+other)}));drawSettings();return}
-    settings.keys=Object.assign({},settings.keys,{[a]:c});save();sfx('ui');drawSettings();
+    settings.keys=Object.assign({},settings.keys,{[a]:c});save();sfx('ui');drawSettings();toolTips();
   };
 }
 function setVal(k,val){
@@ -321,7 +321,7 @@ function setVal(k,val){
 }
 $('#setList').addEventListener('click',e=>{
   const kb=e.target.closest('[data-key]');if(kb){keyBind(kb);return}
-  if(e.target.closest('#keyReset')){settings.keys={};save();sfx('ui');drawSettings();return}
+  if(e.target.closest('#keyReset')){settings.keys={};save();sfx('ui');drawSettings();toolTips();return}
   const dd=e.target.closest('[data-dd]');
   if(dd){const w=dd.parentElement,open=w.classList.contains('open');$$('.dd.open').forEach(x=>x.classList.remove('open'));if(!open){w.classList.add('open');const on=w.querySelector('.dd-o.on');if(on)on.scrollIntoView({block:'nearest'})}return}
   const b=e.target.closest('[data-k]');if(!b||b.type==='range')return;
@@ -372,7 +372,7 @@ $('#setReset').onclick=()=>{const b=$('#setReset');
 /* ========== language ========== */
 function applyLang(){
   document.documentElement.lang=LANG;
-  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();
   $('#quitBtn').style.display=isDesk?'':'none';
   $('#verify').textContent=demoOn?ui('skip'):ui('verify');
   updHud();drawMachine();

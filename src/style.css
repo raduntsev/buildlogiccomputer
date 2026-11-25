@@ -307,7 +307,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
   #top{left:8px;right:8px;top:8px;grid-template-columns:auto 1fr;grid-template-rows:40px 40px;height:88px;gap:8px}
   #formula{grid-column:1/-1;grid-row:2;justify-self:center;font-size:17px;height:38px}
   .tbtn{height:38px;padding:0 12px;font-size:14px}
-  #redo,#btnClear,#hud .hr{display:none}
+  #btnClear,#hud .hr{display:none}
   #palette{left:8px;top:104px;padding:4px}
   .pi{width:58px}
   #sheet{left:8px;right:8px;bottom:8px}
@@ -667,4 +667,28 @@ body.treeMob #treeList{display:block}
   .cbtn{padding:10px 14px}
   #sheetTog{width:40px;height:40px}
   #selPop{height:42px;padding:0 20px;font-size:15px}
+}
+
+/* ================= v3.6 ================= */
+/* undo, redo and scissors: one icon group next to Menu */
+.tgrp{display:flex;align-items:center;gap:2px;height:40px;padding:0 4px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+.ib{width:36px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:0 0 auto}
+.ib svg,#chatX svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover{background:var(--card2)}
+.ib:disabled{opacity:.3;pointer-events:none}
+.tsep{width:1px;height:20px;background:var(--line);margin:0 4px}
+#knifeBtn.on{background:var(--coral);color:#fff}
+/* Bit's folded tab is a square window, like the comm link it opens into */
+#bitTab{border-radius:16px}
+/* close sits first in the header, bare until hovered */
+.chd{padding-left:8px}
+.chd #chatX{width:30px;height:30px;padding:0;border-radius:8px;background:none;color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-right:2px}
+.chd #chatX:hover{background:var(--card2);color:var(--ink)}
+#chatX svg{width:16px;height:16px}
+#chatLogBtn{margin-left:auto}
+@media (max-width:760px){
+  .tgrp{height:38px;padding:0 3px}
+  .ib{width:36px;height:32px}
+  .chd #chatX{width:40px;height:40px}
+  #chatX svg{width:20px;height:20px}
 }
