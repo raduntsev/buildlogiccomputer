@@ -1,0 +1,30 @@
+{
+  "applicationId": "ru.logiclab.game",
+  "version": "3.3.0",
+  "defaultMode": "window",
+  "documentRoot": "/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": false,
+  "tokenSecurity": "one-time",
+  "logging": { "enabled": false, "writeToLogFile": false },
+  "modes": {
+    "window": {
+      "title": "Logic Lab",
+      "width": 1280,
+      "height": 820,
+      "minWidth": 640,
+      "minHeight": 480,
+      "center": true,
+      "resizable": true,
+      "exitProcessOnClose": true,
+      "enableInspector": false
+    }
+  },
+  "cli": {
+    "binaryName": "LogicLab",
+    "resourcesPath": "/resources/",
+    "binaryVersion": "6.4.0",
+    "clientVersion": "6.4.0"
+  }
+}

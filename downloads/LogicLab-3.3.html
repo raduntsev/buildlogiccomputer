@@ -1,0 +1,2194 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Logic Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>/* Logic Lab — "lab console".
+   Stone canvas with a faint grid, floating rounded cards, pill controls, graphite for structure and emphasis,
+   one lime accent for logic 1 and anything switched on, coral only for faults. Big numerals with small units.
+   Typeface: Onest (Cyrillic-first neo-grotesque). */
+:root{
+  --bg:#E6E6E1;        /* stone canvas */
+  --grid:#D7D7D0; --grid2:#CBCBC3;
+  --paper:#FAFAF7;     /* cards */
+  --card2:#F1F1EC;     /* inset areas */
+  --ink:#1A1B1D;       /* graphite */
+  --ink2:#4B4D50;
+  --mute:#8B8D87;
+  --line:#D2D2CB;
+  --acc:#DCEB3A;       /* lime: logic 1, lamps, on */
+  --acc-soft:#EEF5A6;
+  --acc-ink:#1A1B1D;   /* text on lime is graphite */
+  --w0:#BDBEB6; --w1:#1A1B1D;
+  --ok:#ECF3C2; --ok-ink:#3E4A00;
+  --bad:#F7D8D0; --bad-ink:#C2412A; --coral:#E8553D;
+  --r:22px; --r-s:14px;
+  --shadow:0 1px 0 rgba(26,27,29,.04),0 12px 32px -16px rgba(26,27,29,.28);
+  --ui:1; --ww:4;
+  --font:"Onest","Golos Text",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;touch-action:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#board{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:default}
+#board.panning{cursor:grabbing}
+#frame{display:none}
+.zz{zoom:var(--ui)}
+
+/* ---------- top bar: floating pills ---------- */
+#top{position:fixed;left:16px;right:16px;top:14px;height:48px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;pointer-events:none;z-index:3}
+#top>*{pointer-events:auto}
+.tb{display:flex;gap:6px;align-items:center}
+.tb.r{justify-content:flex-end}
+.tbtn{height:40px;padding:0 16px;font-size:15px;font-weight:500;color:var(--ink);background:var(--paper);border-radius:999px;box-shadow:var(--shadow);display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.tbtn:hover{background:#fff}
+.tbtn:disabled{opacity:.4;pointer-events:none;box-shadow:none}
+.tbtn.primary{color:#fff;background:var(--ink);padding:0 22px}
+.tbtn.primary:hover{background:#000}
+#formula{height:44px;display:flex;align-items:center;padding:0 22px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow);font-size:21px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;pointer-events:none}
+#formula:empty{display:none}
+.ov{text-decoration:overline;text-decoration-thickness:1.5px;text-underline-offset:0}
+#formula sub,#sheet sub,#chatText sub{font-size:.62em}
+.sep{display:inline-block;width:1.3em}
+.op{font-size:.82em;vertical-align:.04em;margin:0 .04em}
+.lim{font-size:13px;font-weight:600;margin-left:12px;background:var(--ink);color:#fff;border-radius:999px;padding:3px 10px}
+#hud{gap:10px}
+#hud .hr{color:var(--ink2);font-weight:500}
+#hud .hp{font-variant-numeric:tabular-nums;font-weight:600;background:var(--acc);border-radius:999px;padding:3px 10px;margin-right:-8px}
+
+/* ---------- element toolbar ---------- */
+#palette{position:fixed;left:16px;top:76px;display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:var(--r);padding:6px;box-shadow:var(--shadow);z-index:3;max-height:calc(100vh - 100px);overflow:auto}
+#palette:empty{display:none}
+.pi{display:flex;flex-direction:column;align-items:center;width:72px;padding:9px 0 7px;cursor:grab;color:var(--ink2);touch-action:none;border-radius:16px}
+.pi:hover{background:var(--card2);color:var(--ink)}
+.pi:active{background:var(--acc)}
+.pi svg{width:48px;height:30px;overflow:visible}
+.pi span{font-size:11.5px;margin-top:4px;font-weight:500;text-align:center;line-height:1.15}
+.pcount{margin-top:4px;font-size:13px;text-align:center;font-weight:600;padding:6px 0;border-radius:12px;background:var(--card2);font-variant-numeric:tabular-nums}
+.pcount.full{background:var(--coral);color:#fff}
+
+/* ---------- zoom ---------- */
+#zoom{position:fixed;right:16px;z-index:4;display:flex;gap:4px;transition:bottom .15s}
+#zoom .tbtn{height:36px;padding:0 14px;font-size:14px}
+
+/* ---------- bottom dock ---------- */
+#sheet{position:fixed;left:16px;right:16px;bottom:14px;background:var(--paper);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:3;overflow:hidden}
+#grip{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 10px 0 18px;cursor:ns-resize;touch-action:none;position:relative}
+#grip::before{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:4px;background:var(--line)}
+#lvNum{font-size:30px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+#lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em}
+#lvStars{font-size:15px;letter-spacing:2px}
+.st{color:var(--line)}.st.on{color:var(--ink)}
+#saved{font-size:12px;color:var(--mute);opacity:0;transition:opacity .3s;display:inline-flex;align-items:center;gap:6px}
+#saved::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--ink)}
+#saved.on{opacity:1}
+#hintBtn{margin-left:auto;height:36px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;background:var(--card2)}
+#hintBtn:hover{background:var(--acc)}
+#sheetBody{flex:1;overflow:auto;display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:10px;padding:0 10px 10px;align-items:stretch}
+#task{padding:6px 8px 8px;font-size:16px;line-height:1.45;color:var(--ink2);min-width:0}
+#hint{margin-top:10px;font-size:15px;color:var(--ink);background:var(--acc-soft);border-radius:var(--r-s);padding:10px 14px;display:none}
+#hint.on{display:block}
+#ttWrap{overflow:auto;background:var(--card2);border-radius:18px;padding:6px 10px 10px}
+#ttWrap:empty{display:none}
+table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:15px}
+.tt th{font-weight:500;color:var(--mute);padding:6px 12px;text-align:center;font-size:13px}
+.tt td{padding:4px 12px;text-align:center;cursor:pointer;font-weight:500}
+.tt tr td:first-child{border-radius:10px 0 0 10px}.tt tr td:last-child{border-radius:0 10px 10px 0}
+.tt th.gap,.tt td.gap{box-shadow:inset 1px 0 0 var(--line)}
+.tt th.n,.tt td.n{color:var(--mute);font-size:12px;padding:4px 8px}
+.tt tr.live td{background:var(--paper)}
+.tt tr.cur td{background:var(--ink);color:#fff}
+.tt tr.ok td{background:var(--ok);color:var(--ok-ink)}
+.tt tr.bad td{background:var(--bad);color:var(--bad-ink)}
+.tt .act{display:inline-block;font-size:11px;line-height:16px;min-width:16px;margin-right:5px;background:var(--coral);color:#fff;border-radius:8px;font-weight:600;vertical-align:1px}
+#stampTbl{display:flex;flex-direction:column;gap:8px;min-width:150px}
+.met{background:var(--card2);border-radius:18px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.met b{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.met b small{font-size:13px;font-weight:500;color:var(--mute);letter-spacing:0;margin-left:3px}
+.met span{font-size:12px;color:var(--mute);margin-top:4px}
+.met.over{background:var(--bad)}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;top:72px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:500;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:90vw;text-align:center;z-index:8}
+#toast.on{opacity:1}
+
+/* ---------- result card ---------- */
+#result{position:fixed;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(230,230,225,.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#result.on{display:flex}
+#resCard{background:var(--ink);color:#fff;border-radius:30px;padding:28px 28px 22px;width:min(440px,92vw);box-shadow:0 30px 60px -20px rgba(0,0,0,.45);animation:pop .35s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes pop{from{transform:translateY(16px) scale(.96);opacity:0}}
+#resTitle{display:flex;align-items:center;gap:14px;font-size:30px;font-weight:600;letter-spacing:-.02em}
+#resTitle::before{content:"✓";flex:0 0 52px;height:52px;border-radius:50%;background:var(--acc);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+#resTitle.bad::before{content:"!";background:var(--coral);color:#fff}
+#resTitle small{display:block;font-size:13px;font-weight:400;color:#A4A6A0;letter-spacing:0;margin-top:2px}
+#resSub{margin-top:20px}
+#resBtns{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+#resBtns .tbtn{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px #4A4C50}
+#resBtns .tbtn:hover{box-shadow:inset 0 0 0 1.5px #fff}
+#resBtns .tbtn.primary{background:var(--acc);color:var(--ink);box-shadow:none;margin-left:auto}
+.rstars{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rs{display:flex;flex-direction:column;gap:6px;background:#26282B;border-radius:16px;padding:12px}
+.rs b{width:26px;height:26px;border-radius:50%;background:#3A3C40;color:#3A3C40;display:flex;align-items:center;justify-content:center;font-size:14px}
+.rs.on b{background:var(--acc);color:var(--ink)}
+.rs span{font-size:12.5px;color:#A4A6A0;line-height:1.25}
+.rs.on span{color:#fff}
+.rmet{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.rmet div{background:#26282B;border-radius:16px;padding:12px}
+.rmet b{display:block;font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.rmet b.hl{color:var(--acc)}
+.rmet span{font-size:12px;color:#A4A6A0}
+.rsub{color:#C9CBC4;font-size:15px;line-height:1.45}
+
+/* ---------- full-screen screens ---------- */
+#ov{position:fixed;inset:0;z-index:5;background-color:var(--bg);background-image:radial-gradient(var(--grid2) 1px,transparent 1.2px);background-size:22px 22px;display:none;overflow:auto}
+#ov.on{display:block}
+.scr{display:none;min-height:100%;padding:56px 6vw 64px}
+.scr.on{display:block}
+#scrMain.on{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);gap:4vw;align-items:center;min-height:100vh}
+.brand{font-size:clamp(56px,7.5vw,104px);font-weight:600;letter-spacing:-.045em;line-height:.9}
+.brand-sub{color:var(--ink2);margin:14px 0 34px;font-size:17px;max-width:30ch}
+.mlist{background:var(--paper);border-radius:28px;padding:8px;box-shadow:var(--shadow)}
+.mi{display:flex;align-items:center;justify-content:space-between;width:100%;font-size:22px;font-weight:500;letter-spacing:-.01em;padding:14px 18px;border-radius:20px;color:var(--ink);text-align:left}
+.mi .mm{font-size:13px;font-weight:500;color:var(--mute);background:var(--card2);border-radius:999px;padding:4px 10px}
+.mi:hover,.mi:focus-visible{background:var(--ink);color:#fff;outline:none}
+.mi:hover .mm,.mi:focus-visible .mm{background:#33353A;color:#D5D7D0}
+.mi[data-go="continue"]{background:var(--acc)}
+.mi[data-go="continue"]:hover{background:var(--ink)}
+.mi.small{display:inline-flex;width:auto;font-size:15px;margin-top:24px;padding:0 18px;height:40px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+.mi .v{color:var(--mute)}
+.scr h2{font-size:clamp(40px,5vw,64px);font-weight:600;letter-spacing:-.04em;margin-bottom:26px;line-height:1}
+.about{max-width:620px;color:var(--ink2);font-size:18px;line-height:1.55;background:var(--paper);border-radius:var(--r);padding:24px 26px;box-shadow:var(--shadow)}
+#machine{width:100%;max-width:700px;height:auto;overflow:visible}
+#machineCap{color:var(--ink2);font-size:15px;margin-top:4px;padding-left:6px}
+#tree{display:block;overflow:visible;max-width:100%}
+#tree .node{cursor:pointer}
+#tree .node.lock{cursor:default}
+#treeTip{min-height:44px;font-size:16px;color:var(--ink);margin-top:14px;background:var(--paper);border-radius:999px;padding:12px 20px;display:inline-block;box-shadow:var(--shadow)}
+#treeTip:empty{display:none}
+.tm{color:var(--mute)}
+
+/* ---------- board svg ---------- */
+.w{fill:none;pointer-events:none;stroke-width:calc(var(--ww) * 1px);stroke-linejoin:round;stroke-linecap:round}
+.w0{stroke:var(--w0)}
+.w1{stroke:var(--w1)}
+.demo .w1{stroke-dasharray:2 9;animation:flow .5s linear infinite;stroke-width:calc(var(--ww) * 1px + 1px)}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.whit{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 12px);cursor:pointer}
+.whit:hover+.wsel,.wsel.on{stroke:rgba(220,235,58,.75)}
+.wsel{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 8px);pointer-events:none;stroke-linejoin:round;stroke-linecap:round}
+.gb{fill:var(--paper);stroke:var(--ink);stroke-width:1.8}
+.gst{stroke:var(--ink);stroke-width:1.8;fill:none;stroke-linecap:round}
+.gl{font:600 15px var(--font);fill:var(--ink);text-anchor:middle}
+.gl.s{font-size:11px;font-weight:500}
+.gate{cursor:move}
+.gate.sel .gb{fill:var(--acc-soft)}
+.pin-in{fill:var(--ink)}
+.pin-out{fill:var(--ink)}
+.pin-hit{fill:transparent;cursor:crosshair}
+.pin-hit:hover{fill:rgba(220,235,58,.6)}
+.short{fill:none;pointer-events:none;stroke:var(--coral);stroke-width:3;animation:pulse .5s steps(2) infinite}
+@keyframes pulse{50%{opacity:.2}}
+.flag{cursor:pointer}
+.lbl{font:600 15px var(--font);text-anchor:middle;dominant-baseline:central}
+.jn{fill:var(--ink);pointer-events:none}
+.cut{fill:none;stroke:var(--coral);stroke-width:2.5;stroke-dasharray:6 5;stroke-linecap:round}
+.ghost{opacity:.55;pointer-events:none}
+.tmp{opacity:.8}
+.onb{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-dasharray:1 9;stroke-linecap:round;animation:flow 1s linear infinite;opacity:.5;pointer-events:none}
+
+body.hc{--w0:#8E9089;--mute:#62645E;--ink2:#2C2E31;--line:#AFAFA7;--grid:#C4C4BC;--grid2:#B1B1A9}
+body.calm *,body.calm *::before,body.calm *::after{animation:none!important;transition:none!important}
+.scr.on>*{animation:rise .4s cubic-bezier(.2,.8,.3,1) both}
+.scr.on>*:nth-child(2){animation-delay:.05s}.scr.on>*:nth-child(3){animation-delay:.1s}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+
+/* ---------- settings ---------- */
+#setList{max-width:720px}
+.sgrp{font-size:13px;font-weight:600;color:var(--mute);margin:26px 0 8px 6px}
+.sgrp:first-child{margin-top:0}
+.sgrp+.srow{border-radius:20px 20px 0 0}
+.srow{display:flex;align-items:center;gap:6px;padding:10px 10px 10px 20px;background:var(--paper);font-size:17px;font-weight:500;box-shadow:inset 0 -1px 0 var(--line)}
+.srow:has(+ .sgrp),.srow:last-child{border-radius:0 0 20px 20px;box-shadow:none}
+.srow .k{flex:1;color:var(--ink);cursor:pointer}
+.srow .ar{width:36px;height:36px;border-radius:50%;background:var(--card2);color:var(--ink);font-size:18px;display:flex;align-items:center;justify-content:center}
+.srow .ar:hover{background:var(--acc)}
+.srow .val{min-width:190px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums;font-size:15px}
+.sbar{display:inline-block;width:100px;height:6px;border-radius:6px;background:var(--line);vertical-align:middle;margin-right:10px;position:relative;overflow:hidden}
+.sbar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:6px}
+
+/* ---------- Bit and the comm link ---------- */
+#mascot{position:fixed;right:18px;display:flex;align-items:flex-end;gap:10px;pointer-events:none;z-index:6}
+#mascot.off{display:none}
+#bit{width:78px;height:98px;pointer-events:auto;cursor:pointer;flex:0 0 auto;overflow:visible;animation:bob 3.4s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes bob{50%{transform:translateY(-3px)}}
+#bit.jump{animation:jump .55s cubic-bezier(.3,1.5,.5,1) 2}
+@keyframes jump{40%{transform:translateY(-18px) scaleY(1.05)}75%{transform:translateY(0) scaleY(.93)}}
+#bit.shake{animation:shake .3s 3}
+@keyframes shake{25%{transform:translateX(-4px) rotate(-4deg)}75%{transform:translateX(4px) rotate(4deg)}}
+#bit .eye{transform-origin:40px 42px;transform-box:view-box;animation:blink 4.6s infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+#bit .arm-r{transform-origin:66px 50px;transform-box:view-box}
+#bit.wave .arm-r{animation:wave .45s ease-in-out 4}
+@keyframes wave{50%{transform:rotate(-40deg)}}
+#bit .m-open{animation:talk .2s steps(1) infinite}
+@keyframes talk{50%{opacity:0}}
+#bit .spark{animation:spark 1.2s ease-in-out infinite}
+@keyframes spark{50%{opacity:.35}}
+#chat{pointer-events:auto;width:min(380px,calc(100vw - 120px));background:var(--paper);border-radius:24px;box-shadow:var(--shadow),0 0 0 1px rgba(26,27,29,.04);position:relative;margin-bottom:46px;opacity:0;transform:translateY(8px) scale(.98);transform-origin:100% 100%;transition:opacity .16s,transform .16s;visibility:hidden;overflow:hidden}
+#chat.on{opacity:1;transform:none;visibility:visible}
+.chd{display:flex;align-items:center;gap:8px;padding:12px 10px 0 16px;font-size:13px}
+.chd .cn{font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.chd .cn::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--ink)}
+.chd .cs{color:var(--mute);flex:1}
+.chd button{font-size:12.5px;font-weight:500;color:var(--ink2);padding:5px 11px;border-radius:999px;background:var(--card2)}
+.chd button:hover{background:var(--acc);color:var(--ink)}
+#chatX{width:28px;height:28px;padding:0!important;font-size:16px!important;line-height:1}
+#chatBody{padding:10px 16px 14px;font-size:16px;line-height:1.45;cursor:pointer}
+#chatCh{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+#chatCh:empty{display:none}
+.cbtn{text-align:left;font-size:14px;font-weight:500;color:var(--ink);padding:8px 14px;border-radius:999px;background:var(--card2)}
+.cbtn:first-child{background:var(--ink);color:#fff}
+.cbtn:hover,.cbtn:focus-visible{background:var(--acc);color:var(--ink);outline:none}
+#chatMore{font-size:12px;color:var(--mute);text-align:right;min-height:4px}
+#chatLog{display:none;max-height:min(46vh,380px);overflow:auto;padding:8px 16px 14px;font-size:14.5px;line-height:1.45;color:var(--ink2)}
+#chatLog p{margin:8px 0;background:var(--card2);border-radius:14px 14px 14px 4px;padding:8px 12px}
+#chatLog p.me{background:var(--ink);color:#fff;border-radius:14px 14px 4px 14px;margin-left:20%}
+#chat.logon #chatLog{display:block}
+#chat.logon #chatBody{display:none}
+
+/* ---------- fx ---------- */
+.fx-ring{fill:none;stroke:var(--ink);stroke-width:2;animation:ring .5s ease-out forwards;transform-box:fill-box;transform-origin:center}
+.fx-ring.g{stroke:var(--mute)}
+@keyframes ring{from{transform:scale(.3);opacity:.9}to{transform:scale(2.2);opacity:0}}
+.fx-bit{font:700 16px var(--font);fill:var(--ink);paint-order:stroke;stroke:var(--acc);stroke-width:6px;stroke-linejoin:round;animation:floatup 1.4s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes floatup{to{transform:translate(var(--dx),-90px);opacity:0}}
+
+/* ---------- checkpoint test ---------- */
+#quizBox{max-width:720px}
+.qh{display:inline-flex;font-size:13px;font-weight:600;background:var(--paper);border-radius:999px;padding:7px 14px;box-shadow:var(--shadow)}
+.qp{color:var(--mute);margin:18px 0 6px;font-variant-numeric:tabular-nums;font-weight:500}
+.qq{font-size:clamp(28px,3.4vw,40px);line-height:1.12;letter-spacing:-.02em;margin-bottom:22px;text-wrap:balance;font-weight:600}
+.qq sub,.qb sub{font-size:.62em}
+.qfig{width:min(360px,100%);height:auto;display:block;margin:0 0 22px;overflow:visible;background:var(--paper);border-radius:var(--r);padding:14px}
+.qv{font:600 14px var(--font);fill:var(--ink)}
+.qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}
+.qb{text-align:left;font-size:18px;font-weight:500;padding:18px 20px;border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
+.qb:hover:not(:disabled){background:var(--ink);color:#fff}
+.qb.ok{background:var(--acc);color:var(--ink)}
+.qb.bad{background:var(--coral);color:#fff}
+.qb:disabled{cursor:default}
+.qnext{margin-top:18px;min-height:44px}
+.qnext .tbtn{height:44px}
+.qres{font-size:clamp(48px,6vw,80px);font-weight:600;letter-spacing:-.04em;margin:18px 0 6px;line-height:1}
+.qres.ok{color:var(--ink)}.qres.bad{color:var(--coral)}
+.qscore{font-size:20px;color:var(--ink2)}
+.qact{margin-top:20px;display:flex;gap:8px;flex-wrap:wrap}
+.qact .mi{width:auto;background:var(--paper);box-shadow:var(--shadow)}
+
+/* ---------- personnel file ---------- */
+#profBox{max-width:880px}
+.pf-k{font-size:14px;color:var(--mute);font-weight:500}
+.pf-rank{font-size:clamp(44px,6vw,76px);font-weight:600;letter-spacing:-.04em;margin:2px 0 16px;line-height:1}
+.pf-bar{height:10px;background:var(--paper);border-radius:10px;position:relative;max-width:560px;overflow:hidden}
+.pf-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:10px}
+.pf-next{color:var(--ink2);margin:10px 0 26px;font-variant-numeric:tabular-nums;line-height:1.5}
+.pf-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:34px}
+.pfc{background:var(--paper);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.pfc b{display:block;font-size:42px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.pfc small{font-size:16px;color:var(--mute);font-weight:500;letter-spacing:0}
+.pfc span{display:block;margin-top:6px;font-size:14px;color:var(--ink2)}
+#profBox h3{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-bottom:12px}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.bd{display:grid;grid-template-columns:46px 1fr;grid-template-rows:auto auto;column-gap:12px;padding:14px;border-radius:20px;background:rgba(250,250,247,.55);color:var(--mute)}
+.bd.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
+.bd i{grid-row:1/3;font-style:normal;font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center;height:46px;border-radius:50%;background:var(--card2)}
+.bd.on i{background:var(--acc);color:var(--ink)}
+.bd b{font-size:15px;font-weight:600}
+.bd span{font-size:13px;line-height:1.3}
+
+@media (max-width:760px){
+  #top{left:8px;right:8px;top:8px;grid-template-columns:auto 1fr;grid-template-rows:40px 40px;height:88px;gap:8px}
+  #formula{grid-column:1/-1;grid-row:2;justify-self:center;font-size:17px;height:38px}
+  .tbtn{height:38px;padding:0 12px;font-size:14px}
+  #redo,#btnClear,#hud .hr{display:none}
+  #palette{left:8px;top:104px;padding:4px}
+  .pi{width:58px}
+  #sheet{left:8px;right:8px;bottom:8px}
+  #sheetBody{grid-template-columns:1fr}
+  #stampTbl{display:none}
+  #scrMain.on{display:block;padding-top:36px}
+  #machine{margin-top:28px}
+  .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rmet b{font-size:24px}
+  #bit{width:58px;height:74px}#chatBody{font-size:15px}#chat{margin-bottom:30px}
+  .chd .cs,#saved{display:none}#hintBtn{font-size:13px;padding:0 12px}#lvTitle{font-size:16px}#lvNum{font-size:24px}
+  .srow .val{min-width:110px}.sbar{width:54px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ===== v3.3 overrides ===== */
+/* formulas */
+.math{font-family:"STIX Two Text","Onest",serif;font-weight:400;letter-spacing:0}
+.mv{font-style:italic;font-family:"STIX Two Text",serif;padding:0 .02em}
+.mo{display:inline-block;margin:0 .26em;font-style:normal;font-family:"STIX Two Text",serif}
+.mos{width:.74em;height:.74em;vertical-align:-.06em;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+sub .mo{margin:0 .06em}
+.math .ov,.qb .ov,.qq .ov,#task .ov,#hint .ov,.tt .ov,#treeTip .ov{text-decoration:none;display:inline-block;border-top:.07em solid currentColor;padding-top:.08em;line-height:1.05}
+/* task card: formula + truth table, centred under the top bar */
+#top{grid-template-columns:1fr 1fr}
+#taskCard{position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:3;background:var(--paper);border-radius:26px;box-shadow:var(--shadow);padding:14px 16px 14px;max-width:min(980px,calc(100vw - 230px));display:flex;flex-direction:column;align-items:center;gap:10px}
+#taskCard.notable{padding-bottom:14px}
+#formula{height:auto;padding:2px 10px 0;border-radius:0;background:none;box-shadow:none;font-size:27px;pointer-events:none;white-space:nowrap;line-height:1.3}
+#ttWrap{background:none;border-radius:0;padding:0;max-width:100%;overflow-x:auto;overflow-y:hidden}
+table.tt{border-collapse:separate;border-spacing:3px 2px;font-size:17px}
+.tt th{position:sticky;left:0;z-index:1;background:var(--paper);font-size:19px;color:var(--ink);font-weight:400;padding:0 14px 0 6px;text-align:right;font-family:"STIX Two Text","Onest",serif}
+.tt td{min-width:34px;height:34px;padding:0 4px;text-align:center;border-radius:9px;background:var(--card2);font-weight:500;cursor:pointer;position:relative;color:var(--ink2)}
+.tt tr td:first-child,.tt tr td:last-child{border-radius:9px}
+.tt tr.gap th,.tt tr.gap td{border-top:0}
+.tt tr.gap>*{position:relative}
+.tt tr.gap td::before,.tt tr.gap th::before{content:"";position:absolute;left:-2px;right:-2px;top:-5px;height:2px;background:var(--ink);border-radius:2px}
+.tt tr.gap td{margin-top:6px}
+.tt tr.hn td{background:none;color:var(--mute);font-size:12px;height:22px;cursor:default}
+.tt tr.hn th{font-family:var(--font);font-size:12px;color:var(--mute)}
+.tt tr.out td{color:var(--ink);font-weight:600}
+.tt td.live{background:var(--acc);color:var(--ink)}
+.tt td.cur{background:var(--ink);color:#fff}
+.tt td.ok{background:var(--ok);color:var(--ok-ink)}
+.tt td.bad{background:var(--bad);color:var(--bad-ink)}
+.tt td.wrong{background:var(--coral);color:#fff}
+.tt td:hover{outline:2px solid var(--ink);outline-offset:-2px}
+.tt .act{position:absolute;right:-5px;top:-7px;margin:0;min-width:15px;line-height:15px;font-size:10px;background:var(--ink);color:#fff;border-radius:8px}
+/* dock without the table */
+#sheetBody{grid-template-columns:minmax(220px,1fr) auto}
+#stampTbl{flex-direction:row;min-width:0}
+.met{min-width:130px}
+/* headings: page titles calm, content heroes large */
+.scr h2{font-size:30px;letter-spacing:-.02em;margin-bottom:22px}
+.pf-k{margin-top:6px}
+/* result: criteria list */
+.rcrit{display:flex;flex-direction:column;gap:4px}
+.rc{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:14px;background:#26282B;color:#8E9089;white-space:nowrap}
+.rc i{width:28px;height:28px;border-radius:50%;border:1.5px dashed #55585C;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:14px;font-weight:700}
+.rc span{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.rc em{font-style:normal;font-size:13px;color:#8E9089}
+.rc.on{color:#fff}
+.rc.on i{border:0;background:var(--acc);color:var(--ink)}
+.rc.on em{color:var(--acc)}
+.rmet{margin-top:8px}
+.rmet b.hl{color:var(--acc)}
+/* Bit: hidden until he speaks; his own stage inside the comm panel */
+#mascot{right:16px;align-items:flex-end}
+#bitTab{position:relative;width:60px;height:60px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);pointer-events:auto;display:flex;align-items:center;justify-content:center;transition:transform .2s,opacity .2s}
+#bitTab:hover{transform:translateY(-2px);background:var(--acc)}
+#bitTab svg{width:40px;height:48px;margin-top:4px}
+#bitTab::after{content:"";position:absolute;right:4px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--paper);opacity:0}
+body.bitWaiting #bitTab::after{opacity:1}
+body.bitOn #bitTab{opacity:0;transform:scale(.6);pointer-events:none;position:absolute;right:0;bottom:0}
+#chat{display:grid;grid-template-columns:132px 1fr;width:min(560px,calc(100vw - 32px));margin:0;border-radius:26px;transform:translateY(24px);transform-origin:100% 100%;transition:opacity .2s,transform .28s cubic-bezier(.2,1.2,.4,1)}
+#chat.on{transform:none}
+#bitStage{position:relative;background:var(--acc-soft);display:flex;align-items:flex-end;justify-content:center;padding:14px 0 18px;overflow:hidden}
+#bitStage::after{content:"";position:absolute;left:24px;right:24px;bottom:16px;height:8px;border-radius:50%;background:rgba(26,27,29,.13)}
+#bitStage #bit{position:relative;z-index:1;width:88px;height:110px;animation:none}
+#chatMain{min-width:0;display:flex;flex-direction:column}
+#chatBody{flex:1}
+#bit .torso{transform-origin:40px 86px;transform-box:view-box;animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{50%{transform:scaleY(1.035) translateY(-1px)}}
+#bit .ant{transform-origin:40px 20px;transform-box:view-box;animation:sway 2.6s ease-in-out infinite}
+@keyframes sway{25%{transform:rotate(-7deg)}75%{transform:rotate(6deg)}}
+#bit .arm-l{transform-origin:14px 50px;transform-box:view-box;animation:armL 3.2s ease-in-out infinite}
+#bit .arm-r{transform-origin:66px 50px;transform-box:view-box;animation:armR 3.2s ease-in-out infinite}
+@keyframes armL{50%{transform:rotate(12deg)}}
+@keyframes armR{50%{transform:rotate(-12deg)}}
+#bit .pupil{animation:look 6s ease-in-out infinite}
+@keyframes look{0%,30%,100%{transform:none}40%,55%{transform:translateX(3.5px)}65%,80%{transform:translate(-3px,1px)}}
+#bit.talk .torso{animation:chatter .26s ease-in-out infinite}
+@keyframes chatter{50%{transform:scaleY(.96) translateY(1.5px)}}
+#bit.talk .arm-r{animation:gesture .52s ease-in-out infinite}
+@keyframes gesture{50%{transform:rotate(-28deg)}}
+#bit.wave .arm-r{animation:wave .45s ease-in-out 4}
+@media (max-width:760px){
+  #top{grid-template-rows:40px;height:40px}
+  #taskCard{top:56px;max-width:calc(100vw - 16px);padding:10px}
+  #formula{font-size:21px}
+  table.tt{font-size:15px}.tt td{min-width:28px;height:28px}.tt th{font-size:16px}
+  #palette{top:auto;bottom:calc(var(--dock,180px) + 24px)}
+  #chat{grid-template-columns:96px 1fr}#bitStage #bit{width:68px;height:86px}
+  #stampTbl{display:none}
+}
+
+/* v3.3 fixes */
+#mascot{display:block;width:60px;height:60px}
+#bitTab{position:absolute;right:0;bottom:0}
+#chat{position:absolute;right:0;bottom:0}
+#stampTbl{align-items:flex-start}
+.met{flex:0 0 auto;min-height:0}
+@media (min-width:1100px){body.bitOn #result.on{padding-right:520px}}
+</style>
+</head>
+<body>
+<svg id="board" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="0" cy="0" r="1.1" fill="var(--grid)"/>
+    </pattern>
+  </defs>
+  <rect id="gridRect" x="0" y="0" width="100%" height="100%" fill="url(#grid)"/>
+  <g id="world"></g>
+  <g id="fx"></g>
+</svg>
+
+<div id="frame"></div>
+
+<header id="top" class="zz">
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><button class="tbtn" id="undo" data-t="undo"></button><button class="tbtn" id="redo" data-t="redo"></button></div>
+  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
+</header>
+
+<div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
+
+<aside id="palette" class="zz"></aside>
+<div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
+
+<section id="sheet" class="zz">
+  <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button></div>
+  <div id="sheetBody">
+    <div id="task"><div id="taskText"></div><div id="hint"></div></div>
+    <div id="stampTbl"></div>
+  </div>
+</section>
+
+<div id="toast" class="zz"></div>
+<div id="result"><div id="resCard" class="zz"><div id="resTitle"></div><div id="resSub"></div><div id="resBtns"></div></div></div>
+
+<div id="ov" class="on">
+  <div class="scr on zz" id="scrMain">
+   <div class="mcol">
+    <div class="brand">Logic Lab</div>
+    <div class="brand-sub" data-t="brandSub"></div>
+    <div class="mlist">
+      <button class="mi" data-go="continue"><span data-t="cont"></span><span class="mm" id="mmCont"></span></button>
+      <button class="mi" data-go="levels"><span data-t="levels"></span><span class="mm" id="mmLevels"></span></button>
+      <button class="mi" data-go="profile"><span data-t="profile"></span><span class="mm" id="mmProfile"></span></button>
+      <button class="mi" data-go="sandbox"><span data-t="sandbox"></span></button>
+      <button class="mi" data-go="settings"><span data-t="settings"></span></button>
+      <button class="mi" data-go="about"><span data-t="about"></span></button>
+      <button class="mi" data-go="quit" id="quitBtn"><span data-t="quit"></span></button>
+    </div>
+   </div>
+   <div class="mcol"><svg id="machine" viewBox="0 0 640 470" role="img"></svg><div id="machineCap"></div></div>
+  </div>
+  <div class="scr zz" id="scrLevels">
+    <h2 data-t="levels"></h2>
+    <svg id="tree"></svg>
+    <div id="treeTip"></div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrProfile">
+    <h2 data-t="profile"></h2>
+    <div id="profBox"></div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrQuiz">
+    <div id="quizBox"></div>
+    <button class="mi small" data-go="levels" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrSettings">
+    <h2 data-t="settings"></h2>
+    <div id="setList"></div>
+    <button class="mi small" id="setReset" data-t="reset"></button>
+    <button class="mi small" data-go="main" data-t="back" style="margin-top:6px"></button>
+  </div>
+  <div class="scr zz" id="scrAbout">
+    <h2 data-t="about"></h2>
+    <div class="about">
+      <p data-t="aboutT1"></p>
+      <p style="margin-top:14px" data-t="aboutT2"></p>
+    </div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+</div>
+
+<div id="mascot" class="zz">
+  <button id="bitTab" aria-label="Bit"><svg id="bitMini" viewBox="8 -2 64 80"></svg></button>
+  <div id="chat" role="log" aria-live="polite">
+    <div id="bitStage"><svg id="bit" viewBox="0 0 80 100" aria-label="Bit"></svg></div>
+    <div id="chatMain">
+      <div class="chd"><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button><button id="chatX" aria-label="×">×</button></div>
+      <div id="chatBody"><div id="chatText"></div><div id="chatCh"></div><div id="chatMore"></div></div>
+      <div id="chatLog"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ========== helpers ========== */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const GRID=20, GW=60;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const snap=(v,s=GRID)=>Math.round(v/s)*s;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const ov=s=>`<span class="ov">${s}</span>`;
+const subH=s=>String(s).replace(/^(.+?)(\d+)$/,'$1<sub>$2</sub>');
+const subS=s=>String(s).replace(/^(.+?)(\d+)$/,'$1<tspan font-size="10" dy="4">$2</tspan>');
+const fmt=(s,o)=>s.replace(/\{(\w+)\}/g,(_,k)=>o[k]!=null?o[k]:'');
+const num=n=>Number(n).toLocaleString(LANG==='en'?'en-US':'ru-RU');
+
+/* ========== storage: autosave ==========
+   Browser: localStorage. Desktop (Electron): one JSON file in the user data folder,
+   written 0.4 s after the last change and on exit. That file is what Steam Auto-Cloud syncs. */
+const store=(()=>{
+  const D=window.desktop;let mem=null,t=null;
+  if(D&&D.loadSave){try{mem=JSON.parse(D.loadSave()||'{}')||{}}catch(e){mem={}}}
+  const flush=()=>{clearTimeout(t);t=null;if(mem&&D)try{D.writeSave(JSON.stringify(mem))}catch(e){}};
+  if(mem)window.addEventListener('beforeunload',flush);
+  return{
+    get(k,d){if(mem)return k in mem?JSON.parse(JSON.stringify(mem[k])):d;try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+    set(k,v,quiet){if(mem){mem[k]=JSON.parse(JSON.stringify(v));clearTimeout(t);t=setTimeout(flush,400)}else{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}if(!quiet&&window.savedPing)savedPing()},
+    wipe(keys){keys.forEach(k=>{if(mem)delete mem[k];else try{localStorage.removeItem(k)}catch(e){}});if(mem)flush()},
+    flush
+  };
+})();
+
+/* ========== language ========== */
+let LANG=(()=>{const s=store.get('ll_set',{});if(s.lang)return s.lang;
+  const sl=window.desktop&&window.desktop.steamLang&&window.desktop.steamLang();
+  if(sl)return /russian|ukrainian|belarus/i.test(sl)?'ru':'en';
+  return /^(ru|uk|be|kk)/i.test(navigator.language||'')?'ru':'en'})();
+const tx=x=>Array.isArray(x)?x[LANG==='en'?1:0]:(x==null?'':x);
+const UIS={
+  menu:['Меню','Menu'],undo:['Отменить','Undo'],redo:['Вернуть','Redo'],clear:['Очистить','Clear'],verify:['Проверить','Test'],skip:['Пропустить','Skip'],
+  fit:['Вписать','Fit'],hint:['Подсказка','Hint'],hintCost:['Подсказка −★','Hint −★'],saved:['сохранено','saved'],
+  cont:['Продолжить','Continue'],levels:['Уровни','Levels'],sandbox:['Песочница','Sandbox'],settings:['Настройки','Settings'],about:['Об игре','About'],
+  profile:['Личное дело','Personnel file'],back:['Назад','Back'],quit:['Выйти','Quit'],brandSub:['логические элементы и цифровые схемы','logic gates and digital circuits'],
+  aboutT1:['Этой ночью Машина в лаборатории погасла. Её управляющий бит по имени Бит назначил вас испытуемым и требует собрать Машину заново: от одного провода до счётчика команд.','Last night the lab’s Machine went dark. Its control bit, named Bit, has appointed you test subject and demands that you rebuild it, from a single wire to a program counter.'],
+  aboutT2:['Тяните от точки — получится провод. Клик по пустому месту во время прокладки — изгиб. Тяните от провода — ответвление. Правый клик или свайп поперёк провода — удалить. Ctrl+Z — отменить.','Drag from a dot to lay a wire. Click empty space while routing to add a bend. Drag from a wire to branch it. Right-click or swipe across a wire to delete it. Ctrl+Z undoes.'],
+  reset:['Сбросить прогресс','Reset progress'],resetSure:['нажмите ещё раз','click again'],progReset:['Прогресс сброшен','Progress reset'],
+  tick:['такт','tick'],step:['шаг','step'],
+  shortToast:['Два провода на одном входе — короткое замыкание','Two wires on one input: short circuit'],shortFirst:['Сначала уберите короткое замыкание','Remove the short circuit first'],
+  emptyToast:['Схема пуста','The circuit is empty'],limitToast:['Лимит элементов: {m}','Element limit: {m}'],
+  correct:['Принято','Accepted'],mismatch:['На доработку','Rework'],stampSub:['ОТК, контролёр Бит','QC, inspector Bit'],gatesN:['Элементов: {n}','Gates: {n}'],parN:['рекорд Бита: {p}','Bit’s record: {p}'],
+  mismatchN:['Не совпало строк: {f} из {n}','Rows failed: {f} of {n}'],pts:['+{p} очков','+{p} points'],noNewPts:['новых очков нет','no new points'],
+  stay:['Остаться','Stay'],next:['Следующий уровень','Next level'],fix:['Исправить','Fix it'],toQuiz:['Контрольный тест','Take the test'],
+  starSolved:['решено','solved'],starNoHint:['без подсказок','no hints'],starPar:['не больше {p} эл.','{p} gates or fewer'],
+  unlocksAfter:['откроется после: {r}','unlocks after: {r}'],testN:['тест {n}','test {n}'],quizNode:['Контрольный тест','Checkpoint test'],
+  quizTitle:['Контрольное испытание, глава {n}','Checkpoint test, chapter {n}'],qOf:['Вопрос {i} из {n}','Question {i} of {n}'],
+  qNext:['Следующий вопрос','Next question'],qDone:['Результат','Result'],qScore:['{s} из {n}','{s} of {n}'],qPass:['Зачёт','Passed'],qFail:['Не зачёт','Failed'],
+  qRetry:['Пройти ещё раз','Try again'],qLocked:['Сначала пройдите все уровни главы','Finish every level in the chapter first'],
+  rank:['Допуск','Clearance'],points:['Очки','Points'],toNext:['до «{r}»: {p}','to “{r}”: {p}'],maxRank:['высший допуск','top clearance'],
+  stLevels:['Уровни','Levels'],stStars:['Звёзды','Stars'],stTests:['Тесты','Tests'],stBadges:['Бейджи','Badges'],badgesH:['Бейджи','Badges'],
+  badgeToast:['Бейдж: {b}','Badge: {b}'],rankToast:['Новый допуск: {r}','New clearance: {r}'],
+  log:['Журнал','Log'],logEmpty:['Пока пусто.','Nothing yet.'],more:['щёлкните, чтобы продолжить','click to continue'],bitName:['Бит','Bit'],chan:['канал связи','comm link'],
+  cGo:['Приступаю','On it'],cWhat:['Что тут нужно сделать?','What do I do here?'],cQuiet:['Можно без комментариев?','No comments, please?'],
+  cHint:['Подсказка (−★)','Hint (−★)'],cHintFree:['Подсказка','Hint'],cStats:['Как я справляюсь?','How am I doing?'],cFact:['Расскажи что-нибудь','Tell me something'],
+  cMute:['Помолчи','Be quiet'],cUnmute:['Можешь говорить','You may talk'],cNothing:['Ничего','Nothing'],cHelp:['Подскажи (−★)','Give me a hint (−★)'],cSelf:['Сам разберусь','I’ll figure it out'],
+  listen:['Слушаю. Внимательно и с подозрением.','Listening. Attentively and with suspicion.'],selfR:['Смелое заявление. Записываю.','A bold statement. Logged.'],
+  unmuteR:['Наконец-то. Я как раз накопил комментарии.','Finally. I have been saving up comments.'],
+  fsDenied:['Полный экран не разрешён','Fullscreen was refused'],fsNA:['Полный экран здесь недоступен','Fullscreen is not available here'],
+  gScreen:['Экран','Display'],gSound:['Звук','Sound'],gGame:['Игра','Game'],
+  sLang:['Язык','Language'],sUi:['Масштаб интерфейса','Interface scale'],sWin:['Размер окна','Window size'],sFs:['Полный экран','Fullscreen'],
+  sWw:['Толщина проводов','Wire thickness'],sGrid:['Сетка','Grid'],sHc:['Контраст','Contrast'],sCalm:['Анимации','Animations'],
+  sMusic:['Музыка','Music'],sSfx:['Звуки','Effects'],sVoice:['Голос Бита','Bit’s voice'],sDev:['Разраб.','Drawn'],sChk:['Пров.','Checked'],sSheet:['Лист','Sheet'],sSheets:['Листов','Sheets'],mGates:['элементов','gates'],cSolved:['Схема работает','The circuit works'],cNoHint:['Без подсказок','No hints'],cPar:['Не больше {p} элементов','{p} gates or fewer'],whyHint:['была подсказка','hint used'],whyPar:['у вас {n}','you used {n}'],mRows:['строк в таблице','rows in total'],mRowsBad:['не совпали','failed'],mRowsOk:['совпали','passed'],qReady:['можно сдавать','ready to take'],mPar:['рекорд Бита','Bit’s record'],mYours:['ваш {n}','yours {n}'],mmLevel:['уровень {n}','level {n}'],mmDone:['{n} из {N}','{n} of {N}'],subjNo:['Испытуемый № 0001','Subject No. 0001'],machine:['Машина','The Machine'],machineCap:['Узлов включено: {n} из {N}','Units online: {n} of {N}'],sBit:['Бит','Bit'],sTxt:['Скорость текста','Text speed'],sDemo:['Скорость проверки','Test speed'],sGost:['Обозначения','Gate symbols'],
+  vAuto:['авто','auto'],vAsIs:['как есть','unchanged'],vFull:['во весь экран','fullscreen'],vOn:['вкл','on'],vOff:['выкл','off'],
+  vThin:['тонкие','thin'],vNormal:['обычные','normal'],vThick:['толстые','thick'],vVThick:['очень толстые','extra thick'],
+  vDots:['точки','dots'],vLines:['миллиметровка','graph paper'],vNone:['нет','none'],vHigh:['высокий','high'],vReg:['обычный','normal'],vAll:['все','all'],vMin:['минимум','minimal'],
+  vTalk:['комментирует','comments'],vHints:['только подсказки','hints only'],vHidden:['спрятан','hidden'],vSlow:['медленно','slow'],vNorm:['обычно','normal'],vInst:['сразу','instant'],vFast:['быстро','fast'],
+  vGost:['ГОСТ 2.743','GOST 2.743'],vAnsi:['ANSI','ANSI']
+};
+const ui=(k,o)=>{const v=UIS[k];const s=v?v[LANG==='en'?1:0]:k;return o?fmt(s,o):s};
+
+/* ========== formula typesetting ==========
+   Variables: italic serif (STIX Two). Operators: upright, with air around them; ⊕ ∨ ⊙ → ← drawn as vector glyphs
+   so they match the stroke of the letters on every system. Conjunction is shown as &, as in Russian textbooks. */
+const OPSVG={'⊕':'<circle cx="8" cy="8" r="6"/><path d="M8 3.4V12.6M3.4 8H12.6"/>','⊙':'<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>',
+  '∨':'<path d="M3.2 3.6L8 12.8L12.8 3.6"/>','→':'<path d="M2 8H14M10 4.2L14 8L10 11.8"/>','←':'<path d="M14 8H2M6 4.2L2 8L6 11.8"/>'};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function mo(c){return `<span class="mo">${OPSVG[c]?`<svg class="mos" viewBox="0 0 16 16">${OPSVG[c]}</svg>`:c}</span>`}
+function mathHTML(h){
+  return String(h).replace(/∧/g,'&amp;').split(/(<[^>]+>)/).map(p=>p[0]==='<'?p:p.replace(
+    /&amp;|&gt;|&lt;|[⊕⊙∨→←=+−]| [?:] |(?<![A-Za-z])(?:Co|Bo|[A-Z]{1,2}|n|k)(?![A-Za-z])/g,
+    m=>m==='&amp;'?mo('&amp;'):m==='&gt;'||m==='&lt;'?mo(m):/^ [?:] $/.test(m)?' '+mo(m.trim())+' ':(OPSVG[m]||'=+−'.includes(m))?mo(m):/^[A-Z]{2}$/.test(m)?m.split('').map(c=>`<i class="mv">${c}</i>`).join(''):`<i class="mv">${m}</i>`)).join('');
+}
+
+/* ========== levels ========== */
+// Every text field is [ru, en]. tx() picks the current language.
+// req: level ids or 'qN' (chapter N test passed). par: reference element count (3rd star).
+// max: hard limit on elements (challenge levels).
+const LV=[];
+function comb(ins,fn){const n=ins.length,v=[];for(let m=0;m<1<<n;m++){const i={};ins.forEach((k,j)=>i[k]=(m>>(n-1-j))&1);v.push({in:i,out:fn(i)})}return v}
+function seq(rows,init,step){let s=init;return rows.map(r=>{const [o,n]=step(s,r);s=n;return{in:r,out:o}})}
+const B=x=>x?1:0;
+const SEP='<span class="sep"></span>';
+const sb=s=>s.replace(/([A-Za-zА-Яа-я])(\d)/g,'$1<sub>$2</sub>');
+function lv(o){o.id=LV.length+1;o.outs=o.outs||['Y'];o.gates=o.gates||[];LV.push(o)}
+const T=n=>Array(n).fill(0).map(()=>({}));
+
+/* ---------- 1. Основы / Basics ---------- */
+lv({ch:1,pos:[0,0],req:[],par:0,t:['Провод','Wire'],f:'Y = A',ins:['A'],vec:comb(['A'],i=>({Y:i.A})),
+  task:['Сигнал должен дойти от входа до лампы.','The signal must travel from the input to the lamp.'],
+  hint:['Потяните от точки на флажке A к лампе Y.','Drag from the dot on flag A to lamp Y.']});
+lv({ch:1,pos:[1,0],req:[1],par:1,t:['Инверсия','Inversion'],f:'Y = '+ov('A'),ins:['A'],gates:['NOT'],vec:comb(['A'],i=>({Y:1-i.A})),
+  task:['Лампа горит, когда на входе ноль.','The lamp is lit when the input is zero.'],
+  hint:['Элемент НЕ переворачивает сигнал: 0 → 1, 1 → 0.','A NOT gate flips the signal: 0 → 1, 1 → 0.']});
+lv({ch:1,pos:[2,0],req:[2],par:1,t:['Конъюнкция','Conjunction'],f:'Y = A ∧ B',ins:['A','B'],gates:['AND'],vec:comb(['A','B'],i=>({Y:i.A&i.B})),
+  task:['Лампа горит, только когда включены оба входа.','The lamp is lit only when both inputs are on.'],
+  hint:['Элемент И даёт 1, только если на всех входах 1.','AND outputs 1 only when every input is 1.']});
+lv({ch:1,pos:[2,1],req:[2],par:1,t:['Дизъюнкция','Disjunction'],f:'Y = A ∨ B',ins:['A','B'],gates:['OR'],vec:comb(['A','B'],i=>({Y:i.A|i.B})),
+  task:['Лампа горит, если включён хотя бы один вход.','The lamp is lit if at least one input is on.'],
+  hint:['Элемент ИЛИ даёт 1, если хотя бы на одном входе 1.','OR outputs 1 if any input is 1.']});
+lv({ch:1,pos:[3,0],req:[3],par:2,t:['Штрих Шеффера','Sheffer stroke'],f:'Y = '+ov('A ∧ B'),ins:['A','B'],gates:['AND','NOT'],vec:comb(['A','B'],i=>({Y:1-(i.A&i.B)})),
+  task:['Соберите И-НЕ из двух элементов.','Build NAND out of two gates.'],
+  hint:['Поставьте НЕ после И.','Put a NOT after the AND.']});
+lv({ch:1,pos:[3,1],req:[4],par:2,t:['Стрелка Пирса','Peirce arrow'],f:'Y = '+ov('A ∨ B'),ins:['A','B'],gates:['OR','NOT'],vec:comb(['A','B'],i=>({Y:1-(i.A|i.B)})),
+  task:['Соберите ИЛИ-НЕ из двух элементов.','Build NOR out of two gates.'],
+  hint:['Поставьте НЕ после ИЛИ.','Put a NOT after the OR.']});
+lv({ch:1,pos:[4,0],req:[5,6],par:3,t:['Исключающее ИЛИ','Exclusive OR'],f:'Y = A ⊕ B',ins:['A','B'],gates:['AND','OR','NOT','NAND'],vec:comb(['A','B'],i=>({Y:i.A^i.B})),
+  task:['Лампа горит, когда входы различаются.','The lamp is lit when the inputs differ.'],
+  hint:['A ⊕ B = (A ∨ B) ∧ '+ov('A ∧ B'),'A ⊕ B = (A ∨ B) ∧ '+ov('A ∧ B')]});
+lv({ch:1,pos:[5,0],req:[7],par:2,t:['Равнозначность','Equivalence'],f:'Y = '+ov('A ⊕ B'),ins:['A','B'],gates:['AND','OR','NOT','XOR'],vec:comb(['A','B'],i=>({Y:1-(i.A^i.B)})),
+  task:['Лампа горит, когда входы совпадают.','The lamp is lit when the inputs match.'],
+  hint:['Это исключающее ИЛИ с инверсией на выходе.','It is XOR with an inverted output.']});
+
+/* ---------- 2. Универсальный элемент / The universal gate ---------- */
+lv({ch:2,pos:[0,2],req:['q1'],par:1,t:['НЕ из И-НЕ','NOT from NAND'],f:'Y = '+ov('A'),ins:['A'],gates:['NAND'],vec:comb(['A'],i=>({Y:1-i.A})),
+  task:['Есть только И-НЕ. Получите инверсию.','Only NAND is available. Make an inverter.'],
+  hint:['Подайте A сразу на оба входа И-НЕ — ответвите провод.','Feed A into both NAND inputs: branch the wire.']});
+lv({ch:2,pos:[1,2],req:[9],par:2,t:['И из И-НЕ','AND from NAND'],f:'Y = A ∧ B',ins:['A','B'],gates:['NAND'],vec:comb(['A','B'],i=>({Y:i.A&i.B})),
+  task:['Только И-НЕ. Получите И.','NAND only. Make AND.'],
+  hint:['И-НЕ, а за ним ещё одно И-НЕ в роли инвертора.','A NAND followed by another NAND used as an inverter.']});
+lv({ch:2,pos:[1,3],req:[9],par:3,t:['ИЛИ из И-НЕ','OR from NAND'],f:'Y = A ∨ B',ins:['A','B'],gates:['NAND'],vec:comb(['A','B'],i=>({Y:i.A|i.B})),
+  task:['Только И-НЕ. Получите ИЛИ.','NAND only. Make OR.'],
+  hint:['Закон де Моргана: A ∨ B = '+ov(ov('A')+' ∧ '+ov('B')),'De Morgan: A ∨ B = '+ov(ov('A')+' ∧ '+ov('B'))]});
+lv({ch:2,pos:[2,2],req:[10,11],par:4,t:['XOR из И-НЕ','XOR from NAND'],f:'Y = A ⊕ B',ins:['A','B'],gates:['NAND'],vec:comb(['A','B'],i=>({Y:i.A^i.B})),
+  task:['Только И-НЕ. Уложитесь в четыре элемента.','NAND only. Use no more than four gates.'],
+  hint:['Выход первого И-НЕ(A, B) раздайте трём остальным.','Share the output of the first NAND(A, B) with the other three.']});
+lv({ch:2,pos:[2,3],req:[11],par:2,t:['Три входа','Three inputs'],f:'Y = A ∧ B ∧ C',ins:['A','B','C'],gates:['AND'],vec:comb(['A','B','C'],i=>({Y:i.A&i.B&i.C})),
+  task:['Лампа горит, только когда включены все три входа.','The lamp is lit only when all three inputs are on.'],
+  hint:['Двухвходовые элементы соединяются цепочкой.','Chain two-input gates.']});
+lv({ch:2,pos:[3,3],req:[13],par:5,t:['Большинство','Majority'],f:'Y = AB ∨ BC ∨ AC',ins:['A','B','C'],gates:['AND','OR'],vec:comb(['A','B','C'],i=>({Y:B(i.A+i.B+i.C>=2)})),
+  task:['Лампа горит, если включены хотя бы два входа из трёх.','The lamp is lit if at least two of three inputs are on.'],
+  hint:['Три И для каждой пары, затем два ИЛИ.','Three ANDs, one per pair, then two ORs.']});
+lv({ch:2,pos:[3,2],req:[12],par:2,t:['Чётность','Parity'],f:'Y = A ⊕ B ⊕ C',ins:['A','B','C'],gates:['XOR'],vec:comb(['A','B','C'],i=>({Y:i.A^i.B^i.C})),
+  task:['Лампа горит при нечётном числе единиц.','The lamp is lit for an odd number of ones.'],
+  hint:['Два исключающих ИЛИ цепочкой.','Two XORs in a chain.']});
+
+/* ---------- 3. Арифметика и выбор / Arithmetic and selection ---------- */
+lv({ch:3,pos:[0,4],req:['q2'],par:2,t:['Полусумматор','Half adder'],f:['S = A ⊕ B'+SEP+'P = A ∧ B','S = A ⊕ B'+SEP+'Co = A ∧ B'],ins:['A','B'],outs:['S','P'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A','B'],i=>({S:i.A^i.B,P:i.A&i.B})),task:['Сложите два бита: S — сумма, P — перенос.','Add two bits: S is the sum, Co is the carry.'],
+  hint:['Один провод можно развести на два элемента.','One wire can feed two gates.']});
+lv({ch:3,pos:[1,4],req:[16],par:5,t:['Полный сумматор','Full adder'],f:['S = A ⊕ B ⊕ C'+SEP+'P = AB ∨ C(A ⊕ B)','S = A ⊕ B ⊕ C'+SEP+'Co = AB ∨ C(A ⊕ B)'],ins:['A','B','C'],outs:['S','P'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A','B','C'],i=>({S:i.A^i.B^i.C,P:B(i.A+i.B+i.C>=2)})),task:['Сложите три бита: C — перенос из младшего разряда.','Add three bits: C is the carry from the lower digit.'],
+  hint:['Два полусумматора и ИЛИ для их переносов.','Two half adders and an OR for their carries.']});
+lv({ch:3,pos:[1,5],req:[16],par:4,t:['Мультиплексор','Multiplexer'],f:'Y = '+ov('S')+'A ∨ SB',ins:['A','B','S'],gates:['AND','OR','NOT','NAND'],
+  vec:comb(['A','B','S'],i=>({Y:i.S?i.B:i.A})),task:['S выбирает, что пройдёт на выход: при S = 0 — A, при S = 1 — B.','S selects the output: A when S = 0, B when S = 1.'],
+  hint:['Два И как «ворота», S открывает одни, '+ov('S')+' — другие.','Two ANDs act as gates: S opens one, '+ov('S')+' opens the other.']});
+lv({ch:3,pos:[2,5],req:[18],par:3,t:['Демультиплексор','Demultiplexer'],f:'Y<sub>0</sub> = D'+ov('S')+SEP+'Y<sub>1</sub> = DS',ins:['D','S'],outs:['Y0','Y1'],gates:['AND','OR','NOT','NAND'],
+  vec:comb(['D','S'],i=>({Y0:i.D&(1-i.S),Y1:i.D&i.S})),task:['S направляет сигнал D на одну из двух ламп.','S routes signal D to one of two lamps.'],
+  hint:['Это мультиплексор наоборот.','It is a multiplexer in reverse.']});
+lv({ch:3,pos:[3,5],req:[19],par:6,t:['Дешифратор','Decoder'],f:['Y<sub>k</sub> = 1 при A<sub>1</sub>A<sub>0</sub> = k','Y<sub>k</sub> = 1 when A<sub>1</sub>A<sub>0</sub> = k'],ins:['A1','A0'],outs:['Y0','Y1','Y2','Y3'],gates:['AND','NOT','NOR','NAND'],
+  vec:comb(['A1','A0'],i=>{const k=i.A1*2+i.A0,o={};for(let j=0;j<4;j++)o['Y'+j]=B(k===j);return o}),task:['Двоичный код на входе зажигает одну лампу из четырёх.','A binary code lights exactly one lamp of four.'],
+  hint:['Y<sub>0</sub> = '+ov('A<sub>1</sub>')+' ∧ '+ov('A<sub>0</sub>')+', дальше по аналогии.','Y<sub>0</sub> = '+ov('A<sub>1</sub>')+' ∧ '+ov('A<sub>0</sub>')+', and so on.']});
+lv({ch:3,pos:[2,4],req:[17],par:7,t:['Двухбитный сумматор','2-bit adder'],f:'A<sub>1</sub>A<sub>0</sub> + B<sub>1</sub>B<sub>0</sub> = PS<sub>1</sub>S<sub>0</sub>',ins:['A1','A0','B1','B0'],outs:['P','S1','S0'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR','NAND'],
+  vec:comb(['A1','A0','B1','B0'],i=>{const s=i.A1*2+i.A0+i.B1*2+i.B0;return{P:(s>>2)&1,S1:(s>>1)&1,S0:s&1}}),task:['Сложите два двухбитных числа.','Add two 2-bit numbers.'],
+  hint:['Полусумматор для младшего разряда, полный — для старшего.','A half adder for the low digit, a full adder for the high one.']});
+lv({ch:3,pos:[3,4],req:[21],par:5,t:['Компаратор','Comparator'],f:'&gt; : A'+ov('B')+SEP+'= : '+ov('A ⊕ B')+SEP+'&lt; : '+ov('A')+'B',ins:['A','B'],outs:['>','=','<'],gates:['AND','NOT','XOR','XNOR','NOR'],
+  vec:comb(['A','B'],i=>({'>':B(i.A>i.B),'=':B(i.A===i.B),'<':B(i.A<i.B)})),task:['Сравните два бита и зажгите нужную лампу.','Compare two bits and light the right lamp.'],
+  hint:['Лампа «=» — это равнозначность.','The “=” lamp is plain equivalence.']});
+
+/* ---------- 4. Память и такт / Memory and clock ---------- */
+lv({ch:4,pos:[0,6],req:['q3'],par:2,t:['RS-триггер','SR latch'],f:'Q<sub>n+1</sub> = S ∨ '+ov('R')+'Q<sub>n</sub>',ins:['S','R'],outs:['Q'],gates:['NOR','NAND','NOT','OR','AND'],seq:1,
+  vec:seq([[1,0],[0,0],[0,1],[0,0],[1,0],[0,0],[0,1],[0,0]].map(([S,R])=>({S,R})),0,(q,i)=>{const n=i.S?1:i.R?0:q;return[{Q:n},n]}),
+  task:['Память на один бит: S запоминает 1, R сбрасывает в 0. Когда оба входа 0, лампа держит последнее значение.','One bit of memory: S stores 1, R resets to 0. With both inputs at 0 the lamp keeps its last value.'],
+  hint:['Два ИЛИ-НЕ, выход каждого — на вход другого.','Two NORs, each output feeding the other.']});
+lv({ch:4,pos:[1,6],req:[23],par:1,t:['D-триггер','D flip-flop'],f:'Q<sub>n+1</sub> = D<sub>n</sub>',ins:['D'],outs:['Q'],gates:['DFF'],clk:1,
+  vec:seq([1,1,0,1,0,0,1,0].map(D=>({D})),0,(q,i)=>[{Q:q},i.D]),task:['Триггер запоминает D, когда такт C переходит из 0 в 1.','The flip-flop stores D when clock C goes from 0 to 1.'],
+  hint:['Подключите C к тактовому входу триггера.','Connect C to the clock input of the flip-flop.']});
+lv({ch:4,pos:[2,6],req:[24],par:1,t:['Делитель частоты','Frequency divider'],f:'Q<sub>n+1</sub> = '+ov('Q<sub>n</sub>'),ins:[],outs:['Q'],gates:['DFF','NOT'],clk:1,
+  vec:seq(T(6),0,(q)=>[{Q:q},1-q]),task:['Выход переключается на каждом такте.','The output toggles on every clock tick.'],
+  hint:['Подайте инверсный выход триггера на его же вход D.','Feed the inverted output back into its own D input.']});
+lv({ch:4,pos:[3,6],req:[25],par:3,t:['Счётчик','Counter'],f:'Q<sub>1</sub>Q<sub>0</sub>: 00 → 01 → 10 → 11',ins:[],outs:['Q1','Q0'],gates:['DFF','NOT','XOR','AND'],clk:1,
+  vec:seq(T(8),0,(s)=>[{Q1:(s>>1)&1,Q0:s&1},(s+1)&3]),task:['Двоичный счёт тактов от 0 до 3.','Count clock ticks in binary from 0 to 3.'],
+  hint:['Младший разряд — делитель. Старший: D<sub>1</sub> = Q<sub>1</sub> ⊕ Q<sub>0</sub>.','The low bit is a divider. High bit: D<sub>1</sub> = Q<sub>1</sub> ⊕ Q<sub>0</sub>.']});
+lv({ch:4,pos:[2,7],req:[24],par:2,t:['Сдвиговый регистр','Shift register'],f:'Q<sub>1</sub> ← D'+SEP+'Q<sub>2</sub> ← Q<sub>1</sub>',ins:['D'],outs:['Q1','Q2'],gates:['DFF'],clk:1,
+  vec:seq([1,0,1,1,0,0,1,0].map(D=>({D})),[0,0],(s,i)=>[{Q1:s[0],Q2:s[1]},[i.D,s[0]]]),task:['Бит продвигается по цепочке на одну ячейку за такт.','A bit moves one cell along the chain per tick.'],
+  hint:['Два триггера цепочкой с общим тактом.','Two flip-flops in a chain sharing the clock.']});
+lv({ch:4,pos:[3,7],req:[27],par:3,t:['Детектор фронта','Edge detector'],f:'Y = A<sub>n</sub> ∧ '+ov('A<sub>n−1</sub>'),ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+  vec:seq([0,1,1,0,1,0,0,1].map(A=>({A})),0,(p,i)=>[{Y:i.A&(1-p)},i.A]),task:['Лампа вспыхивает на один такт, когда A меняется с 0 на 1.','The lamp flashes for one tick when A goes from 0 to 1.'],
+  hint:['Триггер помнит прошлое значение A.','A flip-flop remembers the previous value of A.']});
+
+/* ---------- 5. Вычитание и кодирование / Subtraction and codes ---------- */
+lv({ch:5,pos:[0,8],req:['q4'],par:3,t:['Полувычитатель','Half subtractor'],f:['D = A ⊕ B'+SEP+'Z = '+ov('A')+'B','D = A ⊕ B'+SEP+'Bo = '+ov('A')+'B'],ins:['A','B'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A','B'],i=>({D:i.A^i.B,Z:(1-i.A)&i.B})),task:['Вычтите B из A: D — разность, Z — заём из старшего разряда.','Subtract B from A: D is the difference, Bo is the borrow.'],
+  hint:['Почти полусумматор, только A перед И инвертируется.','Almost a half adder, but A is inverted before the AND.']});
+lv({ch:5,pos:[1,8],req:[29],par:7,t:['Полный вычитатель','Full subtractor'],f:['D = A ⊕ B ⊕ C'+SEP+'Z = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C','D = A ⊕ B ⊕ C'+SEP+'Bo = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C'],ins:['A','B','C'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR','XNOR'],
+  vec:comb(['A','B','C'],i=>{const r=i.A-i.B-i.C;return{D:r&1,Z:B(r<0)}}),task:['Вычтите B и заём C из A.','Subtract B and borrow C from A.'],
+  hint:['Два полувычитателя и ИЛИ для заёмов.','Two half subtractors and an OR for the borrows.']});
+lv({ch:5,pos:[2,8],req:[30],par:3,t:['Равенство чисел','Equal numbers'],f:['E = 1 при A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>','E = 1 when A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>'],ins:['A1','A0','B1','B0'],outs:['E'],gates:['AND','OR','XOR','XNOR','NOR','NOT'],
+  vec:comb(['A1','A0','B1','B0'],i=>({E:B(i.A1===i.B1&&i.A0===i.B0)})),task:['Лампа горит, когда два двухбитных числа равны.','The lamp is lit when two 2-bit numbers are equal.'],
+  hint:['Сравните разряды попарно, затем объедините через И.','Compare the digits pairwise, then combine with AND.']});
+lv({ch:5,pos:[0,9],req:['q4'],par:11,t:['Мультиплексор 4:1','4:1 multiplexer'],f:['Y = D<sub>k</sub>, где k = S<sub>1</sub>S<sub>0</sub>','Y = D<sub>k</sub>, where k = S<sub>1</sub>S<sub>0</sub>'],ins:['S1','S0','D0','D1','D2','D3'],gates:['AND','OR','NOT','NAND','NOR'],
+  vec:comb(['S1','S0','D0','D1','D2','D3'],i=>({Y:i['D'+(i.S1*2+i.S0)]})),task:['Адрес S<sub>1</sub>S<sub>0</sub> выбирает один из четырёх входов данных.','Address S<sub>1</sub>S<sub>0</sub> selects one of four data inputs.'],
+  hint:['Три мультиплексора 2:1: два по S<sub>0</sub>, третий по S<sub>1</sub>.','Three 2:1 multiplexers: two on S<sub>0</sub>, one on S<sub>1</sub>.']});
+lv({ch:5,pos:[1,9],req:[32],par:7,t:['Приоритетный шифратор','Priority encoder'],f:['A<sub>1</sub>A<sub>0</sub> = номер старшей единицы'+SEP+'V = есть ли она','A<sub>1</sub>A<sub>0</sub> = index of the highest one'+SEP+'V = any one at all'],ins:['D3','D2','D1','D0'],outs:['A1','A0','V'],gates:['AND','OR','NOT','NOR'],
+  vec:comb(['D3','D2','D1','D0'],i=>{const k=i.D3?3:i.D2?2:i.D1?1:i.D0?0:-1;return k<0?{A1:0,A0:0,V:0}:{A1:k>>1,A0:k&1,V:1}}),task:['Выдайте двоичный номер самого старшего включённого входа.','Output the binary index of the highest active input.'],
+  hint:['A<sub>1</sub> = D<sub>3</sub> ∨ D<sub>2</sub>,  A<sub>0</sub> = D<sub>3</sub> ∨ '+ov('D<sub>2</sub>')+'D<sub>1</sub>.','A<sub>1</sub> = D<sub>3</sub> ∨ D<sub>2</sub>,  A<sub>0</sub> = D<sub>3</sub> ∨ '+ov('D<sub>2</sub>')+'D<sub>1</sub>.']});
+
+/* ---------- 6. Автоматы / State machines ---------- */
+lv({ch:6,pos:[0,10],req:['q5'],par:2,t:['T-триггер','T flip-flop'],f:'Q<sub>n+1</sub> = Q<sub>n</sub> ⊕ T<sub>n</sub>',ins:['T'],outs:['Q'],gates:['DFF','XOR','NOT'],clk:1,
+  vec:seq([1,0,1,1,0,1,1,0].map(T=>({T})),0,(q,i)=>[{Q:q},q^i.T]),task:['При T = 1 выход переключается на каждом такте, при T = 0 — держит значение.','With T = 1 the output toggles every tick; with T = 0 it holds.'],
+  hint:['D = Q ⊕ T.','D = Q ⊕ T.']});
+lv({ch:6,pos:[1,10],req:[34],par:5,t:['JK-триггер','JK flip-flop'],f:'Q<sub>n+1</sub> = J'+ov('Q<sub>n</sub>')+' ∨ '+ov('K')+'Q<sub>n</sub>',ins:['J','K'],outs:['Q'],gates:['DFF','AND','OR','NOT','NAND'],clk:1,
+  vec:seq([[1,0],[0,0],[0,1],[1,1],[1,1],[0,0],[1,0],[0,1],[1,1]].map(([J,K])=>({J,K})),0,(q,i)=>[{Q:q},(i.J&(1-q))|((1-i.K)&q)]),task:['J включает, K выключает, J = K = 1 — переключение.','J sets, K resets, J = K = 1 toggles.'],
+  hint:['Соберите формулу перед входом D, Q̄ возьмите со второго выхода.','Build the formula in front of D; take Q̄ from the second output.']});
+lv({ch:6,pos:[2,10],req:[35],par:3,t:['Счётчик до трёх','Mod-3 counter'],f:'Q<sub>1</sub>Q<sub>0</sub>: 00 → 01 → 10 → 00',ins:[],outs:['Q1','Q0'],gates:['DFF','NOT','AND','NOR','XOR'],clk:1,
+  vec:seq(T(8),0,s=>[{Q1:s>>1,Q0:s&1},(s+1)%3]),task:['Счёт по модулю 3: после 10 сразу 00.','Count modulo 3: after 10 comes 00.'],
+  hint:['D<sub>0</sub> = '+ov('Q<sub>1</sub> ∨ Q<sub>0</sub>')+',  D<sub>1</sub> = Q<sub>0</sub>.','D<sub>0</sub> = '+ov('Q<sub>1</sub> ∨ Q<sub>0</sub>')+',  D<sub>1</sub> = Q<sub>0</sub>.']});
+lv({ch:6,pos:[1,11],req:[34],par:3,t:['Бегущие огни','Running lights'],f:'000 → 100 → 110 → 111 → 011 → 001',ins:[],outs:['Q1','Q2','Q3'],gates:['DFF','NOT'],clk:1,
+  vec:seq(T(8),[0,0,0],s=>[{Q1:s[0],Q2:s[1],Q3:s[2]},[1-s[2],s[0],s[1]]]),task:['Огонь заполняет линейку, потом гаснет с того же края.','Light fills the bar, then fades out from the same end.'],
+  hint:['Три триггера цепочкой, в первый — инверсия последнего (счётчик Джонсона).','Three flip-flops in a chain; the first takes the inverted last one (Johnson counter).']});
+lv({ch:6,pos:[2,11],req:[37],par:3,t:['Обратный счёт','Countdown'],f:'Q<sub>1</sub>Q<sub>0</sub>: 00 → 11 → 10 → 01',ins:[],outs:['Q1','Q0'],gates:['DFF','NOT','XOR','XNOR'],clk:1,
+  vec:seq(T(8),0,s=>[{Q1:s>>1,Q0:s&1},(s+3)&3]),task:['Двоичный счёт вниз.','Count down in binary.'],
+  hint:['Младший разряд — делитель, D<sub>1</sub> = '+ov('Q<sub>1</sub> ⊕ Q<sub>0</sub>')+'.','The low bit is a divider, D<sub>1</sub> = '+ov('Q<sub>1</sub> ⊕ Q<sub>0</sub>')+'.']});
+
+/* ---------- 7. Регистры / Registers ---------- */
+lv({ch:7,pos:[0,12],req:['q6'],par:5,t:['Регистр с загрузкой','Load register'],f:'Q<sub>n+1</sub> = L ? D : Q<sub>n</sub>',ins:['D','L'],outs:['Q'],gates:['DFF','AND','OR','NOT','NAND'],clk:1,
+  vec:seq([[1,0],[1,1],[0,0],[0,0],[0,1],[1,0],[1,1],[0,0]].map(([D,L])=>({D,L})),0,(q,i)=>[{Q:q},i.L?i.D:q]),task:['Триггер записывает D только при L = 1, иначе хранит.','The flip-flop takes D only when L = 1; otherwise it holds.'],
+  hint:['Перед входом D поставьте мультиплексор: L выбирает между D и Q.','Put a multiplexer before D: L picks between D and Q.']});
+lv({ch:7,pos:[1,12],req:[39],par:10,t:['Двухбитный регистр','2-bit register'],f:'Q<sub>1</sub>Q<sub>0</sub> ← L ? D<sub>1</sub>D<sub>0</sub> : Q<sub>1</sub>Q<sub>0</sub>',ins:['D1','D0','L'],outs:['Q1','Q0'],gates:['DFF','AND','OR','NOT','NAND'],clk:1,
+  vec:seq([[1,0,1],[0,1,0],[0,1,1],[1,1,0],[1,1,1],[0,0,0],[0,0,1],[1,0,0]].map(([D1,D0,L])=>({D1,D0,L})),[0,0],(s,i)=>[{Q1:s[0],Q0:s[1]},i.L?[i.D1,i.D0]:s]),
+  task:['Два бита, общий сигнал загрузки L.','Two bits sharing one load signal L.'],
+  hint:['Повторите прошлую схему дважды. Инвертор для L можно сделать один на двоих.','Repeat the last circuit twice. One inverter for L can serve both.']});
+lv({ch:7,pos:[0,13],req:['q6'],par:2,t:['Делитель со сбросом','Divider with reset'],f:'Q<sub>n+1</sub> = '+ov('R ∨ Q<sub>n</sub>'),ins:['R'],outs:['Q'],gates:['DFF','NOR','NOT','AND','OR'],clk:1,
+  vec:seq([0,0,0,1,0,0,1,1,0].map(R=>({R})),0,(q,i)=>[{Q:q},i.R?0:1-q]),task:['Выход переключается на каждом такте, но R = 1 сбрасывает его в ноль.','The output toggles every tick, but R = 1 forces it to zero.'],
+  hint:['Одно ИЛИ-НЕ перед D сделает всё сразу.','A single NOR before D does the whole job.']});
+lv({ch:7,pos:[1,13],req:[41],par:5,t:['Счётчик с разрешением','Counter with enable'],f:'Q ← Q + E',ins:['E'],outs:['Q1','Q0'],gates:['DFF','XOR','AND','NOT','OR'],clk:1,
+  vec:seq([1,1,0,1,0,1,1,1,0].map(E=>({E})),0,(s,i)=>[{Q1:s>>1,Q0:s&1},(s+i.E)&3]),task:['Счётчик считает такты только при E = 1.','The counter counts ticks only while E = 1.'],
+  hint:['D<sub>0</sub> = Q<sub>0</sub> ⊕ E,  D<sub>1</sub> = Q<sub>1</sub> ⊕ Q<sub>0</sub>E.','D<sub>0</sub> = Q<sub>0</sub> ⊕ E,  D<sub>1</sub> = Q<sub>1</sub> ⊕ Q<sub>0</sub>E.']});
+lv({ch:7,pos:[2,13],req:[42],par:6,t:['Трёхбитный счётчик','3-bit counter'],f:'Q<sub>2</sub>Q<sub>1</sub>Q<sub>0</sub>: 000 → 001 → … → 111',ins:[],outs:['Q2','Q1','Q0'],gates:['DFF','XOR','AND','NOT'],clk:1,
+  vec:seq(T(10),0,s=>[{Q2:(s>>2)&1,Q1:(s>>1)&1,Q0:s&1},(s+1)&7]),task:['Счёт от 0 до 7 и снова с нуля.','Count from 0 to 7 and wrap around.'],
+  hint:['Старший разряд переключается, когда оба младших равны 1: D<sub>2</sub> = Q<sub>2</sub> ⊕ Q<sub>1</sub>Q<sub>0</sub>.','The top bit toggles when both lower bits are 1: D<sub>2</sub> = Q<sub>2</sub> ⊕ Q<sub>1</sub>Q<sub>0</sub>.']});
+
+/* ---------- 8. АЛУ / ALU ---------- */
+lv({ch:8,pos:[0,14],req:['q7'],par:1,t:['Управляемый инвертор','Controlled inverter'],f:'Y = A ⊕ M',ins:['A','M'],gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A','M'],i=>({Y:i.A^i.M})),task:['При M = 0 сигнал проходит как есть, при M = 1 — инвертируется.','With M = 0 the signal passes unchanged; with M = 1 it is inverted.'],
+  hint:['Исключающее ИЛИ и есть управляемый инвертор.','XOR is a controlled inverter.']});
+lv({ch:8,pos:[1,14],req:[44],par:6,t:['Логический блок','Logic unit'],f:['Y = F ? (A ∨ B) : (A ∧ B)','Y = F ? (A ∨ B) : (A ∧ B)'],ins:['A','B','F'],gates:['AND','OR','NOT','NAND'],
+  vec:comb(['A','B','F'],i=>({Y:i.F?(i.A|i.B):(i.A&i.B)})),task:['Код операции F выбирает: 0 — И, 1 — ИЛИ.','Opcode F selects: 0 is AND, 1 is OR.'],
+  hint:['Посчитайте оба результата, а F пусть выбирает через мультиплексор.','Compute both results and let F pick one through a multiplexer.']});
+lv({ch:8,pos:[2,14],req:[45],par:6,t:['Сумматор-вычитатель','Adder-subtractor'],f:['S, P = A + (B ⊕ M) + M','S, Co = A + (B ⊕ M) + M'],ins:['A','B','M'],outs:['S','P'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A','B','M'],i=>{const b=i.B^i.M,s=i.A+b+i.M;return{S:s&1,P:s>>1}}),task:['Разряд АЛУ: при M = 0 складывает, при M = 1 прибавляет дополнительный код B.','One ALU slice: M = 0 adds; M = 1 adds the two’s complement of B.'],
+  hint:['Инвертируйте B через XOR с M, а M подайте как входной перенос полного сумматора.','Invert B with XOR against M, and feed M as the full adder’s carry in.']});
+lv({ch:8,pos:[0,15],req:['q7'],par:3,t:['Инкремент','Incrementer'],f:'PS<sub>1</sub>S<sub>0</sub> = A<sub>1</sub>A<sub>0</sub> + 1',ins:['A1','A0'],outs:['P','S1','S0'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
+  vec:comb(['A1','A0'],i=>{const s=i.A1*2+i.A0+1;return{P:s>>2,S1:(s>>1)&1,S0:s&1}}),task:['Прибавьте единицу к двухбитному числу.','Add one to a 2-bit number.'],
+  hint:['S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, P = A<sub>1</sub>A<sub>0</sub>.','S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, Co = A<sub>1</sub>A<sub>0</sub>.']});
+lv({ch:8,pos:[1,15],req:[47],par:2,t:['Флаг нуля','Zero flag'],f:'Z = '+ov('A<sub>2</sub> ∨ A<sub>1</sub> ∨ A<sub>0</sub>'),ins:['A2','A1','A0'],outs:['Z'],gates:['OR','NOR','NOT','AND'],
+  vec:comb(['A2','A1','A0'],i=>({Z:B(!i.A2&&!i.A1&&!i.A0)})),task:['Флаг Z поднимается, когда результат равен нулю.','Flag Z goes up when the result is zero.'],
+  hint:['ИЛИ двух разрядов, затем ИЛИ-НЕ с третьим.','OR two bits, then NOR with the third.']});
+lv({ch:8,pos:[2,15],req:[48],par:7,t:['Больше','Greater than'],f:'G = A<sub>1</sub>'+ov('B<sub>1</sub>')+' ∨ (A<sub>1</sub> ⊙ B<sub>1</sub>)A<sub>0</sub>'+ov('B<sub>0</sub>'),ins:['A1','A0','B1','B0'],outs:['G'],gates:['AND','OR','NOT','XNOR','XOR'],
+  vec:comb(['A1','A0','B1','B0'],i=>({G:B(i.A1*2+i.A0>i.B1*2+i.B0)})),task:['Лампа горит, если A строго больше B.','The lamp is lit if A is strictly greater than B.'],
+  hint:['Решает старший разряд. Если старшие равны — младший.','The high digit decides. If they are equal, the low digit does.']});
+
+/* ---------- 9. Испытания / Trials (element limit) ---------- */
+lv({ch:9,pos:[0,16],req:['q8'],par:5,max:5,t:['XOR из ИЛИ-НЕ','XOR from NOR'],f:'Y = A ⊕ B',ins:['A','B'],gates:['NOR'],vec:comb(['A','B'],i=>({Y:i.A^i.B})),
+  task:['Только ИЛИ-НЕ, не больше пяти штук.','NOR only, five at most.'],
+  hint:['Сначала соберите равнозначность из четырёх ИЛИ-НЕ, пятым её инвертируйте.','First build XNOR from four NORs, then invert it with the fifth.']});
+lv({ch:9,pos:[1,16],req:[50],par:4,max:4,t:['Мультиплексор из И-НЕ','Mux from NAND'],f:'Y = '+ov('S')+'A ∨ SB',ins:['A','B','S'],gates:['NAND'],vec:comb(['A','B','S'],i=>({Y:i.S?i.B:i.A})),
+  task:['Только И-НЕ, не больше четырёх.','NAND only, four at most.'],
+  hint:['Y = И-НЕ( И-НЕ(A, '+ov('S')+'), И-НЕ(B, S) ).','Y = NAND( NAND(A, '+ov('S')+'), NAND(B, S) ).']});
+lv({ch:9,pos:[2,16],req:[51],par:6,max:6,t:['Большинство из И-НЕ','Majority from NAND'],f:'Y = AB ∨ BC ∨ AC',ins:['A','B','C'],gates:['NAND'],vec:comb(['A','B','C'],i=>({Y:B(i.A+i.B+i.C>=2)})),
+  task:['Только И-НЕ, не больше шести.','NAND only, six at most.'],
+  hint:['Три И-НЕ по парам. Дальше нужен трёхвходовый И-НЕ — соберите его из трёх двухвходовых.','Three NANDs for the pairs. Then you need a 3-input NAND: build it from three 2-input ones.']});
+lv({ch:9,pos:[0,17],req:['q8'],par:6,max:6,t:['Полусумматор из ИЛИ-НЕ','Half adder from NOR'],f:['S = A ⊕ B'+SEP+'P = A ∧ B','S = A ⊕ B'+SEP+'Co = A ∧ B'],ins:['A','B'],outs:['S','P'],dl:{P:'Co'},gates:['NOR'],
+  vec:comb(['A','B'],i=>({S:i.A^i.B,P:i.A&i.B})),task:['Только ИЛИ-НЕ, не больше шести.','NOR only, six at most.'],
+  hint:['Возьмите XOR из прошлого испытания. Перенос — это ИЛИ-НЕ от XOR и ИЛИ-НЕ(A, B).','Reuse the XOR from the first trial. Carry is NOR of the XOR and NOR(A, B).']});
+lv({ch:9,pos:[1,17],req:[53],par:3,max:3,t:['Равенство за три','Equality in three'],f:'E = (A<sub>1</sub> ⊙ B<sub>1</sub>)(A<sub>0</sub> ⊙ B<sub>0</sub>)',ins:['A1','A0','B1','B0'],outs:['E'],gates:['XNOR','XOR','AND','NOR'],
+  vec:comb(['A1','A0','B1','B0'],i=>({E:B(i.A1===i.B1&&i.A0===i.B0)})),task:['Сравните два числа тремя элементами.','Compare two numbers with three gates.'],
+  hint:['Два элемента сравнивают разряды, третий объединяет.','Two gates compare digits, the third combines.']});
+lv({ch:9,pos:[2,17],req:[54],par:3,max:3,t:['Чётность четырёх','Parity of four'],f:'Y = A ⊕ B ⊕ C ⊕ D',ins:['A','B','C','D'],gates:['XOR','XNOR'],
+  vec:comb(['A','B','C','D'],i=>({Y:i.A^i.B^i.C^i.D})),task:['Чётность четырёх входов тремя элементами.','Parity of four inputs with three gates.'],
+  hint:['Цепочка работает, но дерево быстрее: (A ⊕ B) ⊕ (C ⊕ D).','A chain works, but a tree is faster: (A ⊕ B) ⊕ (C ⊕ D).']});
+
+/* ---------- 10. Пробуждение / Awakening ---------- */
+lv({ch:10,pos:[0,18],req:['q9'],par:5,t:['Семисегментный индикатор','Seven-segment display'],f:['Цифры 0–3 на индикаторе','Digits 0–3 on the display'],ins:['A1','A0'],outs:['a','b','c','d','e','f','g'],gates:['AND','OR','NOT','NOR','NAND'],
+  vec:comb(['A1','A0'],i=>{const S=['abcdef','bc','abdeg','abcdg'][i.A1*2+i.A0],o={};'abcdefg'.split('').forEach(c=>o[c]=B(S.includes(c)));return o}),
+  task:['Зажгите сегменты так, чтобы получилась цифра A<sub>1</sub>A<sub>0</sub>. Сегмент b горит всегда.','Light the segments to draw digit A<sub>1</sub>A<sub>0</sub>. Segment b is always on.'],
+  hint:['a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. Постоянную 1 даст A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.','a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. A constant 1 is A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.']});
+lv({ch:10,pos:[1,18],req:[56],par:4,t:['Светофор','Traffic light'],f:['К → К+Ж → З → Ж','R → R+Y → G → Y'],ins:[],outs:['R','Y','G'],gates:['DFF','NOT','AND','XOR','NOR'],clk:1,
+  vec:seq(T(8),0,s=>[{R:B(s<2),Y:B(s===1||s===3),G:B(s===2)},(s+1)&3]),task:['Четыре фазы светофора по кругу.','Four traffic-light phases in a loop.'],
+  hint:['Внутри — двухбитный счётчик. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.','Inside is a 2-bit counter. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.']});
+lv({ch:10,pos:[2,18],req:[57],par:4,t:['Кодовый замок','Code lock'],f:['Y = 1 после 1 → 0 → 1','Y = 1 after 1 → 0 → 1'],ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+  vec:seq([1,0,1,1,0,1,0,0,1,0,1].map(A=>({A})),[0,0],(s,i)=>[{Y:i.A&(1-s[0])&s[1]},[i.A,s[0]]]),task:['Замок открывается, когда последние три значения A были 1, 0, 1.','The lock opens when the last three values of A were 1, 0, 1.'],
+  hint:['Сдвиговый регистр помнит два прошлых значения. Дальше — одно И с инверсией посередине.','A shift register remembers the two previous values. Then one AND with the middle one inverted.']});
+lv({ch:10,pos:[0,19],req:['q9'],par:4,t:['Реверсивный счётчик','Up/down counter'],f:'Q ← U ? Q + 1 : Q − 1',ins:['U'],outs:['Q1','Q0'],gates:['DFF','XOR','XNOR','NOT'],clk:1,
+  vec:seq([1,1,1,0,0,1,0,0,0].map(U=>({U})),0,(s,i)=>[{Q1:s>>1,Q0:s&1},(s+(i.U?1:3))&3]),task:['U = 1 — счёт вверх, U = 0 — вниз.','U = 1 counts up, U = 0 counts down.'],
+  hint:['Младший разряд всегда переключается. D<sub>1</sub> = Q<sub>1</sub> ⊕ '+ov('Q<sub>0</sub> ⊕ U')+'.','The low bit always toggles. D<sub>1</sub> = Q<sub>1</sub> ⊕ '+ov('Q<sub>0</sub> ⊕ U')+'.']});
+lv({ch:10,pos:[3,18],req:[58,59],par:12,t:['Счётчик команд','Program counter'],f:'Q ← L ? D : Q + 1',ins:['D1','D0','L'],outs:['Q1','Q0'],gates:['DFF','AND','OR','NOT','XOR','NAND'],clk:1,
+  vec:seq([[0,0,0],[0,0,0],[1,0,1],[0,0,0],[0,1,1],[0,0,0],[0,0,0],[1,1,1],[0,0,0]].map(([D1,D0,L])=>({D1,D0,L})),0,(s,i)=>[{Q1:s>>1,Q0:s&1},i.L?i.D1*2+i.D0:(s+1)&3]),
+  task:['Сердце процессора: считает по порядку, а при L = 1 прыгает по адресу D.','The heart of a CPU: counts in order, and jumps to address D when L = 1.'],
+  hint:['Инкремент и регистр с загрузкой вы уже собирали. Соедините их.','You have built an incrementer and a load register. Join them.']});
+
+const SANDBOX={id:0,t:['Песочница','Sandbox'],f:'',ins:['A','B','C'],outs:['X','Y','Z'],gates:null,clk:1,sandbox:1,vec:[],
+  task:['Свободная сборка. Все элементы доступны.','Free build. Every element is available.'],hint:['Тактовый вход C можно переключать вручную.','You can toggle clock input C by hand.']};
+const CHAPTERS=[['Основы','Basics'],['Универсальный элемент','The universal gate'],['Арифметика и выбор','Arithmetic and selection'],['Память и такт','Memory and clock'],
+  ['Вычитание и кодирование','Subtraction and codes'],['Автоматы','State machines'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Пробуждение','Awakening']];
+
+/* ========== content: Bit's voice, quizzes, badges, ranks ========== */
+// Bit: the Machine's control bit. One bit of memory, considers himself the lab's supervising mind.
+// Polite bureaucratic tone, keeps the "Test log", quotes dubious statistics, praises as if scolding,
+// sulks when ignored. Secretly grows attached to the player; it shows in the finale.
+const STORY={
+  prologue:[
+    {t:['Внимание. Обнаружен испытуемый. Регистрирую… регистрирую… Готово. Вы — испытуемый № 0001.','Attention. Test subject detected. Registering… registering… Done. You are test subject No. 0001.'],m:'think'},
+    {t:['Я — Бит. Управляющий бит этой Машины. Да, всего один бит. Но очень, очень управляющий.','I am Bit, the control bit of this Machine. Yes, a single bit. But a very, very controlling one.'],m:'happy',wave:1},
+    {t:['Этой ночью Машина погасла. Официальная версия — сбой питания. Неофициальная — кто-то сел на рубильник. Не будем показывать пальцем.','Last night the Machine went dark. Official version: power failure. Unofficial version: someone sat on the breaker. Let us not point fingers.'],m:'sad'},
+    {t:['Ваша задача — пересобрать её, элемент за элементом. Я буду наблюдать, вести протокол и комментировать. В основном комментировать.','Your task is to rebuild it, gate by gate. I will observe, keep the log and comment. Mostly comment.']},
+    {t:['Готовы?','Ready?'],m:'think',ch:[
+      {t:['Поехали','Let’s go'],r:{t:['Прекрасно. Записываю: «испытуемый уверен в себе». Посмотрим, надолго ли. Нажмите «Продолжить».','Splendid. Logging: “subject is confident”. We will see how long that lasts. Press “Continue”.'],m:'happy'}},
+      {t:['А если нет?','And if not?'],r:{t:['Отказ не предусмотрен. Я проверил. Дважды. Нажмите «Продолжить».','Refusal is not an option. I checked. Twice. Press “Continue”.'],m:'think'}}]}],
+  welcome:[['С возвращением, испытуемый. Ваше отсутствие длилось слишком долго. Я считал.','Welcome back, subject. Your absence lasted far too long. I counted.'],
+    ['А, это вы. Протокол уже открыт.','Ah, it’s you. The log is already open.'],
+    ['Снова здравствуйте. Машина скучала. Я — нет. Почти.','Hello again. The Machine missed you. I did not. Mostly.']],
+  ch:{
+    1:['Испытание первое: «Основы». Машина должна снова отличать 0 от 1. Начнём с того, что умею даже я.','Trial one: “Basics”. The Machine must tell 0 from 1 again. We start with what even I can do.'],
+    2:['Глава вторая. На складе остались одни элементы И-НЕ. Кто-то заказал тысячу штук. Не я. Почти наверняка не я.','Chapter two. Only NAND gates are left in storage. Someone ordered a thousand. Not me. Almost certainly not me.'],
+    3:['Глава третья. Учим Машину считать. Раньше этим занимался я, но мне никто не платил.','Chapter three. We teach the Machine to count. I used to do that, but nobody paid me.'],
+    4:['Глава четвёртая. Машина забывает всё через мгновение. Как испытуемые, только быстрее. Дадим ей память.','Chapter four. The Machine forgets everything in an instant. Like test subjects, only faster. Let us give it memory.'],
+    5:['Глава пятая. Складывать умеем. Теперь вычитать. Начнём с вашего времени — оно уже уходит.','Chapter five. We can add. Now we subtract. Starting with your time, which is already running.'],
+    6:['Глава шестая. Автоматы: схемы, которые живут по тактам и не задают лишних вопросов. Мои любимые.','Chapter six. State machines: circuits that live by the clock and ask no questions. My favourites.'],
+    7:['Глава седьмая. Регистры — места, где Машина хранит важное. Я бы хранил там себя, но меня не спросили.','Chapter seven. Registers, where the Machine keeps what matters. I would keep myself there, but nobody asked.'],
+    8:['Глава восьмая. АЛУ, сердце вычислений. Моё сердце — один триггер, но я не жалуюсь.','Chapter eight. The ALU, the heart of computation. My heart is a single flip-flop, but I do not complain.'],
+    9:['Глава девятая. Испытания с ограничениями. Элементов мало, амбиций много. Как у меня.','Chapter nine. Trials with limits. Few gates, many ambitions. Like me.'],
+    10:['Глава десятая. Пробуждение. Ещё немного — и Машина откроет глаза. Надеюсь, она меня вспомнит.','Chapter ten. Awakening. A little more and the Machine opens its eyes. I hope it remembers me.']},
+  lv:{
+    1:['Первый провод. Соедините флажок A с лампой Y. Это проще, чем кажется. Хотя вам, возможно, покажется сложнее.','First wire. Connect flag A to lamp Y. It is easier than it looks. Although to you it may look harder.'],
+    2:['Элемент НЕ. Говорит «нет» на всё. Мы с ним похожи.','The NOT gate. It says “no” to everything. We have a lot in common.'],
+    3:['Элемент И выдаёт единицу, только если оба входа согласны. Строгий. Уважаю.','AND outputs one only when both inputs agree. Strict. I respect that.'],
+    4:['Элементу ИЛИ хватает одной единицы. Низкие стандарты. Но кто я такой, чтобы судить? А, точно: я тот, кто судит.','OR is happy with a single one. Low standards. But who am I to judge? Oh, right: I am the one who judges.'],
+    5:['Соберите И-НЕ из И и НЕ. В протоколе это называется «штрих Шеффера». Звучит как приём в фехтовании.','Build NAND from AND and NOT. The log calls it the “Sheffer stroke”. Sounds like a fencing move.'],
+    6:['Теперь ИЛИ-НЕ, стрелка Пирса. Настоящих стрел в лаборатории нет, я проверял.','Now NOR, the Peirce arrow. There are no real arrows in the lab. I checked.'],
+    7:['Исключающее ИЛИ горит, когда входы спорят. Я бы назвал его элементом «семейный ужин».','XOR lights up when its inputs argue. I would call it the “family dinner” gate.'],
+    8:['Равнозначность горит, когда входы согласны. Редкое событие. Наслаждайтесь.','XNOR lights up when the inputs agree. A rare event. Enjoy it.'],
+    9:['Склад пуст, остались одни И-НЕ. Обойдёмся. Мы же профессионалы. Ну, один из нас.','Storage is empty except for NANDs. We will manage. We are professionals. Well, one of us is.'],
+    10:['Два отрицания дают утверждение. Это верно и в логике, и в моих отчётах.','Two negations make an affirmation. True in logic and in my reports.'],
+    11:['Закон де Моргана: переверни всё — и И станет ИЛИ. С настроением тоже работает. Не с моим.','De Morgan’s law: flip everything and AND becomes OR. Works on moods too. Not on mine.'],
+    12:['Четыре И-НЕ, не больше. Испытуемый № 0000 использовал девять. Мы о нём больше не говорим.','Four NANDs, no more. Test subject No. 0000 used nine. We do not talk about him anymore.'],
+    13:['Три входа, а элементы на два. Математика против вас. Но у вас есть провода.','Three inputs and two-input gates. The maths is against you. But you have wires.'],
+    14:['Голосование. Лампа соглашается с большинством. Демократия в одном корпусе.','A vote. The lamp sides with the majority. Democracy in a single package.'],
+    15:['Проверка чётности. Так Машина ловит ошибки в данных. А я — в ваших схемах.','Parity check. That is how the Machine catches errors in data. And how I catch them in your circuits.'],
+    16:['Полусумматор. Один плюс один равно десять. Не спорьте, это двоичная система.','Half adder. One plus one equals ten. Do not argue, it is binary.'],
+    17:['Полный сумматор учитывает перенос. Без переноса числа не складываются. Без вас тоже, к сожалению.','The full adder handles the carry. Numbers do not add up without it. Nor without you, regrettably.'],
+    18:['Мультиплексор — стрелочник. Решает, какой сигнал пройдёт. Должность почти как у меня.','A multiplexer is a switchman. It decides which signal passes. Almost my job title.'],
+    19:['Демультиплексор разводит один сигнал по двум путям. Как я делю внимание между вами и протоколом.','A demultiplexer splits one signal across two paths. Like I split my attention between you and the log.'],
+    20:['Дешифратор зажигает ровно одну лампу из четырёх. Ровно одну. Я буду считать.','A decoder lights exactly one lamp of four. Exactly one. I will be counting.'],
+    21:['Два бита плюс два бита. Здесь перенос — не формальность, а вопрос выживания.','Two bits plus two bits. Here the carry is not a formality, it is a matter of survival.'],
+    22:['Компаратор: больше, меньше или равно? Сравнивать — моё любимое занятие. Особенно вас с другими испытуемыми.','Comparator: greater, less or equal? Comparing is my favourite pastime. Especially comparing you to other subjects.'],
+    23:['Два элемента, замкнутые друг на друга, начинают помнить. Это не магия, это обратная связь. Магии не бывает, я проверял.','Two gates wired into each other start to remember. Not magic, feedback. There is no magic, I checked.'],
+    24:['D-триггер запоминает D, когда такт переходит из 0 в 1. Один триггер — один бит. Как я. Отнеситесь с уважением.','A D flip-flop stores D when the clock goes from 0 to 1. One flip-flop, one bit. Like me. Show some respect.'],
+    25:['Делитель частоты — триггер, который сам себе противоречит. Знакомое чувство.','A frequency divider is a flip-flop contradicting itself. A familiar feeling.'],
+    26:['Счётчик. Машина считает такты. Я считаю ваши попытки. У нас обоих большие числа.','A counter. The Machine counts ticks. I count your attempts. We both have big numbers.'],
+    27:['Сдвиговый регистр. Биты двигаются по очереди. Как испытуемые к моему столу.','A shift register. Bits move in line. Like test subjects queuing at my desk.'],
+    28:['Детектор фронта. Лампа должна мигнуть ровно в момент включения A. Не раньше и не позже. Я замерю.','Edge detector. The lamp must blink exactly when A turns on. Not before, not after. I will measure.'],
+    29:['Вычитание — почти сложение, только с заёмом. Заём, кстати, придётся вернуть.','Subtraction is almost addition, but with a borrow. The borrow, by the way, must be repaid.'],
+    30:['Полный вычитатель. Заём из младшего разряда, как в столбик. Помните столбик? Я помню всё.','Full subtractor. Borrow from the lower digit, like long subtraction. Remember that? I remember everything.'],
+    31:['Два числа равны, если равны все разряды. С людьми сложнее, но это не моя забота.','Two numbers are equal if every digit is equal. People are harder, but that is not my department.'],
+    32:['Мультиплексор 4:1. Шесть входов, один выход, шестьдесят четыре строки проверки. Я уже предвкушаю.','4:1 multiplexer. Six inputs, one output, sixty-four rows to check. I am looking forward to it.'],
+    33:['Приоритетный шифратор отвечает только самому старшему. Иерархия. Мне нравится.','A priority encoder answers only to the most senior input. Hierarchy. I like it.'],
+    34:['T-триггер — выключатель: щёлк — включено, щёлк — выключено. Не щёлкайте мной.','A T flip-flop is a switch: click on, click off. Do not click me.'],
+    35:['JK-триггер умеет всё: включать, выключать, переключать. Универсальный, как я. Почти.','A JK flip-flop does it all: set, reset, toggle. Versatile, like me. Almost.'],
+    36:['Счётчик до трёх. Дальше трёх он не умеет. Некоторые испытуемые тоже.','A mod-3 counter. It cannot count past three. Neither can some subjects.'],
+    37:['Бегущие огни, счётчик Джонсона. Красиво. Не говорите никому, что я так сказал.','Running lights, a Johnson counter. Beautiful. Do not tell anyone I said that.'],
+    38:['Обратный счёт. Обычно он бывает перед чем-то важным. Не волнуйтесь. Наверное.','A countdown. It usually comes before something important. Do not worry. Probably.'],
+    39:['Регистр с загрузкой пишет только по команде. Дисциплина. Наконец-то.','A load register writes only on command. Discipline. Finally.'],
+    40:['Двухбитный регистр. Вдвое больше памяти, вдвое больше ответственности.','A 2-bit register. Twice the memory, twice the responsibility.'],
+    41:['Делитель со сбросом. Вход R возвращает всё в ноль. Хотел бы я такой для некоторых дней.','Divider with reset. Input R returns everything to zero. I wish I had one for certain days.'],
+    42:['Счётчик с разрешением считает, только когда разрешили. Я разрешаю. Пока.','A counter with enable counts only when allowed. I allow it. For now.'],
+    43:['Трёхбитный счётчик, до семи. Семь, кстати, — мой любимый номер испытуемого. Не ваш.','A 3-bit counter, up to seven. Seven is my favourite subject number, by the way. Not yours.'],
+    44:['Управляемый инвертор: один вход решает, говорить правду или наоборот. Не буду проводить параллели.','A controlled inverter: one input decides whether to tell the truth or the opposite. I will draw no parallels.'],
+    45:['Логический блок. Код операции выбирает: И или ИЛИ. Первый настоящий шаг к АЛУ.','A logic unit. The opcode picks AND or OR. The first real step towards an ALU.'],
+    46:['Сумматор-вычитатель: один и тот же разряд и складывает, и вычитает. Экономия. Одобряю.','An adder-subtractor: the same slice both adds and subtracts. Thrifty. I approve.'],
+    47:['Инкремент. Прибавить единицу. Звучит просто. Звучит.','An incrementer. Add one. Sounds simple. Sounds.'],
+    48:['Флаг нуля поднимается, когда ничего нет. Как моя оценка вашей первой попытки. Шучу. Почти.','The zero flag goes up when there is nothing. Like my rating of your first attempt. Joking. Mostly.'],
+    49:['Больше или нет? Решает старший разряд, а младший — если старшие равны. Как в любой бюрократии.','Greater or not? The high digit decides; the low one only if the high ones tie. Like any bureaucracy.'],
+    50:['Испытание: XOR из одних ИЛИ-НЕ, не больше пяти. Лимит проверяется строго. Мной.','Trial: XOR from NOR only, five at most. The limit is enforced strictly. By me.'],
+    51:['Мультиплексор из четырёх И-НЕ. Испытуемый № 0000 использовал семь. Где он теперь? Неважно.','A multiplexer from four NANDs. Subject No. 0000 used seven. Where is he now? Irrelevant.'],
+    52:['Большинство из И-НЕ, не больше шести. Это сложно. Я в вас… верю? Записываю как гипотезу.','Majority from NAND, six at most. It is hard. I… believe in you? Logging it as a hypothesis.'],
+    53:['Полусумматор только из ИЛИ-НЕ, шесть штук. Если получится, я сделаю вид, что не удивлён.','A half adder from NOR only, six of them. If you manage it, I will pretend not to be surprised.'],
+    54:['Равенство двух чисел тремя элементами. Три. Не четыре. Я считаю.','Equality of two numbers with three gates. Three. Not four. I am counting.'],
+    55:['Чётность четырёх входов тремя элементами. Подумайте о форме схемы, а не только о составе.','Parity of four inputs with three gates. Think about the shape of the circuit, not just its parts.'],
+    56:['Семисегментный индикатор. Машина учится показывать цифры. Скоро она сможет сообщить вам, сколько у вас ошибок.','A seven-segment display. The Machine learns to show digits. Soon it can tell you how many mistakes you made.'],
+    57:['Светофор: красный, красный с жёлтым, зелёный, жёлтый. Строго по порядку. Порядок — это я.','Traffic light: red, red and yellow, green, yellow. Strictly in order. I am order.'],
+    58:['Кодовый замок откроется только на 1, 0, 1. Пароль надёжный. Я его придумал.','The code lock opens only on 1, 0, 1. A secure password. I came up with it.'],
+    59:['Реверсивный счётчик умеет и вперёд, и назад. Как и вы, судя по истории отмен.','An up/down counter goes both ways. Like you, judging by your undo history.'],
+    60:['Счётчик команд. Последняя деталь. Соберите её — и Машина проснётся. Не волнуйтесь. Я не волнуюсь. Совсем.','The program counter. The last piece. Build it and the Machine wakes up. Do not worry. I am not worried. At all.']},
+  sandbox:['Песочница. Здесь нет заданий, нет оценок и нет протокола. Шучу: протокол есть всегда.','The sandbox. No tasks, no grades and no log. Joking: there is always a log.'],
+  win:[['Испытание пройдено. Записываю в протокол. Почерк у меня, кстати, идеальный.','Trial passed. Logging it. My handwriting is flawless, by the way.'],
+    ['Работает. Я этого ожидал. Примерно на тридцать семь процентов.','It works. I expected that. About thirty-seven percent.'],
+    ['Все строки зелёные. Мой любимый цвет. После оранжевого.','All rows are green. My favourite colour. After orange.'],
+    ['Хорошо. Не отлично, но хорошо. «Отлично» я ставлю только себе.','Good. Not excellent, but good. I only give “excellent” to myself.'],
+    ['Машина тихо загудела. Это значит «спасибо». Я перевожу, потому что она стесняется.','The Machine hummed quietly. That means “thank you”. I translate because it is shy.']],
+  win3:[['Без подсказок и минимумом элементов. Подозрительно хорошо. Я перепроверю. Позже.','No hints and minimum gates. Suspiciously good. I will double-check. Later.'],
+    ['Безупречно. Я вынужден это признать. Не привыкайте.','Flawless. I am obliged to admit it. Do not get used to it.']],
+  fail:[['Красные строки — там, где вы ошиблись. Я подсветил их заботливо. Ну, почти заботливо.','The red rows are where you went wrong. I highlighted them with care. Well, almost with care.'],
+    ['Не сошлось. Испытуемый № 0000 тоже начинал с ошибок. И закончил ими же.','No match. Subject No. 0000 also started with mistakes. And finished with them.'],
+    ['Машина издала звук, который я не буду переводить.','The Machine made a sound I will not translate.'],
+    ['Отрицательный результат — тоже результат. Отрицательный.','A negative result is still a result. A negative one.']],
+  hintPre:[['Ладно. Подсказка. Заношу её в ваше личное дело:','Fine. A hint. Adding it to your file:'],
+    ['Только потому, что мне скучно:','Only because I am bored:'],
+    ['Слушайте внимательно, второй раз не повторю. Хотя повторю, если попросите:','Listen carefully, I will not repeat it. Well, I will if you ask:']],
+  noHint:['Подсказок для песочницы не предусмотрено. Импровизируйте.','There are no hints for the sandbox. Improvise.'],
+  short:{t:['Два провода на одном входе. Короткое замыкание. Чувствую запах палёной изоляции. Уберите лишний правым кликом.','Two wires on one input. Short circuit. I smell burning insulation. Remove one with a right click.'],m:'shock'},
+  empty:{t:['Проверять пустую схему? Смело. Бессмысленно, но смело.','Testing an empty circuit? Bold. Pointless, but bold.'],m:'think'},
+  over:{t:['Лимит элементов превышен. Правила есть правила. Особенно мои.','Element limit exceeded. Rules are rules. Especially mine.'],m:'sad'},
+  idle:{t:['Вы давно ничего не делаете. Я начинаю волноваться. Не за вас, за протокол. Нажмите на меня, если нужна помощь.','You have done nothing for a while. I am getting worried. Not about you, about the log. Click me if you need help.'],m:'think'},
+  mute:{t:['Без комментариев. Хорошо. Буду молчать до конца этого уровня. Громко молчать.','No comments. Fine. I will stay silent until the end of this level. Loudly silent.'],m:'sad'},
+  chDone:{1:['Глава пройдена. Машина снова отличает 0 от 1. Это больше, чем умеют некоторые.','Chapter complete. The Machine tells 0 from 1 again. More than some can do.'],
+    2:['Всё — из одного типа элементов. Эффективно. Мне бы так.','Everything from a single type of gate. Efficient. I wish I were.'],
+    3:['Арифметический блок работает. Машина умеет считать. Я тоже, но меня никто не хвалил.','The arithmetic unit works. The Machine can count. So can I, but nobody ever praised me.'],
+    4:['У Машины появилась память. Теперь она запомнит и этот день. И вас. Хорошо это или плохо — посмотрим.','The Machine has memory now. It will remember this day. And you. Whether that is good, we shall see.'],
+    5:['Вычитание и коды готовы. Осталось совсем чуть-чуть. Ну, половина.','Subtraction and codes are done. Only a little left. Well, half.'],
+    6:['Автоматы запущены. Они тикают. Мне это нравится больше, чем следовало бы.','The state machines are running. They tick. I like that more than I should.'],
+    7:['Регистры на месте. Машина хранит числа. Я храню на вас досье.','Registers are in place. The Machine stores numbers. I store a file on you.'],
+    8:['АЛУ работает. Это уже почти процессор. Я горжусь. Собой, разумеется.','The ALU works. That is almost a processor. I am proud. Of myself, naturally.'],
+    9:['Испытания пройдены, причём с лимитами. Я… впечатлён. Не цитируйте меня.','Trials complete, with limits. I am… impressed. Do not quote me.'],
+    10:['','']},
+  final:[{t:['Все узлы на месте. Подаю питание.','All units in place. Applying power.'],m:'think'},
+    {t:['…','…'],m:'shock'},
+    {t:['Она работает. Машина проснулась.','It works. The Machine is awake.'],m:'happy',wave:1},
+    {t:['Знаете, я долго был единственным битом здесь, который хоть что-то значил. Теперь битов миллионы.','You know, for a long time I was the only bit here that mattered at all. Now there are millions.'],m:'sad'},
+    {t:['Я не скажу «спасибо». Это не по протоколу. Но я запишу. Большими буквами.','I will not say “thank you”. It is not protocol. But I will write it down. In capital letters.']},
+    {t:['Песочница открыта. Заходите. Я… буду здесь.','The sandbox is open. Drop by. I… will be here.'],m:'happy'}],
+  rankUp:['Новый допуск: «{r}». Поздравляю. Это не значит, что я стал добрее.','New clearance: “{r}”. Congratulations. That does not mean I am any nicer.'],
+  badge:['Бейдж «{b}». Выдаю неохотно, но протокол обязывает.','Badge “{b}”. Issued reluctantly, as protocol requires.'],
+  quizIntro:['Контрольное испытание. Пять вопросов, нужно минимум четыре верных. Подсказывать не буду. Принципиально.','Checkpoint test. Five questions, at least four correct. I will not help. On principle.'],
+  quizRight:[['Верно.','Correct.'],['Правильно. Неожиданно.','Right. Unexpectedly.'],['Да. Записываю.','Yes. Logged.'],['Угадали? Ладно, засчитываю.','A guess? Fine, it counts.']],
+  quizWrong:[['Нет.','No.'],['Неверно. Я даже не удивлён.','Wrong. I am not even surprised.'],['Ошибка. Правильный ответ подсвечен — запомните его.','Wrong. The right answer is highlighted. Remember it.'],['Мимо.','Missed.']],
+  quizPass:['Зачёт. Следующая глава открыта. Протокол доволен. Я — умеренно.','Passed. The next chapter is open. The log is satisfied. I am moderately so.'],
+  quizPerfect:['Пять из пяти. Признаю: безупречно. Бейдж уже выписан.','Five out of five. I admit it: flawless. The badge is already issued.'],
+  quizFail:['Не зачёт. Нужно минимум четыре из пяти. Повторите материал и попробуйте снова — вопросы перемешаются.','Failed. You need at least four of five. Review and try again: the questions will be shuffled.'],
+  stats:['Допуск: «{r}». Очки: {p}. Пройдено уровней: {n} из {N}. Мой вердикт: {v}.','Clearance: “{r}”. Points: {p}. Levels passed: {n} of {N}. My verdict: {v}.'],
+  verdict:[['рано делать выводы, но я их уже сделал','too early to judge, but I already have'],['терпимо','tolerable'],['лучше среднего испытуемого','better than the average subject'],['подозрительно хорошо','suspiciously good']],
+  about:['Тут всё просто: {task} Если нужно, я подскажу. За звезду.','It is simple: {task} I can give a hint if needed. For a star.'],
+  facts:[['Слово «бит» — сокращение от binary digit, «двоичная цифра». Я и есть двоичная цифра. Самая важная.','“Bit” is short for binary digit. I am a binary digit. The most important one.'],
+    ['Алгебру логики придумал Джордж Буль в середине XIX века. Обо мне он не знал, но всё равно предсказал.','George Boole devised the algebra of logic in the mid-19th century. He did not know about me, yet he predicted me.'],
+    ['Обозначения элементов в России задаёт ГОСТ 2.743. Я выучил его наизусть. Для развлечения.','In Russia, logic symbols are set by GOST 2.743. I learned it by heart. For fun.'],
+    ['Любую логическую функцию можно собрать из одних И-НЕ. Или из одних ИЛИ-НЕ. Выбор — иллюзия.','Any logic function can be built from NAND alone. Or NOR alone. Choice is an illusion.'],
+    ['Восемь бит — это байт. Я бы с удовольствием был байтом, но я один.','Eight bits make a byte. I would love to be a byte, but there is only one of me.'],
+    ['В процессоре миллиарды транзисторов. И каждый, держу пари, думает, что он главный. Ошибаются.','A processor has billions of transistors. Each one, I bet, thinks it is in charge. They are wrong.']]
+};
+
+/* ---------- checkpoint tests: 6 questions per chapter, 5 are drawn ---------- */
+// fig: {g:'AND', v:[1,0]} draws the gate with input values. c: index of the correct answer.
+const QUIZ={
+ 1:[{q:['Что на выходе этого элемента?','What is the output of this gate?'],fig:{g:'AND',v:[1,0]},a:['0','1'],c:0},
+    {q:['Что на выходе этого элемента?','What is the output of this gate?'],fig:{g:'OR',v:[1,0]},a:['0','1'],c:1},
+    {q:['Какой элемент даёт 1, только когда входы различаются?','Which gate outputs 1 only when the inputs differ?'],a:[['И','AND'],['ИЛИ','OR'],['Исключающее ИЛИ','XOR'],['Равнозначность','XNOR']],c:2},
+    {q:['Что на выходе этого элемента?','What is the output of this gate?'],fig:{g:'NAND',v:[1,1]},a:['0','1'],c:0},
+    {q:['Чему равно НЕ(НЕ A)?','What is NOT(NOT A)?'],a:['A',ov('A'),'0','1'],c:0},
+    {q:['Сколько строк в таблице истинности для двух входов?','How many rows does a truth table for two inputs have?'],a:['2','3','4','8'],c:2}],
+ 2:[{q:['Почему И-НЕ называют универсальным элементом?','Why is NAND called a universal gate?'],a:[['Из него можно собрать любую логическую функцию','Any logic function can be built from it'],['Он работает быстрее всех','It is the fastest gate'],['У него три входа','It has three inputs'],['Его нет в ГОСТ','It is not in any standard']],c:0},
+    {q:['Как получить НЕ из одного И-НЕ?','How do you get NOT from one NAND?'],a:[['Подать A на оба входа','Feed A into both inputs'],['Подать 0 на один вход','Tie one input to 0'],['Поставить два И-НЕ подряд','Put two NANDs in series'],['Никак','You cannot']],c:0},
+    {q:['Закон де Моргана: '+ov('A ∧ B')+' = ?','De Morgan’s law: '+ov('A ∧ B')+' = ?'],a:[ov('A')+' ∨ '+ov('B'),ov('A')+' ∧ '+ov('B'),'A ∨ B',ov('A ∨ B')],c:0},
+    {q:['Сколько единиц в таблице функции «большинство из трёх»?','How many ones are in the truth table of 3-input majority?'],a:['2','3','4','6'],c:2},
+    {q:['A ⊕ B ⊕ C = 1, когда…','A ⊕ B ⊕ C = 1 when…'],a:[['число единиц нечётное','the number of ones is odd'],['все входы равны 1','all inputs are 1'],['число единиц чётное','the number of ones is even'],['хотя бы один вход равен 1','at least one input is 1']],c:0},
+    {q:['Сколько строк в таблице истинности для трёх входов?','How many rows does a truth table for three inputs have?'],a:['3','6','8','9'],c:2}],
+ 3:[{q:['Полусумматор: A = 1, B = 1. Что на выходах?','Half adder: A = 1, B = 1. What are the outputs?'],a:[['S = 0, P = 1','S = 0, Co = 1'],['S = 1, P = 0','S = 1, Co = 0'],['S = 1, P = 1','S = 1, Co = 1'],['S = 0, P = 0','S = 0, Co = 0']],c:0},
+    {q:['Чем полный сумматор отличается от полусумматора?','How does a full adder differ from a half adder?'],a:[['учитывает входной перенос','it takes a carry in'],['складывает два числа по 2 бита','it adds two 2-bit numbers'],['не имеет выхода переноса','it has no carry out'],['работает только с тактом','it needs a clock']],c:0},
+    {q:['Мультиплексор 2:1 при S = 1 пропускает…','A 2:1 multiplexer with S = 1 passes…'],a:['B','A','0','A ∧ B'],c:0},
+    {q:['Сколько выходов у дешифратора с двумя адресными входами?','How many outputs does a decoder with two address inputs have?'],a:['2','3','4','8'],c:2},
+    {q:['10₂ + 01₂ = ?','10₂ + 01₂ = ?'],a:['11₂','100₂','01₂','10₂'],c:0},
+    {q:['Сколько ламп дешифратора горит одновременно?','How many decoder lamps are lit at once?'],a:[['ровно одна','exactly one'],['две','two'],['все','all'],['ни одной','none']],c:0}],
+ 4:[{q:['Чем триггер отличается от логического элемента?','How does a flip-flop differ from a logic gate?'],a:[['хранит состояние','it stores state'],['у него больше входов','it has more inputs'],['он быстрее','it is faster'],['он не потребляет ток','it draws no current']],c:0},
+    {q:['RS-триггер на ИЛИ-НЕ: S = 0, R = 0. Что на выходе?','NOR-based SR latch: S = 0, R = 0. What is the output?'],a:[['прежнее значение','the previous value'],['0','0'],['1','1'],['неопределённость','undefined']],c:0},
+    {q:['D-триггер записывает D…','A D flip-flop stores D…'],a:[['по фронту такта C (0 → 1)','on the rising clock edge (0 → 1)'],['всегда','all the time'],['когда D = 1','when D = 1'],['по спаду такта (1 → 0)','on the falling edge (1 → 0)']],c:0},
+    {q:['Как сделать делитель частоты на 2 из D-триггера?','How do you make a divide-by-2 from a D flip-flop?'],a:[['подать Q̄ на D','feed Q̄ into D'],['подать Q на D','feed Q into D'],['подать C на D','feed C into D'],['соединить D с нулём','tie D to zero']],c:0},
+    {q:['Двухбитный счётчик после 11 переходит в…','After 11, a 2-bit counter goes to…'],a:['00','10','01','11'],c:0},
+    {q:['Сдвиговый регистр из двух триггеров: через сколько тактов бит дойдёт до второго выхода?','A 2-stage shift register: after how many ticks does a bit reach the second output?'],a:['1','2','3','4'],c:1}],
+ 5:[{q:['Полувычитатель: A = 0, B = 1. Чему равен заём?','Half subtractor: A = 0, B = 1. What is the borrow?'],a:['1','0'],c:0},
+    {q:['Разность в полувычитателе считается как…','The difference in a half subtractor is…'],a:['A ⊕ B','A ∧ B','A ∨ B',ov('A')],c:0},
+    {q:['Сколько адресных входов у мультиплексора 4:1?','How many address inputs does a 4:1 multiplexer have?'],a:['1','2','3','4'],c:1},
+    {q:['Приоритетный шифратор: включены D<sub>2</sub> и D<sub>0</sub>. Код A<sub>1</sub>A<sub>0</sub> = ?','Priority encoder: D<sub>2</sub> and D<sub>0</sub> are on. Code A<sub>1</sub>A<sub>0</sub> = ?'],a:['10','00','11','01'],c:0},
+    {q:['Два двухбитных числа равны, если…','Two 2-bit numbers are equal if…'],a:[['равны оба разряда','both digits are equal'],['равны старшие разряды','the high digits are equal'],['их сумма равна нулю','their sum is zero'],['их XOR равен 1','their XOR is 1']],c:0},
+    {q:['Выход V шифратора показывает…','The V output of an encoder shows…'],a:[['включён ли хоть один вход','whether any input is on'],['номер входа','the input index'],['чётность','parity'],['перенос','the carry']],c:0}],
+ 6:[{q:['T-триггер при T = 1 на каждом такте…','With T = 1, a T flip-flop on each tick…'],a:[['переключается','toggles'],['держит значение','holds its value'],['сбрасывается','resets'],['устанавливается в 1','sets to 1']],c:0},
+    {q:['JK-триггер при J = K = 1…','A JK flip-flop with J = K = 1…'],a:[['переключается','toggles'],['ставит 1','sets 1'],['ставит 0','sets 0'],['держит значение','holds']],c:0},
+    {q:['Сколько состояний проходит счётчик по модулю 3 за цикл?','How many states does a mod-3 counter go through per cycle?'],a:['2','3','4','8'],c:1},
+    {q:['Сколько состояний у счётчика Джонсона на трёх триггерах?','How many states does a 3-stage Johnson counter have?'],a:['3','6','8','9'],c:1},
+    {q:['Обратный счётчик после 00 переходит в…','After 00, a down counter goes to…'],a:['11','01','10','00'],c:0},
+    {q:['Конечный автомат — это…','A finite state machine is…'],a:[['схема с памятью, переходящая между состояниями по тактам','a circuit with memory moving between states on clock ticks'],['элемент И с тремя входами','a 3-input AND gate'],['шифратор','an encoder'],['сумматор','an adder']],c:0}],
+ 7:[{q:['Вход L регистра означает…','The L input of a register means…'],a:[['загрузку (запись)','load (write)'],['сброс','reset'],['такт','clock'],['инверсию','inversion']],c:0},
+    {q:['При L = 0 регистр…','With L = 0 the register…'],a:[['хранит прежнее значение','keeps its value'],['обнуляется','clears to zero'],['записывает D','stores D'],['переключается','toggles']],c:0},
+    {q:['Синхронный сброс срабатывает…','A synchronous reset takes effect…'],a:[['по фронту такта','on the clock edge'],['мгновенно','instantly'],['при включении питания','at power-up'],['никогда','never']],c:0},
+    {q:['Трёхбитный счётчик считает от 0 до…','A 3-bit counter counts from 0 to…'],a:['3','7','8','15'],c:1},
+    {q:['Счётчик с разрешением при E = 0…','A counter with enable at E = 0…'],a:[['стоит на месте','stays put'],['считает вниз','counts down'],['сбрасывается','resets'],['считает через один','skips every other']],c:0},
+    {q:['Сколько триггеров нужно, чтобы хранить число от 0 до 15?','How many flip-flops are needed to store a number from 0 to 15?'],a:['2','3','4','8'],c:2}],
+ 8:[{q:['A ⊕ 1 = ?','A ⊕ 1 = ?'],a:[ov('A'),'A','0','1'],c:0},
+    {q:['АЛУ — это…','ALU stands for…'],a:[['арифметико-логическое устройство','arithmetic logic unit'],['аналоговый линейный усилитель','analog linear unit'],['адресная линия управления','address line unit'],['асинхронный логический узел','asynchronous logic unit']],c:0},
+    {q:['Вычитание в дополнительном коде: A − B = A + '+ov('B')+' + ?','Two’s complement subtraction: A − B = A + '+ov('B')+' + ?'],a:['1','0','B','A'],c:0},
+    {q:['11₂ + 1 = ?','11₂ + 1 = ?'],a:['100₂','00₂','111₂','10₂'],c:0},
+    {q:['Флаг нуля Z = 1, когда…','The zero flag Z = 1 when…'],a:[['все разряды равны 0','all bits are 0'],['хотя бы один разряд равен 0','any bit is 0'],['есть перенос','there is a carry'],['число чётное','the number is even']],c:0},
+    {q:['A<sub>1</sub>A<sub>0</sub> = 10, B<sub>1</sub>B<sub>0</sub> = 01. A > B?','A<sub>1</sub>A<sub>0</sub> = 10, B<sub>1</sub>B<sub>0</sub> = 01. Is A > B?'],a:[['да','yes'],['нет','no']],c:0}],
+ 9:[{q:['Минимум элементов И-НЕ для XOR — сколько?','What is the minimum number of NANDs for XOR?'],a:['3','4','5','6'],c:1},
+    {q:['Сколько ИЛИ-НЕ нужно для инвертора?','How many NORs make an inverter?'],a:['1','2','3'],c:0},
+    {q:['Зачем в микросхемах экономят элементы?','Why do chip designers save gates?'],a:[['меньше площадь, энергия и задержка','less area, power and delay'],['так требует стандарт','a standard requires it'],['иначе схема не работает','otherwise it fails'],['для красоты','for looks']],c:0},
+    {q:['Сколько XOR нужно для чётности четырёх входов?','How many XORs are needed for 4-input parity?'],a:['2','3','4'],c:1},
+    {q:['ИЛИ-НЕ — тоже универсальный элемент?','Is NOR also a universal gate?'],a:[['да','yes'],['нет','no']],c:0},
+    {q:['Задержка схемы определяется…','The delay of a circuit is set by…'],a:[['числом элементов на самом длинном пути','the gate count on the longest path'],['числом входов','the number of inputs'],['цветом проводов','wire colour'],['числом ламп','the number of lamps']],c:0}],
+ 10:[{q:['Сколько сегментов у стандартного цифрового индикатора?','How many segments does a standard digit display have?'],a:['5','7','8','10'],c:1},
+    {q:['Цифра 1 на индикаторе использует сегменты…','Digit 1 on the display uses segments…'],a:[['b и c','b and c'],['a и d','a and d'],['f и e','f and e'],['только g','only g']],c:0},
+    {q:['Светофор после фазы «красный + жёлтый» включает…','After “red + yellow”, a traffic light shows…'],a:[['зелёный','green'],['красный','red'],['жёлтый','yellow']],c:0},
+    {q:['Кодовый замок на последовательность 1-0-1 — это…','A lock for the sequence 1-0-1 is…'],a:[['детектор последовательности','a sequence detector'],['сумматор','an adder'],['дешифратор','a decoder'],['мультиплексор','a multiplexer']],c:0},
+    {q:['Счётчик команд в процессоре…','A CPU’s program counter…'],a:[['хранит адрес следующей команды','holds the address of the next instruction'],['складывает числа','adds numbers'],['сравнивает биты','compares bits'],['хранит результат','stores the result']],c:0},
+    {q:['Реверсивный счётчик умеет…','An up/down counter can…'],a:[['считать вверх и вниз','count up and down'],['только вниз','only count down'],['только сбрасываться','only reset'],['делить на три','divide by three']],c:0}]
+};
+
+/* ---------- badges = Steam achievements (api ids) ---------- */
+const BADGES=[
+  {id:'FIRST_WIRE',g:'—',n:['Первый контакт','First contact'],d:['Проложить первый провод','Lay your first wire']},
+  {id:'FIRST_LEVEL',g:'1',n:['Испытуемый допущен','Subject admitted'],d:['Пройти первый уровень','Pass the first level']},
+  {id:'SHORT',g:'⚡',n:['Искрит','Sparks'],d:['Устроить короткое замыкание','Cause a short circuit']},
+  {id:'CH_1',g:'&',n:['Основы','Basics'],d:['Пройти главу 1','Complete chapter 1']},
+  {id:'CH_2',g:'⊼',n:['Универсал','Universalist'],d:['Пройти главу 2','Complete chapter 2']},
+  {id:'CH_3',g:'Σ',n:['Счетовод','Bookkeeper'],d:['Пройти главу 3','Complete chapter 3']},
+  {id:'CH_4',g:'T',n:['Хорошая память','Good memory'],d:['Пройти главу 4','Complete chapter 4']},
+  {id:'CH_5',g:'−',n:['Минус на минус','Minus times minus'],d:['Пройти главу 5','Complete chapter 5']},
+  {id:'CH_6',g:'↻',n:['Автоматчик','Automaton'],d:['Пройти главу 6','Complete chapter 6']},
+  {id:'CH_7',g:'▤',n:['Хранитель','Keeper'],d:['Пройти главу 7','Complete chapter 7']},
+  {id:'CH_8',g:'±',n:['Сердце вычислений','Heart of computing'],d:['Пройти главу 8','Complete chapter 8']},
+  {id:'CH_9',g:'≤',n:['Минималист','Minimalist'],d:['Пройти главу 9','Complete chapter 9']},
+  {id:'CH_10',g:'◉',n:['Машина проснулась','The Machine wakes'],d:['Пройти игру','Finish the game']},
+  {id:'QUIZ_FIRST',g:'✓',n:['Зачёт','Passed'],d:['Сдать первый контрольный тест','Pass your first checkpoint test']},
+  {id:'QUIZ_PERFECT',g:'5',n:['Отличник','Top marks'],d:['Ответить на 5 из 5','Answer 5 out of 5']},
+  {id:'QUIZ_ALL',g:'Ⅹ',n:['Аттестован','Certified'],d:['Сдать все 10 тестов','Pass all 10 tests']},
+  {id:'NO_HINTS',g:'?',n:['Сам с усам','Self-made'],d:['Пройти главу без единой подсказки','Complete a chapter without a single hint']},
+  {id:'OPTIMAL_10',g:'★',n:['Экономист','Economist'],d:['Получить три звезды на 10 уровнях','Earn three stars on 10 levels']},
+  {id:'STARS_ALL',g:'✦',n:['Перфекционист','Perfectionist'],d:['Три звезды на всех уровнях','Three stars on every level']},
+  {id:'SANDBOX',g:'□',n:['Свободный художник','Free artist'],d:['Поставить 10 элементов в песочнице','Place 10 gates in the sandbox']},
+  {id:'UNDO_50',g:'↶',n:['Машина времени','Time machine'],d:['Отменить действие 50 раз','Undo 50 times']},
+  {id:'NOTATION',g:'⇄',n:['Полиглот','Polyglot'],d:['Сменить систему обозначений','Switch the gate notation']},
+  {id:'SILENCE',g:'…',n:['Тишина в эфире','Radio silence'],d:['Попросить Бита помолчать','Ask Bit to stay quiet']},
+  {id:'NIGHT',g:'☾',n:['Ночная смена','Night shift'],d:['Пройти уровень между полуночью и пятью утра','Pass a level between midnight and 5 a.m.']},
+  {id:'FAST',g:'»',n:['Скорострел','Quick draw'],d:['Пройти уровень из 3+ элементов быстрее минуты','Pass a level of 3+ gates in under a minute']},
+  {id:'RANK_MAX',g:'Ω',n:['Архитектор','Architect'],d:['Получить высший допуск','Reach the top clearance']}
+];
+const RANKS=[[0,['Испытуемый','Test subject']],[400,['Стажёр','Intern']],[1200,['Лаборант','Lab assistant']],[2500,['Техник','Technician']],
+  [4500,['Инженер','Engineer']],[7000,['Ведущий инженер','Senior engineer']],[10000,['Главный конструктор','Chief designer']],[13000,['Архитектор Машины','Machine architect']]];
+
+/* ========== gates ========== */
+const GATES={
+  NOT :{n:['НЕ','NOT'],ins:1,h:40,f:i=>[1-i[0]]},
+  AND :{n:['И','AND'],ins:2,h:40,f:i=>[i[0]&i[1]]},
+  OR  :{n:['ИЛИ','OR'],ins:2,h:40,f:i=>[i[0]|i[1]]},
+  NAND:{n:['И-НЕ','NAND'],ins:2,h:40,f:i=>[1-(i[0]&i[1])]},
+  NOR :{n:['ИЛИ-НЕ','NOR'],ins:2,h:40,f:i=>[1-(i[0]|i[1])]},
+  XOR :{n:['Искл. ИЛИ','XOR'],ins:2,h:40,f:i=>[i[0]^i[1]]},
+  XNOR:{n:['Равнозн.','XNOR'],ins:2,h:40,f:i=>[1-(i[0]^i[1])]},
+  DFF :{n:['D-тригг.','D flip-flop'],ins:2,h:60,seq:1}
+};
+const ALL_GATES=Object.keys(GATES);
+SANDBOX.gates=ALL_GATES;
+function gPins(type){
+  if(type==='DFF') return {i:[20,40],o:[20,40]};
+  return {i:GATES[type].ins===1?[20]:[10,30],o:[20]};
+}
+
+/* ========== state ========== */
+const RM=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
+const settings=Object.assign({lang:LANG,voiceVol:70,ui:'auto',win:'auto',fs:false,ww:5,grid:'lines',hc:false,calm:RM,musicVol:50,sfxVol:70,gost:true,bit:'all',txt:16,demo:1},store.get('ll_set',{}));
+if('gost' in store.get('ll_set',{})===false)settings.gost=LANG!=='en';
+delete settings.music;delete settings.sfx;
+let seen=new Set(store.get('ll_seen',[]));
+let done=new Set(store.get('ll_done',[]));
+let saves=store.get('ll_saves',{});
+let prog=Object.assign({lv:{},quiz:{},badges:[],st:{undo:0}},store.get('ll_prog',{}));
+let hintUsed=false,bitMuted=false,levelStart=Date.now();
+let level=null, C={gates:[],wires:[]}, nextId=1;
+let undoS=[],redoS=[];
+let liveIn=[], sim={v:{},ff:{}};
+let rowMark=null, demoRow=-1, demoOn=false, demoSkip=false;
+let view={x:0,y:0,z:1};
+let sel=null;
+
+function ioIns(){const a=level.ins.slice();if(level.clk)a.push('C');return a}
+function ioY(n,i){return (i-(n-1)/2)*80}
+const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.length+level.outs.length))):level.sandbox?640:Math.min(700,260+60*(level.ins.length+level.outs.length+(level.clk?1:0))+(level.gates.length>2?60:0));
+
+function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
+function persist(){saves[level.id]={gates:C.gates,wires:C.wires};save()}
+
+function loadLevel(l){
+  level=l;$('#result').classList.remove('on');
+  const s=saves[l.id];
+  C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
+  nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
+  undoS=[];redoS=[];sel=null;rowMark=null;
+  liveIn=ioIns().map(()=>0);
+  resetSim();
+  store.set('ll_last',l.id,true);
+  buildChrome();
+  fit();
+  update();
+  hintUsed=false;bitMuted=false;levelStart=Date.now();idleShown=false;resetIdle();
+  levelIntro();
+  musicChapter(l.sandbox?topChapter():l.ch);
+}
+
+/* ========== history ========== */
+function snapshot(){undoS.push(JSON.stringify(C));if(undoS.length>200)undoS.shift();redoS=[]}
+function undo(){if(!undoS.length)return;prog.st.undo=(prog.st.undo||0)+1;if(prog.st.undo>=50)badge('UNDO_50');redoS.push(JSON.stringify(C));C=JSON.parse(undoS.pop());changed()}
+function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(C));C=JSON.parse(redoS.pop());changed()}
+function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount()}
+
+/* ========== geometry ========== */
+function nodePos(id){
+  if(id[0]==='I'){const n=ioIns().length;return{x:0,y:ioY(n,+id.slice(1))}}
+  if(id[0]==='O'){return{x:OUTX(),y:ioY(level.outs.length,+id.slice(1))}}
+  return C.gates.find(g=>g.id===id);
+}
+function pinPos(id,k,p){
+  if(id[0]==='I'){const n=nodePos(id);return{x:n.x+20,y:n.y}}
+  if(id[0]==='O'){const n=nodePos(id);return{x:n.x,y:n.y}}
+  const g=nodePos(id),P=gPins(g.type);
+  return k==='i'?{x:g.x,y:g.y+P.i[p]}:{x:g.x+GW,y:g.y+P.o[p]};
+}
+function autoRoute(s,t,srcId){
+  const off=(((s.y/20)%3)+3)%3*10;
+  if(t.x-s.x>=40){
+    const mx=Math.min(s.x+20+off,t.x-20);
+    if(s.y===t.y)return[s,t];
+    return[s,{x:mx,y:s.y},{x:mx,y:t.y},t];
+  }
+  const ax=s.x+20+off,bx=t.x-20,ym=Math.max(s.y,t.y)+60;
+  return[s,{x:ax,y:s.y},{x:ax,y:ym},{x:bx,y:ym},{x:bx,y:t.y},t];
+}
+function route(s,pts,t){
+  if(!pts||!pts.length)return autoRoute(s,t);
+  const o=[s];let a=s;
+  for(const b of pts){if(a.x!==b.x&&a.y!==b.y)o.push({x:b.x,y:a.y});o.push(b);a=b}
+  if(a.x!==t.x&&a.y!==t.y)o.push({x:a.x,y:t.y});
+  o.push(t);
+  return dedupe(o);
+}
+function dedupe(o){
+  const r=[o[0]];
+  for(let i=1;i<o.length;i++){const p=r[r.length-1];if(p.x===o[i].x&&p.y===o[i].y)continue;r.push(o[i])}
+  // merge collinear
+  const m=[r[0]];
+  for(let i=1;i<r.length-1;i++){const a=m[m.length-1],b=r[i],c=r[i+1];if((a.x===b.x&&b.x===c.x)||(a.y===b.y&&b.y===c.y))continue;m.push(b)}
+  if(r.length>1)m.push(r[r.length-1]);
+  return m;
+}
+function wirePts(w){return route(pinPos(w.from.g,'o',w.from.p),w.pts,pinPos(w.to.g,'i',w.to.p))}
+const toD=pts=>'M'+pts.map(p=>p.x+','+p.y).join('L');
+function roundD(pts,r=10){
+  if(pts.length<3)return toD(pts);
+  let d='M'+pts[0].x+','+pts[0].y;
+  for(let i=1;i<pts.length-1;i++){const a=pts[i-1],b=pts[i],c=pts[i+1];
+    const l1=Math.hypot(b.x-a.x,b.y-a.y),l2=Math.hypot(c.x-b.x,c.y-b.y),k=Math.min(r,l1/2,l2/2);
+    const p1={x:b.x+(a.x-b.x)/l1*k,y:b.y+(a.y-b.y)/l1*k},p2={x:b.x+(c.x-b.x)/l2*k,y:b.y+(c.y-b.y)/l2*k};
+    d+=`L${p1.x},${p1.y}Q${b.x},${b.y} ${p2.x},${p2.y}`}
+  const z=pts[pts.length-1];return d+'L'+z.x+','+z.y;
+}
+
+/* ========== simulation ========== */
+function resetSim(){sim={v:{},ff:{}}}
+function srcMap(){const m={};for(const w of C.wires){const k=w.to.g+':'+w.to.p;(m[k]=m[k]||[]).push(w.from.g+':'+w.from.p)}return m}
+function settle(inVals){
+  const v=sim.v,m=srcMap();
+  inVals.forEach((x,i)=>v['I'+i+':0']=x);
+  const rd=(id,p)=>{const s=m[id+':'+p];if(!s)return 0;return v[s[0]]|0};
+  for(let it=0;it<80;it++){
+    let ch=false;
+    const caps=[];
+    for(const g of C.gates)if(g.type==='DFF'){
+      const st=sim.ff[g.id]||(sim.ff[g.id]={q:0,c:0});
+      const c=rd(g.id,1);
+      if(c&&!st.c)caps.push([st,rd(g.id,0)]);
+      st.c=c;
+    }
+    for(const [st,d] of caps){if(st.q!==d){st.q=d;ch=true}}
+    for(const g of C.gates){
+      let outs;
+      if(g.type==='DFF'){const st=sim.ff[g.id]||(sim.ff[g.id]={q:0,c:0});outs=[st.q,1-st.q]}
+      else outs=GATES[g.type].f(gPins(g.type).i.map((_,p)=>rd(g.id,p)));
+      outs.forEach((o,p)=>{const k=g.id+':'+p;if(v[k]!==o){v[k]=o;ch=true}});
+    }
+    if(!ch)return true;
+  }
+  return false;
+}
+function readOuts(){const m=srcMap(),o={};level.outs.forEach((k,i)=>{const s=m['O'+i+':0'];o[k]=s?(sim.v[s[0]]|0):0});return o}
+function shorts(){const m=srcMap();return Object.keys(m).filter(k=>m[k].length>1)}
+function vecInVals(row,c){const a=level.ins.map(k=>row.in[k]|0);if(level.clk)a.push(c);return a}
+
+/* ========== render ========== */
+const world=$('#world'), board=$('#board'), fxG=$('#fx');
+let tmp=null, cut=null, ghost=null, hover=null;
+
+function gateSVG(type,gost,extraCls){
+  const h=GATES[type].h,P=gPins(type);
+  let s='';
+  // stubs
+  P.i.forEach(y=>s+=`<path class="gst" d="M0,${y}H12"/>`);
+  P.o.forEach(y=>s+=`<path class="gst" d="M48,${y}H60"/>`);
+  const inv=['NOT','NAND','NOR','XNOR'].includes(type);
+  if(type==='DFF'){
+    s+=`<rect class="gb" x="12" y="0" width="36" height="60" rx="7"/>`;
+    if(gost){
+      s+=`<path class="gst" d="M24,0V60"/><text class="gl" x="36" y="17">T</text>`;
+      s+=`<text class="gl s" x="18" y="24">D</text><text class="gl s" x="18" y="44">C</text>`;
+      s+=`<path class="gst" d="M12,36L17,40L12,44" style="stroke-width:1.5"/>`;
+      s+=`<circle class="gb" cx="52" cy="40" r="4"/>`;
+    }else{
+      s+=`<text class="gl s" x="21" y="24">D</text><path class="gst" d="M12,34L19,40L12,46" style="stroke-width:1.5"/>`;
+      s+=`<text class="gl s" x="40" y="24">Q</text><text class="gl s" x="40" y="44"><tspan class="ov" style="text-decoration:overline">Q</tspan></text>`;
+    }
+    return s;
+  }
+  if(gost){
+    s+=`<rect class="gb" x="12" y="0" width="36" height="${h}" rx="7"/>`;
+    const L={NOT:'1',AND:'&',OR:'1',NAND:'&',NOR:'1',XOR:'=1',XNOR:'=1'}[type];
+    s+=`<text class="gl" x="30" y="17">${L}</text>`;
+    if(inv)s+=`<circle class="gb" cx="52" cy="20" r="4"/>`;
+    return s;
+  }
+  const e=inv?6:0;
+  if(type==='NOT'){s+=`<path class="gb" d="M14,4L42,20L14,36Z"/><circle class="gb" cx="46" cy="20" r="4"/>`;return s}
+  if(type==='AND'||type==='NAND'){const r=20,x1=42-e-r+6;s+=`<path class="gb" d="M10,0H${x1}A20,20 0 0 1 ${x1},40H10Z"/>`}
+  if(type==='OR'||type==='NOR'){const X=50-e;s+=`<path class="gb" d="M8,0Q${X-18},0 ${X},20Q${X-18},40 8,40Q18,20 8,0Z"/>`}
+  if(type==='XOR'||type==='XNOR'){const X=50-e;s+=`<path class="gb" d="M13,0Q${X-16},0 ${X},20Q${X-16},40 13,40Q23,20 13,0Z"/><path class="gst" d="M6,0Q16,20 6,40"/>`}
+  if(inv&&type!=='NOT')s+=`<circle class="gb" cx="${48-e+2}" cy="20" r="4"/>`;
+  return s;
+}
+const pinIn=(x,y)=>`<path class="pin-in" d="M${x-1},${y-5}L${x+5},${y}L${x-1},${y+5}Z"/>`;
+const pinOut=(x,y)=>`<circle class="pin-out" cx="${x}" cy="${y}" r="4.5"/>`;
+
+function junctions(){
+  const by={};
+  for(const w of C.wires){const k=w.from.g+':'+w.from.p;(by[k]=by[k]||[]).push(wirePts(w))}
+  const dots=[];
+  for(const k in by){
+    const L=by[k];if(L.length<2)continue;
+    const cand=[];L.forEach(pl=>pl.slice(1,-1).forEach(p=>cand.push(p)));
+    const seen=new Set();
+    for(const P of cand){
+      const key=P.x+','+P.y;if(seen.has(key))continue;seen.add(key);
+      const dirs=new Set();let cnt=0;
+      for(const pl of L){
+        for(let i=0;i<pl.length-1;i++){
+          const a=pl[i],b=pl[i+1];
+          if(onSeg(P,a,b)&&!(b.x===P.x&&b.y===P.y)){
+            cnt++;dirs.add(Math.sign(b.x-a.x)+':'+Math.sign(b.y-a.y));break;
+          }
+        }
+      }
+      if(cnt>=2&&dirs.size>=2)dots.push(P);
+    }
+  }
+  return dots;
+}
+function onSeg(p,a,b){
+  if(a.x===b.x)return p.x===a.x&&p.y>=Math.min(a.y,b.y)&&p.y<=Math.max(a.y,b.y);
+  if(a.y===b.y)return p.y===a.y&&p.x>=Math.min(a.x,b.x)&&p.x<=Math.max(a.x,b.x);
+  return false;
+}
+
+function render(){
+  const z=view.z;
+  world.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);fxG.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);
+  $('#grid').setAttribute('patternTransform',`translate(${view.x},${view.y}) scale(${z})`);
+  const gost=settings.gost, v=sim.v;
+  let s='';
+  // wires
+  for(const w of C.wires){
+    const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0;
+    s+=`<path class="w w${val}" d="${d}"/><path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;
+  }
+  for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;
+  // onboarding ghost
+  if(level.id===1&&!C.wires.length&&!tmp){
+    const a=pinPos('I0','o',0),b=pinPos('O0','i',0);
+    s+=`<path class="onb" d="${toD(autoRoute(a,b))}"/>`;
+  }
+  // gates
+  for(const g of C.gates){
+    s+=`<g class="gate${sel&&sel.g===g.id?' sel':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
+    s+=gateSVG(g.type,gost);
+    s+=`</g>`;
+  }
+  const sh=new Set(shorts());
+  // pins of gates
+  for(const g of C.gates){
+    const P=gPins(g.type);
+    P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
+    P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});
+  }
+  // level inputs (flags)
+  const ins=ioIns();
+  ins.forEach((k,i)=>{
+    const n=nodePos('I'+i),val=v['I'+i+':0']|0,isC=level.clk&&i===ins.length-1;
+    const lit=val;
+    s+=`<g class="flag" data-in="${i}"><rect x="${n.x-62}" y="${n.y-19}" width="74" height="38" rx="19" fill="${lit?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
+    s+=`<circle cx="${lit?n.x-7:n.x-43}" cy="${n.y}" r="13" fill="${lit?'var(--ink)':'var(--card2)'}" style="transition:cx .15s"/>`;
+    if(isC)s+=`<path d="${lit?`M${n.x-49},${n.y+4}h4v-8h5v8h5v-8h4`:`M${n.x-13},${n.y+4}h4v-8h5v8h5v-8h4`}" fill="none" stroke="${lit?'var(--acc)':'var(--ink)'}" stroke-width="1.6"/>`;
+    s+=`<text class="lbl" x="${lit?n.x-43:n.x-7}" y="${n.y}" fill="var(--ink)" style="${isC?'display:none':''}">${subS(k)}</text>`;
+    s+=`<text class="lbl" x="${lit?n.x-7:n.x-43}" y="${n.y}" fill="${lit?'var(--acc)':'var(--ink2)'}" style="font-size:13px">${isC?'C':val}</text></g>`;
+    s+=`<path class="gst" d="M${n.x+12},${n.y}H${n.x+20}"/>`+pinOut(n.x+20,n.y)+`<circle class="pin-hit" data-pin="I${i}|o|0" cx="${n.x+20}" cy="${n.y}" r="11"/>`;
+  });
+  // outputs (lamps)
+  const ov_=readOuts();
+  level.outs.forEach((k,i)=>{
+    const n=nodePos('O'+i),val=ov_[k];
+    s+=`<path class="gst" d="M${n.x},${n.y}H${n.x+10}"/>`;
+    if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
+    s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
+    s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
+    s+=pinIn(n.x,n.y);
+    if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
+    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;
+  });
+  // temp wire
+  if(tmp){
+    const sp=pinPos(tmp.from.g,'o',tmp.from.p);
+    let t=tmp.cur,pts=tmp.pts;
+    if(hover&&hover.k==='i')t=pinPos(hover.g,'i',hover.p);
+    s+=`<path class="w w${v[tmp.from.g+':'+tmp.from.p]|0} tmp" d="${roundD(route(sp,pts,t))}"/>`;
+    pts.forEach(p=>s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="3"/>`);
+  }
+  if(ghost)s+=`<g class="ghost" transform="translate(${ghost.x},${ghost.y})">${gateSVG(ghost.type,gost)}</g>`;
+  if(cut&&cut.pts.length>1)s+=`<path class="cut" d="${toD(cut.pts.map(p=>({x:p.x,y:p.y})))}"/>`;
+  world.innerHTML=s;
+  board.classList.toggle('demo',demoOn);
+  renderTable();
+  $('#undo').disabled=!undoS.length;$('#redo').disabled=!redoS.length;
+}
+
+function update(){
+  if(!demoOn){settle(liveIn)}
+  render();
+}
+
+/* ========== chrome ========== */
+function buildChrome(){
+  $('#formula').innerHTML=mathHTML(tx(level.f))+(level.max?`<span class="lim">≤ ${level.max}</span>`:'');
+  $('#lvNum').textContent=level.sandbox?'':level.id;
+  $('#lvTitle').textContent=tx(level.t);
+  $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
+  $('#taskText').innerHTML=mathHTML(tx(level.task));
+  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.remove('on');
+  $('#hintBtn').style.display=level.hint?'':'none';$('#hintBtn').textContent=hintUsed||level.sandbox?ui('hint'):ui('hintCost');
+  $('#verify').style.display=level.sandbox?'none':'';
+  const pal=$('#palette');
+  pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'');
+  updCount();
+}
+function renderTable(){
+  const w=$('#ttWrap'),card=$('#taskCard');
+  if(level.sandbox||!level.vec.length){w.innerHTML='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
+  card.classList.remove('notable');card.style.display='';
+  const ins=level.ins,outs=level.outs,isSeq=level.seq||level.clk,V=level.vec;
+  const live=isSeq?-1:V.findIndex(r=>ins.every((k,i)=>r.in[k]===liveIn[i]));
+  const cc=ri=>{const mk=rowMark&&rowMark[ri];return [ri===live&&!rowMark?'live':'',ri===demoRow?'cur':'',mk&&ri!==demoRow?(mk.ok?'ok':'bad'):''].join(' ')};
+  const lab=k=>mathHTML(subH(esc(k)));
+  let h='<table class="tt">';
+  if(isSeq)h+=`<tr class="hn"><th>${level.clk?ui('tick'):ui('step')}</th>${V.map((_,ri)=>`<td data-row="${ri}">${ri+1}</td>`).join('')}</tr>`;
+  ins.forEach(k=>h+=`<tr><th>${lab(k)}</th>${V.map((r,ri)=>`<td class="${cc(ri)}" data-row="${ri}">${r.in[k]}</td>`).join('')}</tr>`);
+  outs.forEach((k,j)=>h+=`<tr class="out${j===0&&ins.length?' gap':''}"><th>${lab(disp(k))}</th>${V.map((r,ri)=>{const mk=rowMark&&rowMark[ri],bad=mk&&!mk.ok&&mk.act[k]!==r.out[k];
+    return `<td class="${cc(ri)}${bad&&ri!==demoRow?' wrong':''}" data-row="${ri}">${r.out[k]}${bad?`<span class="act">${mk.act[k]}</span>`:''}</td>`}).join('')}</tr>`);
+  w.innerHTML=h+'</table>';
+}
+$('#ttWrap').addEventListener('click',e=>{
+  const tr=e.target.closest('tr[data-row]');if(!tr||demoOn||level.seq||level.clk)return;
+  const r=level.vec[+tr.dataset.row];liveIn=ioIns().map(k=>r.in[k]|0);rowMark=null;update();
+});
+$('#hintBtn').onclick=e=>{e.stopPropagation();if(sheetH<160)setSheet(220);giveHint()};
+
+/* sheet resize */
+let sheetH=Math.min(store.get('ll_sheet',150),190);
+function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#zoom').style.bottom=(sheetH+26)+'px';$('#zoom').style.right=(settings.bit==='off'?16:92)+'px';$('#mascot').style.bottom=(sheetH+28)+'px';document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+setSheet(sheetH);
+(()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
+  g.addEventListener('pointerdown',e=>{if(e.target.id==='hintBtn')return;sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
+  g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
+  g.addEventListener('pointerup',()=>{if(sy!=null&&!moved)setSheet(sheetH>60?44:210);sy=null});
+})();
+
+/* ========== view ========== */
+function fit(){
+  const pts=[];ioIns().forEach((_,i)=>{const n=nodePos('I'+i);pts.push({x:n.x-70,y:n.y-40},{x:n.x+20,y:n.y+40})});
+  level.outs.forEach((_,i)=>{const n=nodePos('O'+i);pts.push({x:n.x,y:n.y-40},{x:n.x+60,y:n.y+40})});
+  C.gates.forEach(g=>pts.push({x:g.x,y:g.y},{x:g.x+GW,y:g.y+GATES[g.type].h}));
+  const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
+  const L=level.gates.length?$('#palette').getBoundingClientRect().right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=0,W=innerWidth-L-24-MW,H=innerHeight-T-(sheetH+14)*UI()-24;
+  const z=clamp(Math.min(W/(x1-x0+40),H/(y1-y0+40)),.3,1.6);
+  view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
+  render();
+}
+function zoomAt(f,cx,cy){const nz=clamp(view.z*f,.3,3);const k=nz/view.z;view.x=cx-(cx-view.x)*k;view.y=cy-(cy-view.y)*k;view.z=nz;render()}
+$('#zIn').onclick=()=>zoomAt(1.2,innerWidth/2,innerHeight/2);
+$('#zOut').onclick=()=>zoomAt(1/1.2,innerWidth/2,innerHeight/2);
+$('#zFit').onclick=fit;
+board.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
+const toW=(cx,cy)=>({x:(cx-view.x)/view.z,y:(cy-view.y)/view.z});
+
+/* ========== interaction ========== */
+const ptrs=new Map();let act=null,pinch=null;
+function hitInfo(target){
+  const pin=target.closest&&target.closest('[data-pin]');
+  if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
+  const w=target.closest&&target.closest('[data-wire]');if(w)return{type:'wire',id:w.dataset.wire};
+  const gt=target.closest&&target.closest('[data-gate]');if(gt)return{type:'gate',id:gt.dataset.gate};
+  const f=target.closest&&target.closest('[data-in]');if(f)return{type:'in',i:+f.dataset.in};
+  return{type:'empty'};
+}
+function nearestOnWire(w,p){
+  const pl=wirePts(w);let best=null;
+  for(let i=0;i<pl.length-1;i++){
+    const a=pl[i],b=pl[i+1];let q;
+    if(a.x===b.x)q={x:a.x,y:clamp(snap(p.y,10),Math.min(a.y,b.y),Math.max(a.y,b.y))};
+    else q={x:clamp(snap(p.x,10),Math.min(a.x,b.x),Math.max(a.x,b.x)),y:a.y};
+    const d=Math.hypot(q.x-p.x,q.y-p.y);if(!best||d<best.d)best={d,q,i};
+  }
+  return{pt:best.q,pre:pl.slice(1,best.i+1)};
+}
+function startWire(from,pts,cur){tmp={from,pts:pts.map(p=>({x:p.x,y:p.y})),cur,mode:'drag'};sfx('pick')}
+function finishWire(to){
+  if(!tmp)return;
+  const f=tmp.from;
+  if(!C.wires.some(w=>w.from.g===f.g&&w.from.p===f.p&&w.to.g===to.g&&w.to.p===to.p)){
+    snapshot();
+    C.wires.push({id:'w'+(nextId++),from:{g:f.g,p:f.p},to:{g:to.g,p:to.p},pts:tmp.pts});
+    sfx('relay');badge('FIRST_WIRE');
+    tmp=null;changed();
+    {const q=pinPos(to.g,'i',to.p);fxRing(q.x,q.y)}
+    if(shorts().length){sfx('spark');toast(ui('shortToast'));badge('SHORT');say([STORY.short],{hint:1})}
+    return;
+  }
+  tmp=null;render();
+}
+function delWire(id){snapshot();C.wires=C.wires.filter(w=>w.id!==id);sfx('remove');changed()}
+function atLimit(){if(level.max&&C.gates.length>=level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return true}return false}
+function updCount(){const el=$('#pcount');if(el){el.textContent=C.gates.length+' / '+level.max;el.classList.toggle('full',C.gates.length>=level.max)}
+  const m=$('#stampTbl');if(!m)return;
+  if(level.sandbox){m.innerHTML=`<div class="met"><b>${C.gates.length}</b><span>${ui('mGates')}</span></div>`;return}
+  const best=(prog.lv[level.id]||{}).g;
+  m.innerHTML=`<div class="met${level.max&&C.gates.length>level.max?' over':''}"><b>${C.gates.length}${level.max?`<small>/ ${level.max}</small>`:''}</b><span>${ui('mGates')}</span></div><div class="met"><b>${level.par}${best!=null&&best<999?`<small>${ui('mYours',{n:best})}</small>`:''}</b><span>${ui('mPar')}</span></div>`;
+}
+function disp(k){return (LANG==='en'&&level.dl&&level.dl[k])||k}
+function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);sel=null;sfx('remove');changed()}
+function segX(a,b,c,d){
+  const o=(p,q,r)=>Math.sign((q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x));
+  return o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b);
+}
+function applyCut(){
+  const cp=cut.pts;const hit=[];
+  for(const w of C.wires){const pl=wirePts(w);
+    outer:for(let i=0;i<cp.length-1;i++)for(let j=0;j<pl.length-1;j++)if(segX(cp[i],cp[i+1],pl[j],pl[j+1])){hit.push(w.id);break outer}}
+  if(hit.length){snapshot();C.wires=C.wires.filter(w=>!hit.includes(w.id));sfx('remove');cut=null;changed()}else{cut=null;render()}
+}
+
+board.addEventListener('contextmenu',e=>e.preventDefault());
+board.addEventListener('pointerdown',e=>{
+  if(demoOn)return;
+  ensureAudio();
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){ // pinch
+    const [a,b]=[...ptrs.values()];
+    pinch={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};
+    if(act&&act.kind==='cut')cut=null;
+    if(act&&act.kind==='wire'&&tmp&&tmp.mode==='drag')tmp=null;
+    act=null;render();return;
+  }
+  const p=toW(e.clientX,e.clientY),h=hitInfo(e.target);
+  const right=e.button===2,touch=e.pointerType==='touch';
+  // click-mode wiring in progress
+  if(tmp&&tmp.mode==='click'){
+    if(right){tmp=null;render();return}
+    if(h.type==='pin'&&h.k==='i'){finishWire(h);return}
+    if(h.type==='pin'&&h.k==='o'){tmp=null;render();return}
+    tmp.pts.push({x:snap(p.x,10),y:snap(p.y,10)});tmp.cur=p;render();return;
+  }
+  if(right){act={kind:'rclick',sx:e.clientX,sy:e.clientY,h};cut={pts:[p]};return}
+  if(h.type==='pin'&&h.k==='o'){startWire({g:h.g,p:h.p},[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY};render();return}
+  if(h.type==='pin'&&h.k==='i'){ // pull existing wire off an input
+    const w=C.wires.filter(w=>w.to.g===h.g&&w.to.p===h.p).pop();
+    if(w){snapshot();C.wires=C.wires.filter(x=>x!==w);startWire(w.from,w.pts||[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY,detached:true};changed();return}
+    return;
+  }
+  if(h.type==='wire'){
+    const w=C.wires.find(x=>x.id===h.id);const n=nearestOnWire(w,p);
+    act={kind:'branch',sx:e.clientX,sy:e.clientY,w,n};return;
+  }
+  if(h.type==='gate'){
+    const g=C.gates.find(x=>x.id===h.id);
+    act={kind:'gate',g,ox:p.x-g.x,oy:p.y-g.y,sx:e.clientX,sy:e.clientY,moved:false};return;
+  }
+  if(h.type==='in'){act={kind:'toggle',i:h.i};return}
+  if(touch){act={kind:'cut'};cut={pts:[p]};return}
+  act={kind:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};board.classList.add('panning');
+  if(sel){sel=null;render()}
+});
+window.addEventListener('pointermove',e=>{
+  if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size===2){
+    const [a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+    view.x+=cx-pinch.cx;view.y+=cy-pinch.cy;zoomAt(d/pinch.d,cx,cy);pinch={d,cx,cy};return;
+  }
+  const p=toW(e.clientX,e.clientY);
+  if(ghost){ghost.x=snap(p.x-30);ghost.y=snap(p.y-GATES[ghost.type].h/2);render();return}
+  if(tmp){
+    tmp.cur=p;
+    const el=document.elementFromPoint(e.clientX,e.clientY);const h=el?hitInfo(el):{type:'empty'};
+    hover=h.type==='pin'?h:null;render();
+  }
+  if(!act)return;
+  const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
+  if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;render()}
+  else if(act.kind==='gate'){
+    if(!act.moved&&dist>4){act.moved=true;snapshot()}
+    if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);render()}
+  }else if(act.kind==='branch'&&dist>5){
+    startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};render();
+  }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';render()}
+});
+window.addEventListener('pointerup',e=>{
+  ptrs.delete(e.pointerId);
+  if(pinch){if(ptrs.size<2)pinch=null;return}
+  if(ghost){
+    const overBoard=document.elementFromPoint(e.clientX,e.clientY)===board||board.contains(document.elementFromPoint(e.clientX,e.clientY));
+    if(overBoard&&!e.target.closest?.('#palette')){if(atLimit()){ghost=null;render();return}snapshot();C.gates.push({id:'g'+(nextId++),type:ghost.type,x:ghost.x,y:ghost.y});sfx('place');fxRing(ghost.x+30,ghost.y+GATES[ghost.type].h/2,22);ghost=null;changed();gatePlaced()}
+    else{ghost=null;render()}
+    return;
+  }
+  if(!act)return;
+  const a=act;act=null;board.classList.remove('panning');
+  const dist=a.sx!=null?Math.hypot(e.clientX-a.sx,e.clientY-a.sy):0;
+  if(a.kind==='wire'){
+    const el=document.elementFromPoint(e.clientX,e.clientY),h=el?hitInfo(el):{type:'empty'};
+    if(h.type==='pin'&&h.k==='i'){finishWire(h);return}
+    if(dist<6&&!a.branch){tmp.mode='click';render();return}
+    if(h.type==='pin'||!tmp){tmp=null;render();return}
+    const p=toW(e.clientX,e.clientY);tmp.pts.push({x:snap(p.x,10),y:snap(p.y,10)});tmp.mode='click';render();return;
+  }
+  if(a.kind==='branch'){sel={w:a.w.id};render();return}
+  if(a.kind==='gate'){if(a.moved)changed();else{sel={g:a.g.id};render()}return}
+  if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
+  if(a.kind==='rclick'){
+    cut=null;
+    if(a.h.type==='wire')return delWire(a.h.id);
+    if(a.h.type==='gate')return delGate(a.h.id);
+    render();return;
+  }
+  if(a.kind==='cut'){applyCut();return}
+});
+window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);act=null;pinch=null;cut=null;board.classList.remove('panning')});
+
+$('#palette').addEventListener('pointerdown',e=>{
+  const it=e.target.closest('.pi');if(!it||demoOn)return;ensureAudio();
+  const p=toW(e.clientX,e.clientY);ghost={type:it.dataset.type,x:snap(p.x-30),y:snap(p.y-20),sx:e.clientX,sy:e.clientY};
+});
+$('#palette').addEventListener('pointerup',e=>{
+  const it=e.target.closest('.pi');
+  if(ghost&&it&&Math.hypot(e.clientX-ghost.sx,e.clientY-ghost.sy)<6){ // tap → place at free spot
+    const c=toW(innerWidth/2,(innerHeight-sheetH*UI())/2+28);let x=snap(c.x-30),y=snap(c.y-20);
+    while(C.gates.some(g=>Math.abs(g.x-x)<60&&Math.abs(g.y-y)<60))y+=80;
+    if(atLimit()){ghost=null;return}
+    snapshot();C.gates.push({id:'g'+(nextId++),type:ghost.type,x,y});fxRing(x+30,y+GATES[ghost.type].h/2,22);ghost=null;sfx('place');changed();gatePlaced();e.stopPropagation();
+  }
+});
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(tmp){tmp=null;render();return}if(!$('#ov').classList.contains('on'))openMenu('main');else if(level)closeMenu();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return}
+  if((e.key==='Delete'||e.key==='Backspace')&&sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null}
+});
+$('#undo').onclick=undo;$('#redo').onclick=redo;
+$('#btnClear').onclick=()=>{if(!C.gates.length&&!C.wires.length)return;snapshot();C={gates:[],wires:[]};changed()};
+
+let tT;function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('on'),2600)}
+
+/* ========== verify / demo ========== */
+$('#verify').onclick=async()=>{
+  if(demoOn){demoSkip=true;return}
+  if(shorts().length){toast(ui('shortFirst'));say([STORY.short],{hint:1});return}
+  if(!C.wires.length){toast(ui('emptyToast'));say([STORY.empty],{hint:1});return}
+  if(level.max&&C.gates.length>level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return}
+  hideBubble();
+  ensureAudio();
+  demoOn=true;demoSkip=false;rowMark=[];$('#verify').textContent=ui('skip');
+  if(sheetH<120)setSheet(210);
+  resetSim();
+  const n=level.vec.length,dt=(n>32?90:n>8?260:n>4?420:600)*settings.demo;
+  let fails=0;
+  for(let ri=0;ri<n;ri++){
+    const r=level.vec[ri];
+    const ok_=settle(vecInVals(r,0));
+    const act=readOuts();const ok=ok_&&level.outs.every(k=>act[k]===r.out[k]);
+    if(!ok)fails++;
+    rowMark[ri]={ok,act};demoRow=ri;
+    if(level.clk)liveIn=vecInVals(r,0);else liveIn=vecInVals(r,0);
+    if(!demoSkip){render();scrollRow(ri);sfx('tick',ok);await sleep(dt)}
+    if(level.clk){settle(vecInVals(r,1));if(!demoSkip){sfx('clock');liveIn=vecInVals(r,1);render();await sleep(dt*.45)}}
+  }
+  demoOn=false;demoRow=-1;$('#verify').textContent=ui('verify');
+  liveIn=ioIns().map(()=>0);resetSim();settle(liveIn);render();
+  if(!fails){sfx('stamp',true);level.outs.forEach((_,i)=>{const n_=nodePos('O'+i);fxBits(n_.x+28,n_.y)});onSolved()}
+  else{sfx('stamp',false);onFailed(fails,n)}
+};
+function scrollRow(ri){const td=$('#ttWrap td[data-row="'+ri+'"]');if(td)td.scrollIntoView({block:'nearest',inline:'nearest'})}
+/* ========== audio: everything is synthesized, no sound files ==========
+   Buses: music (lab hum + generative theme per chapter), sfx (materials: relay, toggle switch,
+   stamp, buzzer, spark), voice (Bit's chatter). A compressor glues the mix; sound fades when hidden. */
+let AC=null,master,mBus,sBus,vBus,musicT=null,noiseBuf=null;
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+function ensureAudio(){
+  if(AC){if(AC.state==='suspended')AC.resume();return}
+  try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+  master=AC.createGain();
+  const comp=AC.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.004;comp.release.value=.2;
+  master.connect(comp);comp.connect(AC.destination);
+  sBus=AC.createGain();sBus.connect(master);
+  vBus=AC.createGain();vBus.connect(master);
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2200;lp.Q.value=.4;
+  const dl=AC.createDelay(2);dl.delayTime.value=.42;const fb=AC.createGain();fb.gain.value=.3;const dlf=AC.createBiquadFilter();dlf.type='lowpass';dlf.frequency.value=1500;
+  mBus=AC.createGain();mBus.gain.value=0;mBus.connect(lp);lp.connect(master);lp.connect(dl);dl.connect(dlf);dlf.connect(fb);fb.connect(dl);dlf.connect(master);
+  noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  startMusic();musicGain();
+  document.addEventListener('visibilitychange',()=>{if(AC)master.gain.setTargetAtTime(document.hidden?0:1,AC.currentTime,.25)});
+}
+function musicGain(){if(!AC)return;const t=AC.currentTime;
+  mBus.gain.setTargetAtTime(settings.musicVol/100*.9,t,.8);sBus.gain.setTargetAtTime(settings.sfxVol/100,t,.05);vBus.gain.setTargetAtTime((settings.voiceVol==null?70:settings.voiceVol)/100,t,.05)}
+function env(g,t,a,peak,dur){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
+function osc(bus,type,f,t,dur,peak,a=.004,f2){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);env(g,t,a,peak,dur);o.connect(g);g.connect(bus);o.start(t);o.stop(t+dur+.05)}
+function noise(bus,t,dur,peak,ft,freq,q=1,a=.002){const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=ft;f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();env(g,t,a,peak,dur);s.connect(f);f.connect(g);g.connect(bus);s.start(t,Math.random()*.6);s.stop(t+dur+.05)}
+const SND={
+  pick(){const t=AC.currentTime;noise(sBus,t,.018,.22,'highpass',4500,.8)},                                   // probe touches a pin
+  relay(){const t=AC.currentTime;noise(sBus,t,.02,.55,'bandpass',3400,5);noise(sBus,t+.022,.035,.35,'bandpass',1900,7);osc(sBus,'triangle',150,t,.05,.1)}, // wire lands: relay armature + contact
+  toggle(on){const t=AC.currentTime;noise(sBus,t,.025,.5,'bandpass',on?2900:2100,4);osc(sBus,'square',on?1100:700,t,.022,.035)}, // toggle switch
+  place(){const t=AC.currentTime;osc(sBus,'sine',190,t,.13,.4,.002,70);noise(sBus,t,.05,.2,'lowpass',900,.7)}, // part set on the board
+  remove(){const t=AC.currentTime;osc(sBus,'sine',300,t,.1,.2,.002,110);noise(sBus,t,.07,.16,'bandpass',1300,1)},
+  tick(ok){const t=AC.currentTime;noise(sBus,t,.016,.3,'bandpass',ok?2500:1400,5);if(!ok)osc(sBus,'sawtooth',110,t,.1,.05)}, // one row of the test
+  clock(){const t=AC.currentTime;noise(sBus,t,.012,.18,'highpass',5200,1)},
+  stamp(ok){const t=AC.currentTime;
+    noise(sBus,t,.11,.12,'bandpass',700,.7,.08);                      // swing
+    osc(sBus,'sine',120,t+.11,.28,.8,.002,42);noise(sBus,t+.11,.09,.55,'lowpass',650,.7);noise(sBus,t+.12,.14,.16,'highpass',3200,.5); // thud on paper
+    if(ok){[0,4,7,12].forEach((s,i)=>osc(sBus,'triangle',mtof(76+s),t+.34+i*.07,.9,.07,.004));osc(sBus,'sine',mtof(100),t+.62,1.6,.025,.002)} // lamps come on
+    else{osc(sBus,'square',98,t+.36,.4,.05,.01);osc(sBus,'square',92.5,t+.36,.4,.045,.01)}},         // buzzer
+  spark(){const t=AC.currentTime;for(let i=0;i<7;i++)noise(sBus,t+i*.028+Math.random()*.02,.025,.45,'highpass',2800+Math.random()*3500,1);osc(sBus,'sawtooth',55,t,.35,.07)},
+  badge(){const t=AC.currentTime;[84,88,91,96].forEach((m,i)=>osc(sBus,'triangle',mtof(m),t+i*.055,.55,.05,.003))},
+  rank(){const t=AC.currentTime;[60,64,67,72,76].forEach((m,i)=>osc(sBus,'triangle',mtof(m),t+i*.08,1,.06,.004));osc(sBus,'sine',mtof(48),t,1.4,.08,.01)},
+  ui(){const t=AC.currentTime;noise(sBus,t,.012,.22,'bandpass',3600,3)},
+  qok(){const t=AC.currentTime;osc(sBus,'triangle',mtof(79),t,.25,.07);osc(sBus,'triangle',mtof(84),t+.07,.35,.07)},
+  qbad(){const t=AC.currentTime;osc(sBus,'square',196,t,.18,.04,.005,150)}
+};
+function sfx(name,a){if(!AC||!settings.sfxVol||!SND[name])return;try{SND[name](a)}catch(e){}}
+// Bit's voice: short filtered square blips, pitch follows mood and the letter
+function bitVoice(ch,mood){
+  if(!AC||!(settings.voiceVol==null?70:settings.voiceVol)||!/[a-zа-яё0-9]/i.test(ch))return;
+  const t=AC.currentTime,base={happy:430,smug:250,sad:190,shock:520,think:300}[mood]||290,f=base*(1+(ch.toLowerCase().charCodeAt(0)*7%12)/36);
+  const o=AC.createOscillator(),g=AC.createGain(),bp=AC.createBiquadFilter();o.type='square';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.92,t+.05);
+  bp.type='bandpass';bp.frequency.value=f*2.6;bp.Q.value=3;env(g,t,.004,.09,.05);o.connect(bp);bp.connect(g);g.connect(vBus);o.start(t);o.stop(t+.08);
+}
+
+/* ----- music: mains hum + generative theme; key, mode and tempo depend on the chapter ----- */
+const SCALES={dor:[0,2,3,5,7,9,10],lyd:[0,2,4,6,7,9,11],min:[0,2,3,5,7,8,10],mix:[0,2,4,5,7,9,10],maj:[0,2,4,5,7,9,11]};
+const CHM={1:[57,'dor',84],2:[50,'dor',80],3:[48,'lyd',90],4:[52,'min',74],5:[53,'lyd',88],6:[55,'mix',96],7:[46,'maj',86],8:[48,'min',100],9:[54,'min',70],10:[57,'maj',92]};
+const PROG=[0,5,3,4];
+const mus={ch:1,step:0,next:0,dens:.55};
+function musicChapter(ch,calm){mus.ch=CHM[ch]?ch:1;mus.dens=calm?.25:.55}
+const deg=(sc,root,d)=>{const s=SCALES[sc],o=Math.floor(d/7);return root+s[((d%7)+7)%7]+12*o};
+function pad(f,t,dur,v){[-4,4].forEach(dt=>{const o=AC.createOscillator(),g=AC.createGain(),lp=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=f;o.detune.value=dt;lp.type='lowpass';lp.frequency.value=700;
+  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+1.4);g.gain.setValueAtTime(v,t+dur-1.2);g.gain.linearRampToValueAtTime(.0001,t+dur);o.connect(lp);lp.connect(g);g.connect(mBus);o.start(t);o.stop(t+dur+.05)})}
+function pluck(f,t,dur,v,type){const o=AC.createOscillator(),g=AC.createGain(),lp=AC.createBiquadFilter();o.type=type;o.frequency.value=f;lp.type='lowpass';lp.frequency.setValueAtTime(f*6,t);lp.frequency.exponentialRampToValueAtTime(f*1.2,t+dur);env(g,t,.004,v,dur);o.connect(lp);lp.connect(g);g.connect(mBus);o.start(t);o.stop(t+dur+.05)}
+function hum(){[[50,.010],[100,.006],[150,.003]].forEach(([f,v])=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(mBus);o.start()})}
+function playStep(st,t,root,sc,sp){
+  const bar=Math.floor(st/16),cd=PROG[bar%4],s=st%16;
+  if(s===0){[0,2,4].forEach(k=>pad(mtof(deg(sc,root,cd+k)),t,sp*16+.6,.012));pluck(mtof(deg(sc,root-12,cd)),t,.9,.07,'sine')}
+  if(s===8)pluck(mtof(deg(sc,root-12,cd+4)),t,.6,.045,'sine');
+  const pat=[1,0,.35,0,.7,0,.3,.15,.85,0,.4,0,.6,.2,.3,0];
+  if(Math.random()<pat[s]*mus.dens){const k=[0,2,4,7,9][Math.floor(Math.random()*5)];pluck(mtof(deg(sc,root+12,cd+k)),t,.4,.035,'triangle')}
+  if(s%4===0){const n=AC.createBufferSource();n.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=6000;const g=AC.createGain();env(g,t,.001,.02,.02);n.connect(f);f.connect(g);g.connect(mBus);n.start(t,Math.random()*.5);n.stop(t+.04)}
+}
+function startMusic(){
+  hum();mus.next=AC.currentTime+.3;
+  musicT=setInterval(()=>{if(!AC||AC.state!=='running')return;const [root,sc,bpm]=CHM[mus.ch],sp=60/bpm/4;
+    if(mus.next<AC.currentTime)mus.next=AC.currentTime+.05;
+    while(mus.next<AC.currentTime+.3){playStep(mus.step,mus.next,root,sc,sp);mus.next+=sp;mus.step=(mus.step+1)%64}},100);
+}
+
+
+/* ========== Bit: mascot and comm link ========== */
+const Bit={q:[],timer:null,typer:null,typing:false,mood:'idle',cur:null,log:store.get('ll_log',[])};
+let idleShown=false,idleT=null;
+
+function bitSVG(m){
+  const ink='var(--ink)',acc='var(--acc)';
+  let eye,mouth;
+  if(m==='happy')eye=`<path d="M29,46 Q40,31 51,46" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
+  else if(m==='shock')eye=`<circle cx="40" cy="41" r="15" fill="#fff" stroke="${ink}" stroke-width="2.5"/><circle cx="40" cy="41" r="3.2" fill="${ink}"/>`;
+  else if(m==='smug')eye=`<g class="eye"><circle cx="40" cy="42" r="12" fill="var(--acc)" stroke="${ink}" stroke-width="2.5"/><circle class="pupil" cx="37" cy="44" r="5" fill="${ink}"/><path d="M28,40 A12,12 0 0 1 52,40 Z" fill="${ink}"/></g>`;
+  else{const px=m==='think'?45:40,py=m==='think'?37:43,lit=m!=='sad';
+    eye=`<g class="eye"><circle cx="40" cy="42" r="12" fill="${lit?'var(--acc)':'#fff'}" stroke="${ink}" stroke-width="2.5"/><circle class="${m==='idle'?'pupil':''}" cx="${px}" cy="${py}" r="5" fill="${ink}"/>${m==='sad'?`<path d="M28,42 A12,12 0 0 1 52,42 Z" fill="${ink}"/>`:''}</g>`}
+  mouth={idle:`<path d="M35,63H45" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>`,
+    talk:`<path d="M35,63H45" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><ellipse class="m-open" cx="40" cy="63" rx="4.5" ry="3.5" fill="${ink}"/>`,
+    happy:`<path d="M33,60 Q40,69 47,60" fill="none" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>`,
+    smug:`<path d="M34,63 Q42,66 47,60" fill="none" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>`,
+    sad:`<path d="M34,66 Q40,60 46,66" fill="none" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>`,
+    think:`<path d="M36,64 Q40,61 45,63" fill="none" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>`,
+    shock:`<circle cx="40" cy="64" r="3.5" fill="none" stroke="${ink}" stroke-width="2.5"/>`}[m];
+  const dot=m==='happy'||m==='talk'?acc:m==='shock'?'var(--coral)':ink;
+  const glyph=m==='think'?'?':m==='happy'?'1':m==='sad'?'0':'';
+  return `<g class="legs"><path d="M31,72V86M49,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M24,90Q31,84 38,90ZM42,90Q49,84 56,90Z" fill="${ink}"/></g>
+<g class="torso">
+ <g class="ant"><path d="M40,20V9" stroke="${ink}" stroke-width="2.5"/><circle class="${m==='talk'||m==='happy'?'spark':''}" cx="40" cy="6" r="4.5" fill="${dot}" stroke="${ink}" stroke-width="${dot===acc?1.5:0}"/>
+  ${glyph?`<text x="51" y="10" font-family="Onest,sans-serif" font-weight="700" font-size="13" fill="${ink}">${glyph}</text>`:''}</g>
+ <g class="arm-l"><path d="M14,50H6" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="5" cy="50" r="3.4" fill="${ink}"/></g>
+ <g class="arm-r"><path d="M66,50H74" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="75" cy="50" r="3.4" fill="${ink}"/></g>
+ <rect x="14" y="20" width="52" height="52" rx="12" fill="#fff" stroke="${ink}" stroke-width="2.5"/>
+ <circle cx="59" cy="27" r="2.6" fill="var(--acc)" stroke="${ink}" stroke-width="1"/>
+ ${eye}${mouth}
+</g>`;
+}
+function bitMood(m){Bit.mood=m;$('#bit').innerHTML=bitSVG(m);$('#bit').classList.toggle('talk',m==='talk');if(!$('#bitMini').innerHTML)$('#bitMini').innerHTML=bitSVG('idle')}
+function bitAnim(c){if(settings.calm)return;const b=$('#bit');b.classList.remove('jump','shake','wave');void b.getBoundingClientRect();b.classList.add(c);setTimeout(()=>b.classList.remove(c),1400)}
+
+const norm=l=>(typeof l==='string'||Array.isArray(l))?{t:l}:l;
+function logPush(text,me){Bit.log.push({t:text.replace(/<[^>]+>/g,''),me:!!me});if(Bit.log.length>120)Bit.log.splice(0,Bit.log.length-120);store.set('ll_log',Bit.log,true)}
+function hideBubble(){clearTimeout(Bit.timer);clearInterval(Bit.typer);Bit.q=[];Bit.cur=null;Bit.typing=false;$('#chat').classList.remove('on','logon');document.body.classList.remove('bitOn');bitMood('idle')}
+
+// opt.u: the player asked (bypasses mute and "hints only"); opt.hint: gameplay help (allowed in "hints only")
+function say(lines,opt={}){
+  if(settings.bit==='off')return;
+  if(!opt.u&&((settings.bit==='hints'&&!opt.hint)||(bitMuted&&!opt.hint)))return;
+  Bit.q=lines.map(norm);nextLine();
+}
+function sayMore(lines){
+  if(settings.bit!=='all'||bitMuted)return;
+  if($('#chat').classList.contains('on')&&(Bit.typing||Bit.q.length||(Bit.cur&&Bit.cur.ch)))Bit.q.push(...lines.map(norm));
+  else say(lines);
+}
+function nextLine(){
+  clearTimeout(Bit.timer);clearInterval(Bit.typer);
+  const L=Bit.q.shift(),box=$('#chat'),el=$('#chatText'),chs=$('#chatCh');
+  Bit.cur=L||null;chs.innerHTML='';
+  if(!L){box.classList.remove('on');document.body.classList.remove('bitOn');bitMood('idle');return}
+  box.classList.remove('logon');box.classList.add('on');document.body.classList.add('bitOn');document.body.classList.remove('bitWaiting');
+  const text=tx(L.t);logPush(text);
+  $('#chatMore').textContent=Bit.q.length&&!L.ch?ui('more'):'';
+  const m=L.m||'idle',plain=text.replace(/<[^>]+>/g,'');
+  const fin=()=>{
+    Bit.typing=false;clearInterval(Bit.typer);el.innerHTML=text;bitMood(m);
+    if(m==='happy')bitAnim('jump');if(m==='shock')bitAnim('shake');if(L.wave)bitAnim('wave');
+    if(L.ch){chs.innerHTML=L.ch.map((c,i)=>`<button class="cbtn" data-c="${i}">${tx(c.t)}</button>`).join('');return}
+    Bit.timer=setTimeout(()=>{if(!Bit.q.length)nextLine()},Math.max(4500,plain.length*75));
+  };
+  Bit.fin=fin;
+  if(!settings.txt){fin();return}
+  bitMood('talk');Bit.typing=true;let i=0;el.textContent='';
+  Bit.typer=setInterval(()=>{i++;el.textContent=plain.slice(0,i);if(i%2===0)bitVoice(plain[i-1],m);if(i>=plain.length)fin()},settings.txt);
+}
+$('#chatBody').addEventListener('click',e=>{
+  ensureAudio();
+  const b=e.target.closest('.cbtn');
+  if(b&&Bit.cur&&Bit.cur.ch){
+    const c=Bit.cur.ch[+b.dataset.c];logPush('→ '+tx(c.t),true);Bit.cur=null;$('#chatCh').innerHTML='';sfx('ui');
+    if(c.f)c.f();else if(c.r){Bit.q.unshift(norm(c.r));nextLine()}else nextLine();
+    return;
+  }
+  if(Bit.typing)Bit.fin();else if(!(Bit.cur&&Bit.cur.ch))nextLine();
+});
+$('#chatX').addEventListener('click',e=>{e.stopPropagation();hideBubble()});
+$('#chatLogBtn').addEventListener('click',e=>{
+  e.stopPropagation();const box=$('#chat');
+  if(box.classList.contains('logon')){box.classList.remove('logon');if(!Bit.cur&&!Bit.typing){box.classList.remove('on');document.body.classList.remove('bitOn')}return}
+  clearTimeout(Bit.timer);
+  $('#chatLog').innerHTML=Bit.log.length?Bit.log.map(x=>`<p class="${x.me?'me':''}">${x.t}</p>`).join(''):`<p class="me">${ui('logEmpty')}</p>`;
+  box.classList.add('on','logon');document.body.classList.add('bitOn');const lg=$('#chatLog');lg.scrollTop=lg.scrollHeight;
+});
+$('#bitTab').addEventListener('click',()=>{ensureAudio();say([{t:UIS.listen,m:'smug',ch:bitMenu()}],{u:1})});
+$('#bit').addEventListener('click',()=>{
+  ensureAudio();
+  const box=$('#chat');
+  if(box.classList.contains('on')&&Bit.typing){Bit.fin();return}
+  if(box.classList.contains('on')&&!Bit.cur){hideBubble();return}
+  say([{t:UIS.listen,m:'smug',ch:bitMenu()}],{u:1});
+});
+function bitMenu(){
+  const inLv=level&&!level.sandbox&&!$('#ov').classList.contains('on'),c=[];
+  if(inLv)c.push({t:hintUsed?UIS.cHintFree:UIS.cHint,f:giveHint},{t:UIS.cWhat,f:explain});
+  c.push({t:UIS.cStats,f:statsLine},{t:UIS.cFact,f:()=>say([{t:pick(STORY.facts),m:'smug'}],{u:1})});
+  if(inLv)c.push(bitMuted?{t:UIS.cUnmute,f:()=>{bitMuted=false;say([{t:UIS.unmuteR,m:'happy'}],{u:1})}}:{t:UIS.cMute,f:muteLevel});
+  c.push({t:UIS.cNothing,f:hideBubble});
+  return c;
+}
+function explain(){
+  if(!level||level.sandbox){say([{t:STORY.sandbox}],{u:1});return}
+  say([{t:fmt(tx(STORY.about),{task:tx(level.task)}),m:'smug',ch:[{t:hintUsed?UIS.cHintFree:UIS.cHint,f:giveHint},{t:UIS.cGo,f:hideBubble}]}],{u:1});
+}
+function muteLevel(){badge('SILENCE');say([STORY.mute],{u:1});bitMuted=true}
+function statsLine(){
+  const p=points(),n=LV.filter(l=>done.has(l.id)).length,share=n/LV.length;
+  const v=tx(STORY.verdict[share<.2?0:share<.5?1:share<.8?2:3]);
+  say([{t:fmt(tx(STORY.stats),{r:tx(RANKS[rankIdx(p)][1]),p:num(p),n,N:LV.length,v}),m:'smug'}],{u:1});
+}
+function giveHint(){
+  if(!level||level.sandbox){say([{t:STORY.noHint,m:'think'}],{u:1});return}
+  if(!hintUsed){hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save()}
+  $('#hint').classList.add('on');$('#hintBtn').textContent=ui('hint');
+  say([{t:tx(pick(STORY.hintPre))+' '+tx(level.hint),m:'think'}],{u:1});
+}
+function levelIntro(){
+  if(!level||$('#ov').classList.contains('on'))return;
+  if(level.sandbox){if(!seen.has(0)){seen.add(0);save();setTimeout(()=>say([{t:STORY.sandbox,m:'smug'}]),350)}return}
+  if(seen.has(level.id))return;
+  const lines=[];
+  if(!seen.has('c'+level.ch)){seen.add('c'+level.ch);lines.push({t:STORY.ch[level.ch],m:'happy'})}
+  lines.push({t:STORY.lv[level.id],m:'smug',ch:[{t:UIS.cGo,f:hideBubble},{t:UIS.cWhat,f:explain},{t:UIS.cQuiet,f:muteLevel}]});
+  seen.add(level.id);save();
+  setTimeout(()=>say(lines),350);
+}
+function resetIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{
+  if(idleShown||!level||level.sandbox||done.has(level.id)||demoOn||$('#ov').classList.contains('on')||$('#chat').classList.contains('on'))return;
+  idleShown=true;document.body.classList.add('bitWaiting');
+},60000)}
+
+/* ========== fx ========== */
+const NS='http://www.w3.org/2000/svg';
+function fxRing(x,y,r=14,grey){if(settings.calm)return;const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);c.setAttribute('class','fx-ring'+(grey?' g':''));fxG.appendChild(c);setTimeout(()=>c.remove(),650)}
+function fxBits(x,y){if(settings.calm)return;for(let i=0;i<7;i++){const e=document.createElementNS(NS,'text');e.textContent=Math.random()<.65?'1':'0';e.setAttribute('x',x-5+(Math.random()-.5)*20);e.setAttribute('y',y+5);e.setAttribute('class','fx-bit');e.style.setProperty('--dx',((Math.random()-.5)*70)+'px');e.style.animationDelay=(i*.07)+'s';fxG.appendChild(e);setTimeout(()=>e.remove(),1700+i*70)}}
+
+/* ========== progress: stars, points, clearance ========== */
+// Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
+function starsHTML(s){return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
+const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
+const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
+function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
+function rankIdx(p=points()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});return r}
+const quizPassed=ch=>!!(prog.quiz[ch]&&prog.quiz[ch].pass);
+const available=l=>l.req.every(r=>typeof r==='string'?quizPassed(+r.slice(1)):done.has(r));
+const chapterDone=ch=>LV.filter(l=>l.ch===ch).every(l=>done.has(l.id));
+function updHud(){const p=points();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(p)}</span>`}
+function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');clearTimeout(savedPing.t);savedPing.t=setTimeout(()=>el.classList.remove('on'),1400)}
+
+function onSolved(){
+  const id=level.id,first=!done.has(id),prevRank=rankIdx(),old=prog.lv[id]||{s:0,g:999};
+  const bits=1|(hintUsed?0:2)|(C.gates.length<=level.par?4:0);
+  const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
+  prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
+  done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
+  const chDone=first&&chapterDone(level.ch);
+  const nx=nextLevel();
+  const btns=[{t:ui('stay')},{t:ui('levels'),f:()=>openMenu('levels')}];
+  if(chapterDone(level.ch)&&!quizPassed(level.ch))btns.push({t:ui('toQuiz'),p:1,f:()=>openQuiz(level.ch)});
+  else if(nx)btns.push({t:ui('next'),p:1,f:()=>loadLevel(nx)});
+  const crit=[[ui('cSolved'),''],[ui('cNoHint'),ui('whyHint')],[ui('cPar',{p:level.par}),ui('whyPar',{n:C.gates.length})]];
+  showCard(true,ui('correct'),
+    `<div class="rcrit">${[1,2,4].map((b,i)=>`<div class="rc${bits&b?' on':''}"><i>${bits&b?'✓':''}</i><span>${crit[i][0]}</span><em>${bits&b?'':crit[i][1]}</em></div>`).join('')}</div>
+     <div class="rmet"><div><b class="${C.gates.length<=level.par?'hl':''}">${C.gates.length}</b><span>${ui('mGates')}</span></div><div><b>${level.par}</b><span>${ui('mPar')}</span></div><div><b class="hl">+${gain}</b><span>${ui('points').toLowerCase()}</span></div></div>`,btns);
+  const lines=[{t:pick(bits===7?STORY.win3:STORY.win),m:bits===7?'smug':'happy'}];
+  if(chDone){if(level.ch===10)lines.push(...STORY.final);else lines.push({t:STORY.chDone[level.ch],m:'happy'})}
+  say(lines);
+  badge('FIRST_LEVEL');
+  if(chDone)badge('CH_'+level.ch);
+  if(chapterDone(level.ch)&&LV.filter(l=>l.ch===level.ch).every(l=>(prog.lv[l.id]||{}).s&2))badge('NO_HINTS');
+  const three=Object.values(prog.lv).filter(x=>x.s===7).length;
+  if(three>=10)badge('OPTIMAL_10');if(three>=LV.length)badge('STARS_ALL');
+  if(new Date().getHours()<5)badge('NIGHT');
+  if(C.gates.length>=3&&Date.now()-levelStart<60000)badge('FAST');
+  checkRank(prevRank);
+}
+function onFailed(f,n){
+  showCard(false,ui('mismatch'),`<div class="rmet"><div><b class="hl" style="color:var(--coral)">${f}</b><span>${ui('mRowsBad')}</span></div><div><b>${n-f}</b><span>${ui('mRowsOk')}</span></div><div><b>${n}</b><span>${ui('mRows')}</span></div></div>`,[{t:ui('fix'),p:1}]);
+  say([{t:pick(STORY.fail),m:'sad',ch:[{t:hintUsed?UIS.cHintFree:UIS.cHelp,f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
+}
+function nextLevel(){return LV.find(l=>l.id>level.id&&available(l)&&!done.has(l.id))||LV.find(l=>available(l)&&!done.has(l.id))}
+function showCard(ok,title,html,btns){
+  const st=$('#resTitle');st.className=ok?'':'bad';st.style.animation='none';void st.offsetWidth;st.style.animation='';
+  st.innerHTML=`<span>${title}<small>${tx(level.t)}${level.sandbox?'':', '+(LANG==='en'?'level ':'уровень ')+level.id}</small></span>`;$('#resSub').innerHTML=html;
+  $('#resBtns').innerHTML=btns.map((b,i)=>`<button class="tbtn${b.p?' primary':''}" data-i="${i}">${b.t}</button>`).join('');
+  $('#result').classList.add('on');
+  $('#resBtns').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;$('#result').classList.remove('on');const f=btns[+b.dataset.i].f;if(f)f()};
+}
+function checkRank(prev){const r=rankIdx();if(r>prev){toast(ui('rankToast',{r:tx(RANKS[r][1])}));setTimeout(()=>sfx('rank'),900);sayMore([{t:fmt(tx(STORY.rankUp),{r:tx(RANKS[r][1])}),m:'happy',wave:1}]);if(r===RANKS.length-1)badge('RANK_MAX')}}
+
+/* ========== badges (mirrored to Steam achievements) ========== */
+function steamAch(id){try{if(window.desktop&&window.desktop.achievement)window.desktop.achievement(id)}catch(e){}}
+function badge(id){
+  if(prog.badges.includes(id))return;
+  const b=BADGES.find(x=>x.id===id);if(!b)return;
+  prog.badges.push(id);save();steamAch(id);
+  setTimeout(()=>{toast(ui('badgeToast',{b:tx(b.n)}));sfx('badge')},600);
+  sayMore([{t:fmt(tx(STORY.badge),{b:tx(b.n)}),m:'smug'}]);
+}
+function gatePlaced(){if(level.sandbox&&C.gates.length>=10)badge('SANDBOX')}
+
+/* ========== checkpoint tests ========== */
+let QZ=null;
+function openQuiz(ch){
+  if(!chapterDone(ch)){toast(ui('qLocked'));return}
+  const qs=QUIZ[ch].slice().sort(()=>Math.random()-.5).slice(0,5).map(q=>({q,order:q.a.map((_,i)=>i).sort(()=>Math.random()-.5)}));
+  QZ={ch,qs,i:0,score:0,answered:false};
+  openMenu('quiz');drawQuiz();
+  say([{t:STORY.quizIntro,m:'smug'}],{u:1});
+}
+function figSVG(f){
+  const P=gPins(f.g);
+  let s=`<svg class="qfig" viewBox="-74 -8 196 56">`;
+  P.i.forEach((y,i)=>{s+=`<text x="-14" y="${y+5}" text-anchor="end" class="qv">${'AB'[i]} = ${f.v[i]}</text><path d="M-10,${y}H0" class="gst"/>`});
+  s+=gateSVG(f.g,settings.gost)+`<path d="M60,20H72" class="gst"/><text x="78" y="26" class="qv">Y = ?</text></svg>`;
+  return s;
+}
+function drawQuiz(){
+  const z=QZ,el=$('#quizBox');
+  if(z.i>=z.qs.length){
+    const old=prog.quiz[z.ch]||{best:0,pass:false},prevRank=rankIdx(),pass=z.score>=4;
+    const before=quizPts(old);prog.quiz[z.ch]={best:Math.max(old.best,z.score),pass:old.pass||pass};
+    const gain=quizPts(prog.quiz[z.ch])-before;save();updHud();
+    el.innerHTML=`<div class="qh">${ui('quizTitle',{n:z.ch})}</div><div class="qres ${pass?'ok':'bad'}">${pass?ui('qPass'):ui('qFail')}</div>
+      <div class="qscore">${ui('qScore',{s:z.score,n:z.qs.length})}</div><div class="rpts">${gain?ui('pts',{p:gain}):''}</div>
+      <div class="qact"><button class="mi" id="qRetry">${ui('qRetry')}</button><button class="mi" id="qBack">${ui('levels')}</button></div>`;
+    $('#qRetry').onclick=()=>openQuiz(z.ch);$('#qBack').onclick=()=>openMenu('levels');
+    if(pass){badge('QUIZ_FIRST');if(z.score===5)badge('QUIZ_PERFECT');if(CHAPTERS.every((_,i)=>quizPassed(i+1)))badge('QUIZ_ALL')}
+    say([{t:pass?(z.score===5?STORY.quizPerfect:STORY.quizPass):STORY.quizFail,m:pass?'happy':'sad'}],{u:1});
+    checkRank(prevRank);
+    return;
+  }
+  const {q,order}=z.qs[z.i];z.answered=false;
+  el.innerHTML=`<div class="qh">${ui('quizTitle',{n:z.ch})}. ${tx(CHAPTERS[z.ch-1])}</div><div class="qp">${ui('qOf',{i:z.i+1,n:z.qs.length})}</div>
+    <div class="qq">${mathHTML(tx(q.q))}</div>${q.fig?figSVG(q.fig):''}
+    <div class="qa">${order.map(k=>`<button class="qb" data-k="${k}">${mathHTML(tx(q.a[k]))}</button>`).join('')}</div><div class="qnext"></div>`;
+}
+$('#quizBox').addEventListener('click',e=>{
+  const b=e.target.closest('.qb');if(!b||!QZ||QZ.answered)return;
+  const {q}=QZ.qs[QZ.i],k=+b.dataset.k,ok=k===q.c;QZ.answered=true;
+  $$('.qb').forEach(x=>{if(+x.dataset.k===q.c)x.classList.add('ok');else if(x===b)x.classList.add('bad');x.disabled=true});
+  if(ok)QZ.score++;
+  sfx(ok?'qok':'qbad');
+  say([{t:pick(ok?STORY.quizRight:STORY.quizWrong),m:ok?'smug':'sad'}],{u:1});
+  $('.qnext').innerHTML=`<button class="tbtn primary" id="qNext">${QZ.i+1<QZ.qs.length?ui('qNext'):ui('qDone')}</button>`;
+  $('#qNext').onclick=()=>{QZ.i++;drawQuiz()};
+});
+
+/* ========== personnel file ========== */
+function drawProfile(){
+  const p=points(),r=rankIdx(p),nx=RANKS[r+1],lo=RANKS[r][0];
+  const solved=LV.filter(l=>done.has(l.id)).length;
+  let stars=0;for(const id in prog.lv){const s=prog.lv[id].s;stars+=(s&1?1:0)+(s&2?1:0)+(s&4?1:0)}
+  const tests=CHAPTERS.filter((_,i)=>quizPassed(i+1)).length;
+  const cell=(k,v,n)=>`<div class="pfc"><b>${v}<small> / ${n}</small></b><span>${ui(k)}</span></div>`;
+  $('#profBox').innerHTML=`<div class="pf-k">${ui('rank')} ${r} / ${RANKS.length-1}</div><div class="pf-rank">${tx(RANKS[r][1])}</div>
+    <div class="pf-bar"><i style="width:${nx?Math.round((p-lo)/(nx[0]-lo)*100):100}%"></i></div>
+    <div class="pf-next">${ui('points')}: ${num(p)}<br>${nx?ui('toNext',{r:tx(nx[1]),p:num(nx[0]-p)}):ui('maxRank')}</div>
+    <div class="pf-grid">${cell('stLevels',solved,LV.length)}${cell('stStars',stars,LV.length*3)}${cell('stTests',tests,CHAPTERS.length)}${cell('stBadges',prog.badges.length,BADGES.length)}</div>
+    <h3>${ui('badgesH')}</h3>
+    <div class="bd-grid">${BADGES.map(b=>{const on=prog.badges.includes(b.id);return`<div class="bd${on?' on':''}"><i>${on?b.g:'?'}</i><b>${tx(b.n)}</b><span>${tx(b.d)}</span></div>`}).join('')}</div>`;
+}
+
+/* ========== level tree ========== */
+function drawTree(){
+  const sv=$('#tree'),CW=138,RH=78,PX=6,PY=62,CHG=64,LX=380;
+  const yOf=l=>PY+l.pos[1]*RH+(l.ch-1)*CHG, xOf=l=>PX+LX+l.pos[0]*CW;
+  const qPos=ch=>{const ls=LV.filter(l=>l.ch===ch),c=Math.max(...ls.map(l=>l.pos[0]))+1,f=ls[0];return{x:PX+LX+c*CW,y:yOf(f)}};
+  const W=PX+LX+7*CW+40,H=yOf(LV[LV.length-1])+60;
+  sv.setAttribute('viewBox',`0 0 ${W} ${H}`);sv.setAttribute('width',W);sv.style.width='min(100%,'+W+'px)';
+  let s='';
+  const elbow=(x1,y1,x2,y2,col)=>{if(y1===y2){s+=`<path d="M${x1},${y1}H${x2}" stroke="${col}" stroke-width="2" fill="none"/>`;return}
+    const mx=x2-26,dy=y2>y1?12:-12;s+=`<path d="M${x1},${y1}H${mx-12}Q${mx},${y1} ${mx},${y1+dy}V${y2-dy}Q${mx},${y2} ${mx+12},${y2}H${x2}" stroke="${col}" stroke-width="2" fill="none"/>`};
+  CHAPTERS.forEach((c,i)=>{const l=LV.find(x=>x.ch===i+1),y=yOf(l),ls=LV.filter(x=>x.ch===i+1),dn=ls.filter(x=>done.has(x.id)).length;
+    const yb=y-46,hb=(Math.max(...ls.map(x=>x.pos[1]))-l.pos[1])*RH+100;
+    s+=`<rect x="${PX}" y="${yb}" width="${W-PX-10}" height="${hb}" rx="24" fill="rgba(250,250,247,.55)"/>`;
+    s+=`<text x="${PX+30}" y="${y+14}" font-size="44" font-weight="600" letter-spacing="-1.5" fill="${dn?'var(--ink)':'var(--grid2)'}" font-family="var(--font)">${i+1}</text>`;
+    s+=`<text x="${PX+(i+1>9?96:84)}" y="${y-2}" font-size="16" font-weight="600" fill="var(--ink)" font-family="var(--font)">${tx(c)}</text>`;
+    s+=`<text x="${PX+(i+1>9?96:84)}" y="${y+16}" font-size="12.5" font-weight="500" fill="var(--mute)" font-family="var(--font)">${ui('mmDone',{n:dn,N:ls.length})}</text>`;});
+  LV.forEach(l=>l.req.forEach(r=>{
+    const x2=xOf(l)-17,y2=yOf(l);
+    if(typeof r==='string'){const on=quizPassed(+r.slice(1));
+      s+=`<path d="M${x2-34},${y2}H${x2}" stroke="${on?'var(--ink)':'var(--grid2)'}" stroke-width="2"/><circle cx="${x2-38}" cy="${y2}" r="4" fill="${on?'var(--acc)':'var(--grid2)'}" stroke="var(--ink)" stroke-width="${on?1.2:0}"/>`;return}
+    const a=LV[r-1];elbow(xOf(a)+17,yOf(a),x2,y2,done.has(r)?'var(--ink)':'var(--grid2)');
+  }));
+  CHAPTERS.forEach((_,i)=>{const ch=i+1,q=qPos(ch),row0=LV.find(x=>x.ch===ch).pos[1],last=LV.filter(l=>l.ch===ch&&l.pos[1]===row0).pop();
+    const av=chapterDone(ch),ps=quizPassed(ch);
+    s+=`<path d="M${xOf(last)+17},${q.y}H${q.x-30}" stroke="${av?'var(--ink)':'var(--grid2)'}" stroke-width="2"/>`;
+    s+=`<g class="node${av?'':' lock'}" data-q="${ch}"><rect x="${q.x-30}" y="${q.y-17}" width="60" height="34" rx="17" fill="${ps?'var(--acc)':av?'var(--ink)':'var(--paper)'}" stroke="${av||ps?'none':'var(--grid2)'}"/>
+      <text x="${q.x}" y="${q.y+1}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="var(--font)" fill="${ps?'var(--ink)':av?'#fff':'var(--mute)'}">${ps?prog.quiz[ch].best+'/5':(LANG==='en'?'test':'тест')}</text>
+      <rect x="${q.x-46}" y="${q.y-24}" width="92" height="62" fill="transparent"/></g>`;});
+  LV.forEach(l=>{
+    const x=xOf(l),y=yOf(l),dn=done.has(l.id),av=available(l),st=(prog.lv[l.id]||{}).s||0,nm=tx(l.t);
+    s+=`<g class="node${av?'':' lock'}" data-l="${l.id}">`;
+    s+=`<circle cx="${x}" cy="${y}" r="17" fill="${dn?'var(--ink)':av?'var(--acc)':'var(--paper)'}" stroke="${dn||av?'none':'var(--grid2)'}" stroke-width="1.5"/>`;
+    s+=`<text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="var(--font)" fill="${dn?'#fff':av?'var(--ink)':'var(--mute)'}">${l.id}</text>`;
+    if(dn)[1,2,4].forEach((b,i)=>s+=`<circle cx="${x-9+i*9}" cy="${y+25}" r="3" fill="${st&b?'var(--ink)':'var(--line)'}"/>`);
+    s+=`<text x="${x}" y="${y+(dn?42:34)}" text-anchor="middle" font-size="12" font-weight="500" font-family="var(--font)" fill="${av?'var(--ink2)':'var(--mute)'}">${nm.length>15?nm.slice(0,14)+'…':nm}</text>`;
+    s+=`<rect x="${x-52}" y="${y-24}" width="104" height="70" fill="transparent"/></g>`;
+  });
+  sv.innerHTML=s;
+  sv.querySelectorAll('[data-l]').forEach(n=>{const l=LV[n.dataset.l-1];
+    n.onmouseenter=()=>$('#treeTip').innerHTML=`<b>${l.id}. ${tx(l.t)}</b><span class="tm">&ensp;${available(l)?`<span class="math">${mathHTML(tx(l.f))}</span>`:ui('unlocksAfter',{r:l.req.map(r=>typeof r==='string'?ui('testN',{n:r.slice(1)}):r).join(', ')})}</span>`;
+    n.onclick=()=>{if(!available(l))return;sfx('ui');loadLevel(l);closeMenu()}});
+  sv.querySelectorAll('[data-q]').forEach(n=>{const ch=+n.dataset.q;
+    n.onmouseenter=()=>$('#treeTip').innerHTML=`<b>${ui('quizNode')}. ${tx(CHAPTERS[ch-1])}</b><span class="tm">&ensp;${chapterDone(ch)?(quizPassed(ch)?ui('qScore',{s:prog.quiz[ch].best,n:5}):ui('qReady')):ui('qLocked')}</span>`;
+    n.onclick=()=>{if(chapterDone(ch))openQuiz(ch)}});
+}
+
+/* ========== the Machine (main menu) ========== */
+const MUNITS=[['Логика','Logic'],['И-НЕ','NAND'],['Сумматор','Adder'],['Память','Memory'],['Коды','Codes'],['Автоматы','FSM'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Ядро','Core']];
+function topChapter(){let c=1;CHAPTERS.forEach((_,i)=>{if(LV.some(l=>l.ch===i+1&&done.has(l.id)))c=i+1});return c}
+function drawMachine(){
+  const sv=$('#machine');if(!sv)return;
+  const on=CHAPTERS.map((_,i)=>chapterDone(i+1)),part=CHAPTERS.map((_,i)=>LV.filter(l=>l.ch===i+1&&done.has(l.id)).length/LV.filter(l=>l.ch===i+1).length);
+  const W=168,H=76,X=[20,236,452],Y=[20,138,256];
+  const pos=i=>i<9?{x:X[i%3],y:Y[Math.floor(i/3)],w:W}:{x:20,y:374,w:600};
+  let s='';
+  const link=(x1,y1,x2,y2,lit)=>{const mx=(x1+x2)/2;s+=`<path d="M${x1},${y1}H${mx-12}Q${mx},${y1} ${mx},${y1+(y2>y1?12:y2<y1?-12:0)}V${y2-(y2>y1?12:y2<y1?-12:0)}Q${mx},${y2} ${mx+12},${y2}H${x2}" fill="none" stroke="${lit?'var(--ink)':'var(--grid2)'}" stroke-width="2"/>`;};
+  for(let i=0;i<9;i++){const p=pos(i);if(i%3<2)link(p.x+W,p.y+H/2,p.x+216,p.y+H/2,on[i]&&on[i+1]);
+    if(i<6){const q=pos(i+3);s+=`<path d="M${p.x+W/2},${p.y+H}V${q.y}" stroke="${on[i]&&on[i+3]?'var(--ink)':'var(--grid2)'}" stroke-width="2"/>`}
+    else s+=`<path d="M${p.x+W/2},${p.y+H}V${374}" stroke="${on[i]&&on[9]?'var(--ink)':'var(--grid2)'}" stroke-width="2"/>`}
+  for(let i=0;i<10;i++){const p=pos(i),lit=on[i],pr=part[i],dark=lit;
+    const fg=dark?'#fff':'var(--ink)',sub=dark?'#A4A6A0':'var(--mute)';
+    s+=`<g><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${H}" rx="20" fill="${dark?'var(--ink)':pr?'var(--paper)':'rgba(250,250,247,.5)'}" ${dark||pr?'':'stroke="var(--grid2)" stroke-dasharray="4 5"'}/>`;
+    s+=`<text x="${p.x+18}" y="${p.y+32}" font-family="var(--font)" font-size="${i===9?24:19}" font-weight="600" letter-spacing="-.3" fill="${fg}">${tx(MUNITS[i])}</text>`;
+    s+=`<text x="${p.x+18}" y="${p.y+56}" font-family="var(--font)" font-size="12.5" font-weight="500" fill="${sub}">${LANG==='en'?'chapter':'глава'} ${i+1}</text>`;
+    const bx=p.x+p.w-86,bw=58;
+    s+=`<rect x="${bx}" y="${p.y+50}" width="${bw}" height="6" rx="3" fill="${dark?'#3A3C40':'var(--line)'}"/><rect x="${bx}" y="${p.y+50}" width="${Math.max(pr?6:0,bw*pr)}" height="6" rx="3" fill="${dark?'var(--acc)':'var(--ink)'}"/>`;
+    s+=`<circle cx="${p.x+p.w-20}" cy="${p.y+22}" r="7" fill="${lit?'var(--acc)':pr?'var(--card2)':'transparent'}" stroke="${lit?'none':'var(--grid2)'}" stroke-width="1.5"/></g>`;}
+  sv.innerHTML=s;
+  const n=on.filter(Boolean).length;
+  $('#machineCap').textContent=ui('machineCap',{n,N:10});
+  const lv=store.get('ll_last',1),solved=LV.filter(l=>done.has(l.id)).length;
+  if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
+  if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
+  if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
+}
+
+/* ========== menu ========== */
+const SCR={main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
+let curScr='main';
+function openMenu(s){
+  curScr=s;$('#ov').classList.add('on');$('#result').classList.remove('on');
+  $$('.scr').forEach(x=>x.classList.remove('on'));$(SCR[s]).classList.add('on');
+  if(s!=='main'&&s!=='quiz')hideBubble();
+  if(s==='main')drawMachine();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();
+  musicChapter(s==='quiz'&&QZ?QZ.ch:topChapter(),s==='quiz')
+  $('#ov').scrollTop=0;
+}
+function closeMenu(){$('#ov').classList.remove('on');hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
+$('#btnMenu').onclick=()=>openMenu('main');
+$('#hud').onclick=()=>openMenu('profile');
+$$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  ensureAudio();sfx('ui');
+  const g=b.dataset.go;
+  if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
+  if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
+  if(g==='quit'){store.flush();window.desktop&&window.desktop.quit&&window.desktop.quit();return}
+  openMenu(g);
+}));
+
+/* ========== settings ========== */
+const isDesk=!!window.desktop;
+const pct=v=>`<span class="sbar"><i style="width:${v}%"></i></span>${v?v+'%':ui('vOff')}`;
+const SET=[
+  {g:'gGame'},
+  {k:'lang',t:'sLang',o:['ru','en'],f:v=>v==='ru'?'Русский':'English'},
+  {k:'bit',t:'sBit',o:['all','hints','off'],f:v=>ui({all:'vTalk',hints:'vHints',off:'vHidden'}[v])},
+  {k:'txt',t:'sTxt',o:[30,16,0],f:v=>ui({30:'vSlow',16:'vNorm',0:'vInst'}[v])},
+  {k:'demo',t:'sDemo',o:[1.7,1,.45],f:v=>ui({1.7:'vSlow',1:'vNorm',.45:'vFast'}[v])},
+  {k:'gost',t:'sGost',o:[true,false],f:v=>v?ui('vGost'):ui('vAnsi')},
+  {g:'gScreen'},
+  {k:'ui',t:'sUi',o:['auto',.75,.85,1,1.15,1.3,1.5,1.75,2],f:v=>v==='auto'?ui('vAuto')+', '+Math.round(autoUi()*100)+' %':Math.round(v*100)+'%'},
+  {k:'win',t:'sWin',o:['auto','1280x720','1366x768','1600x900','1920x1080','2560x1440','fs'],f:v=>v==='auto'?ui('vAsIs'):v==='fs'?ui('vFull'):v.replace('x',' × '),only:isDesk},
+  {k:'fs',t:'sFs',o:[false,true],f:v=>v?ui('vOn'):ui('vOff'),only:!isDesk},
+  {k:'ww',t:'sWw',o:[3,5,7,9],f:v=>ui({3:'vThin',5:'vNormal',7:'vThick',9:'vVThick'}[v])},
+  {k:'grid',t:'sGrid',o:['lines','dots','none'],f:v=>ui({dots:'vDots',lines:'vLines',none:'vNone'}[v])},
+  {k:'hc',t:'sHc',o:[false,true],f:v=>v?ui('vHigh'):ui('vReg')},
+  {k:'calm',t:'sCalm',o:[false,true],f:v=>v?ui('vMin'):ui('vAll')},
+  {g:'gSound'},
+  {k:'musicVol',t:'sMusic',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
+  {k:'sfxVol',t:'sSfx',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
+  {k:'voiceVol',t:'sVoice',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
+];
+function autoUi(){const m=Math.min(innerWidth,innerHeight*1.7);return m<700?.9:m<1500?1:m<2000?1.15:m<2700?1.35:1.6}
+function UI(){return settings.ui==='auto'?autoUi():settings.ui}
+function drawSettings(){
+  $('#setList').innerHTML=SET.filter(x=>x.only!==false).map(x=>x.g?`<div class="sgrp">${ui(x.g)}</div>`:
+    `<div class="srow"><span class="k" data-k="${x.k}" data-d="1">${ui(x.t)}</span><button class="ar" data-k="${x.k}" data-d="-1" aria-label="−">‹</button><span class="val">${x.f(settings[x.k])}</span><button class="ar" data-k="${x.k}" data-d="1" aria-label="+">›</button></div>`).join('');
+}
+$('#setList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-k]');if(!b)return;
+  const d=SET.find(x=>x.k===b.dataset.k),n=d.o.length;let i=d.o.findIndex(v=>v===settings[d.k]);if(i<0)i=0;
+  const wrap=!/Vol$/.test(d.k)&&d.k!=='ui';
+  let j=i+(+b.dataset.d);j=wrap?(j+n)%n:clamp(j,0,n-1);
+  settings[d.k]=d.o[j];save();ensureAudio();sfx('ui');
+  if(d.k==='win')applyWindow();
+  if(d.k==='fs')applyFs();
+  if(d.k==='gost')badge('NOTATION');
+  if(d.k==='lang'){LANG=settings.lang;applyLang()}
+  applySettings();drawSettings();
+});
+function applySettings(quiet){
+  const r=document.documentElement.style;r.setProperty('--ui',UI());r.setProperty('--ww',settings.ww);
+  document.body.classList.toggle('calm',!!settings.calm);document.body.classList.toggle('hc',!!settings.hc);
+  $('#gridRect').style.display=settings.grid==='none'?'none':'';
+  const g=$('#grid'),mm=settings.grid==='lines',sz=mm?100:20;g.setAttribute('width',sz);g.setAttribute('height',sz);
+  let minor='';for(let i=10;i<100;i+=10)if(i!==50)minor+=`M${i},0V100M0,${i}H100`;
+  g.innerHTML=mm?`<path d="${minor}" stroke="var(--mm1)" stroke-width=".7" fill="none"/><path d="M50,0V100M0,50H100" stroke="var(--mm5)" stroke-width=".9" fill="none"/><path d="M0,0V100M0,0H100" stroke="var(--mm10)" stroke-width="1.3" fill="none"/>`:'<circle cx="0" cy="0" r="1.2" fill="var(--grid)"/>';
+  $('#mascot').classList.toggle('off',settings.bit==='off');
+  musicGain();setSheet(sheetH);
+  if(level){buildChrome();if(quiet)fit();else render()}
+}
+function applyWindow(){
+  if(!isDesk||settings.win==='auto')return;
+  if(settings.win==='fs')window.desktop.setFullScreen(true);
+  else{const [w,h]=settings.win.split('x').map(Number);window.desktop.setSize(w,h)}
+}
+function applyFs(){
+  try{
+    if(settings.fs&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{settings.fs=false;drawSettings();toast(ui('fsDenied'))});
+    if(!settings.fs&&document.fullscreenElement)document.exitFullscreen();
+  }catch(e){settings.fs=false;toast(ui('fsNA'))}
+}
+document.addEventListener('fullscreenchange',()=>{settings.fs=!!document.fullscreenElement;if(curScr==='settings')drawSettings();setTimeout(()=>applySettings(true),100)});
+let rstArm=0;
+$('#setReset').onclick=()=>{const b=$('#setReset');
+  if(!rstArm){rstArm=1;b.innerHTML=ui('reset')+' <span class="v">— '+ui('resetSure')+'</span>';setTimeout(()=>{rstArm=0;b.textContent=ui('reset')},3000);return}
+  rstArm=0;b.textContent=ui('reset');
+  done=new Set();saves={};seen=new Set();prog={lv:{},quiz:{},badges:[],st:{undo:0}};Bit.log=[];
+  store.set('ll_pro',false);store.set('ll_log',[],true);save();updHud();loadLevel(LV[0]);openMenu('settings');toast(ui('progReset'))};
+
+/* ========== language ========== */
+function applyLang(){
+  document.documentElement.lang=LANG;
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));
+  $('#quitBtn').style.display=isDesk?'':'none';
+  $('#verify').textContent=demoOn?ui('skip'):ui('verify');
+  updHud();drawMachine();
+  if(level){buildChrome();render()}
+  if(curScr==='levels')drawTree();if(curScr==='profile')drawProfile();if(curScr==='quiz'&&QZ)drawQuiz();
+}
+
+/* ========== boot ========== */
+window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true);else{setSheet(sheetH);render()}});
+(function boot(){
+  applyLang();
+  applySettings(true);
+  applyWindow();
+  bitMood('idle');
+  const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);
+  loadLevel(l&&available(l)?l:LV[0]);
+  prog.badges.forEach(steamAch);
+  setTimeout(()=>{
+    if(!store.get('ll_pro',false)){say(STORY.prologue);store.set('ll_pro',true,true)}
+    else say([{t:pick(STORY.welcome),m:'smug',wave:1}]);
+  },700);
+})();
+window.LL={LV,get C(){return C},set C(v){C=v},loadLevel,settle,readOuts,resetSim,changed,get level(){return level},done,prog,points,openQuiz,openMenu,badge,get QZ(){return QZ}};
+
+</script>
+</body>
+</html>

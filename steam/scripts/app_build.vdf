@@ -1,0 +1,12 @@
+"AppBuild"
+{
+	"AppID" "480"                 // ← ваш App ID
+	"Desc" "Logic Lab build"
+	"ContentRoot" "..\content\"
+	"BuildOutput" "..\output\"
+	"Depots"
+	{
+		"481" "depot_build_windows.vdf"   // ← ваш Windows depot ID
+		"482" "depot_build_linux.vdf"     // ← ваш Linux depot ID
+	}
+}

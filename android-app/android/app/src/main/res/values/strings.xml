@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Logic Lab</string>
+    <string name="title_activity_main">Logic Lab</string>
+    <string name="package_name">ru.logiclab.game</string>
+    <string name="custom_url_scheme">ru.logiclab.game</string>
+</resources>

@@ -1,0 +1,93 @@
+<svg id="board" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="0" cy="0" r="1.1" fill="var(--grid)"/>
+    </pattern>
+  </defs>
+  <rect id="gridRect" x="0" y="0" width="100%" height="100%" fill="url(#grid)"/>
+  <g id="world"></g>
+  <g id="fx"></g>
+</svg>
+
+<div id="frame"></div>
+
+<header id="top" class="zz">
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><button class="tbtn" id="undo" data-t="undo"></button><button class="tbtn" id="redo" data-t="redo"></button></div>
+  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
+</header>
+
+<div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
+
+<aside id="palette" class="zz"></aside>
+<div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
+
+<section id="sheet" class="zz">
+  <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button></div>
+  <div id="sheetBody">
+    <div id="task"><div id="taskText"></div><div id="hint"></div></div>
+    <div id="stampTbl"></div>
+  </div>
+</section>
+
+<div id="toast" class="zz"></div>
+<div id="result"><div id="resCard" class="zz"><div id="resTitle"></div><div id="resSub"></div><div id="resBtns"></div></div></div>
+
+<div id="ov" class="on">
+  <div class="scr on zz" id="scrMain">
+   <div class="mcol">
+    <div class="brand">Logic Lab</div>
+    <div class="brand-sub" data-t="brandSub"></div>
+    <div class="mlist">
+      <button class="mi" data-go="continue"><span data-t="cont"></span><span class="mm" id="mmCont"></span></button>
+      <button class="mi" data-go="levels"><span data-t="levels"></span><span class="mm" id="mmLevels"></span></button>
+      <button class="mi" data-go="profile"><span data-t="profile"></span><span class="mm" id="mmProfile"></span></button>
+      <button class="mi" data-go="sandbox"><span data-t="sandbox"></span></button>
+      <button class="mi" data-go="settings"><span data-t="settings"></span></button>
+      <button class="mi" data-go="about"><span data-t="about"></span></button>
+      <button class="mi" data-go="quit" id="quitBtn"><span data-t="quit"></span></button>
+    </div>
+   </div>
+   <div class="mcol"><svg id="machine" viewBox="0 0 640 470" role="img"></svg><div id="machineCap"></div></div>
+  </div>
+  <div class="scr zz" id="scrLevels">
+    <h2 data-t="levels"></h2>
+    <svg id="tree"></svg>
+    <div id="treeTip"></div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrProfile">
+    <h2 data-t="profile"></h2>
+    <div id="profBox"></div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrQuiz">
+    <div id="quizBox"></div>
+    <button class="mi small" data-go="levels" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrSettings">
+    <h2 data-t="settings"></h2>
+    <div id="setList"></div>
+    <button class="mi small" id="setReset" data-t="reset"></button>
+    <button class="mi small" data-go="main" data-t="back" style="margin-top:6px"></button>
+  </div>
+  <div class="scr zz" id="scrAbout">
+    <h2 data-t="about"></h2>
+    <div class="about">
+      <p data-t="aboutT1"></p>
+      <p style="margin-top:14px" data-t="aboutT2"></p>
+    </div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+</div>
+
+<div id="mascot" class="zz">
+  <button id="bitTab" aria-label="Bit"><svg id="bitMini" viewBox="8 -2 64 80"></svg></button>
+  <div id="chat" role="log" aria-live="polite">
+    <div id="bitStage"><svg id="bit" viewBox="0 0 80 100" aria-label="Bit"></svg></div>
+    <div id="chatMain">
+      <div class="chd"><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button><button id="chatX" aria-label="×">×</button></div>
+      <div id="chatBody"><div id="chatText"></div><div id="chatCh"></div><div id="chatMore"></div></div>
+      <div id="chatLog"></div>
+    </div>
+  </div>
+</div>

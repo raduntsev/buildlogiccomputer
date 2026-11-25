@@ -1,0 +1,60 @@
+{
+  "name": "logic-lab",
+  "productName": "Logic Lab",
+  "version": "3.3.0",
+  "description": "Logic Lab — logic gate puzzle game",
+  "main": "main.js",
+  "author": "Logic Lab",
+  "build": {
+    "appId": "ru.logiclab.game",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "node_modules/steamworks.js/**"
+    ],
+    "win": {
+      "target": [
+        "dir",
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "LogicLab-Portable-${version}.exe"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "productName": "Logic Lab",
+    "asarUnpack": [
+      "node_modules/steamworks.js/dist/**"
+    ],
+    "extraFiles": [
+      {
+        "from": "steam_appid.txt",
+        "to": "steam_appid.txt"
+      }
+    ],
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Game",
+      "executableName": "logiclab"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win dir portable --x64",
+    "dist:linux": "electron-builder --linux dir --x64",
+    "dist:steam": "electron-builder --win dir --linux dir --x64"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+desktop/dist/
+desktop/index.html
+neu/bin/
+neu/dist/
+neu/resources/
+android-app/android/.gradle/
+android-app/android/app/build/
+android-app/android/build/
+android-app/android/local.properties
+*.log
+.DS_Store
