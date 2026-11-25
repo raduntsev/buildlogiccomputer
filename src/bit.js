@@ -25,14 +25,14 @@ function bitSVG(m,wear){
   return `<g class="legs"><g class="leg-l"><path d="M31,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M24,90Q31,84 38,90Z" fill="${ink}"/></g><g class="leg-r"><path d="M49,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M42,90Q49,84 56,90Z" fill="${ink}"/></g></g>
 <g class="torso">
  ${hat?'':ant}
- <g class="arm-l"><path d="M14,50H6" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="5" cy="50" r="3.4" fill="${ink}"/></g>
- <g class="arm-r"><path d="M66,50H74" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="75" cy="50" r="3.4" fill="${ink}"/></g>
+ <g class="arm-l"><g transform="rotate(-62 14 50)"><path d="M14,50H5" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="4.5" cy="50" r="3.4" fill="${ink}"/></g></g>
+ <g class="arm-r"><g transform="rotate(62 66 50)"><path d="M66,50H75" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="75.5" cy="50" r="3.4" fill="${ink}"/></g></g>
  <rect x="14" y="20" width="52" height="52" rx="12" fill="#fff" stroke="${ink}" stroke-width="2.5"/>
  <circle cx="59" cy="27" r="2.6" fill="var(--acc)" stroke="${ink}" stroke-width="1"/>
  ${eye}${mouth}${w?wearSVG(w):''}${hat?ant:''}
 </g>`;
 }
-function bitMood(m){Bit.mood=m;$('#bit').innerHTML=bitSVG(m);$('#bit').classList.toggle('talk',m==='talk');if(!$('#bitMini').innerHTML)miniDraw()}
+function bitMood(m){Bit.mood=m;if(window.musicMood)musicMood({happy:'bright',smug:'playful',sad:'low',shock:'tense',think:'focus'}[m]);$('#bit').innerHTML=bitSVG(m);$('#bit').classList.toggle('talk',m==='talk');if(!$('#bitMini').innerHTML)miniDraw()}
 function bitAnim(c){if(settings.calm)return;const b=$('#bit');b.classList.remove('jump','shake','wave');void b.getBoundingClientRect();b.classList.add(c);setTimeout(()=>b.classList.remove(c),1400)}
 
 const norm=l=>(typeof l==='string'||Array.isArray(l))?{t:l}:l;
@@ -150,40 +150,71 @@ function fxBits(x,y){if(settings.calm)return;for(let i=0;i<7;i++){const e=docume
 /* ========== Bit's window: drag, flip, mini tab that watches you ========== */
 function miniDraw(){const m=$('#bitMini');m.innerHTML=bitSVG('idle');m.classList.add('bitsvg')}
 $('#bit').classList.add('bitsvg');
-const BP=Object.assign({dx:0,dy:0},store.get('ll_bitpos',{}));window.bitReady=1;
+const BP=Object.assign({dx:0,dy:0,my:0},store.get('ll_bitpos',{}));window.bitReady=1;
+const isMob=()=>innerWidth<=760;
 function bitPlace(){
-  const M=$('#mascot');M.style.translate=`${BP.dx}px ${BP.dy}px`;
-  const r=$('#bitTab').getBoundingClientRect();if(!r.width)return;
-  // keep the tab on screen
-  const z=UI(),pad=8;let fx=0,fy=0;
+  const M=$('#mascot'),T=$('#bitTab'),mob=isMob(),z=UI(),pad=8;
+  M.classList.toggle('mob',mob);
+  if(mob){ // phone: the tab moves on its own, the comm link drops down from the top
+    M.style.translate='';T.style.translate=`${BP.dx}px ${BP.dy}px`;
+    const r=T.getBoundingClientRect();
+    if(r.width){let fx=0,fy=0;
+      if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
+      if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
+      if(fx||fy){BP.dx+=fx;BP.dy+=fy;T.style.translate=`${BP.dx}px ${BP.dy}px`}}
+    const ch=$('#chat').offsetHeight;BP.my=clamp(BP.my||0,0,Math.max(0,innerHeight/z-ch-120));
+    $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;
+  }
+  T.style.translate='';$('#chat').style.top='';
+  M.style.translate=`${BP.dx}px ${BP.dy}px`;
+  const r=T.getBoundingClientRect();if(!r.width)return;
+  let fx=0,fy=0;
   if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
   if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
   if(fx||fy){BP.dx+=fx;BP.dy+=fy;M.style.translate=`${BP.dx}px ${BP.dy}px`}
-  const q=$('#bitTab').getBoundingClientRect(),cw=$('#chat').offsetWidth*z,ch=$('#chat').offsetHeight*z;
-  // open the window towards the free side of the screen
+  const q=T.getBoundingClientRect(),cw=$('#chat').offsetWidth*z,ch=$('#chat').offsetHeight*z;
   M.classList.toggle('fl',q.right-cw<pad&&q.left+cw<innerWidth-pad);
   M.classList.toggle('ft',q.bottom-ch<pad);
 }
+/* a little physics: the window swings on the point you hold it by and settles on a spring */
+const PH={a:0,v:0,t:0,raf:0,el:null,stopT:0};
+function physStep(){
+  PH.v=(PH.v+(PH.t-PH.a)*.09)*.86;PH.a+=PH.v;
+  if(PH.el)PH.el.style.rotate=PH.a.toFixed(2)+'deg';
+  if(Math.abs(PH.v)>.02||Math.abs(PH.t-PH.a)>.05)PH.raf=requestAnimationFrame(physStep);
+  else{PH.raf=0;PH.a=PH.t;if(PH.el){PH.el.style.rotate=PH.t?PH.t+'deg':'';if(!PH.t)PH.el.style.transformOrigin=''}}
+}
+function physKick(){if(!PH.raf&&!settings.calm)PH.raf=requestAnimationFrame(physStep)}
 function bitDrag(handle,isTab){
   let st=null;
   handle.addEventListener('pointerdown',e=>{
     if(e.button!==0||(!isTab&&e.target.closest('button')))return;
-    st={x:e.clientX,y:e.clientY,dx:BP.dx,dy:BP.dy,moved:false,id:e.pointerId};
+    st={x:e.clientX,y:e.clientY,dx:BP.dx,dy:BP.dy,my:BP.my,moved:false,id:e.pointerId,lx:e.clientX,lt:performance.now()};
   });
   window.addEventListener('pointermove',e=>{
     if(!st||e.pointerId!==st.id)return;
     const ddx=e.clientX-st.x,ddy=e.clientY-st.y;
     if(!st.moved&&Math.hypot(ddx,ddy)<5)return;
-    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging')}
-    const z=UI();BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z;bitPlace();
+    const mob=isMob(),vert=mob&&!isTab;
+    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging');
+      // swing around the grab point
+      PH.el=isTab?$('#bitTab'):$('#chat');
+      if(!settings.calm){const r=PH.el.getBoundingClientRect(),z=UI();PH.el.style.transformOrigin=`${(e.clientX-r.left)/z}px ${(e.clientY-r.top)/z}px`}}
+    const z=UI();
+    if(vert){BP.my=st.my+ddy/z}else{BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z}
+    bitPlace();
+    const now=performance.now(),dt=Math.max(8,now-st.lt),vx=(e.clientX-st.lx)/dt*16;st.lx=e.clientX;st.lt=now;
+    PH.t=vert?0:clamp(vx*1.6,-14,14);physKick();
+    clearTimeout(PH.stopT);PH.stopT=setTimeout(()=>{PH.t=0;physKick()},90);
   });
   const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
-    if(mv){store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
+    PH.t=0;physKick();
+    if(mv){store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
   window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
   handle.addEventListener('click',e=>{if(handle.dataset.dragged){e.stopImmediatePropagation();e.preventDefault()}},true);
 }
 bitDrag($('#chat .chd'),false);bitDrag($('#bitTab'),true);
-$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;BP.dx=0;BP.dy=0;store.set('ll_bitpos',BP,true);bitPlace()});
+$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;BP.dx=0;BP.dy=0;BP.my=0;store.set('ll_bitpos',BP,true);bitPlace()});
 window.addEventListener('resize',()=>bitPlace());
 
 // pupils follow the pointer on the small Bits (tab and menu)

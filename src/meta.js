@@ -26,6 +26,7 @@ function onSolved(){
   showCard(true,ui('correct'),
     `<div class="rcrit">${[1,2,4].map((b,i)=>`<div class="rc${bits&b?' on':''}"><i>${bits&b?'✓':''}</i><span>${crit[i][0]}</span><em>${bits&b?'':crit[i][1]}</em></div>`).join('')}</div>
      <div class="rmet"><div><b class="${C.gates.length<=level.par?'hl':''}">${C.gates.length}</b><span>${ui('mGates')}</span></div><div><b>${level.par}</b><span>${ui('mPar')}</span></div><div><b class="hl">+${gain}</b><span>${ui('points').toLowerCase()}</span></div></div>`,btns);
+  musicMood('bright',30000);
   const lines=[{t:pick(bits===7?STORY.win3:STORY.win),m:bits===7?'smug':'happy'}];
   if(chDone){if(level.ch===10)lines.push(...STORY.final);else lines.push({t:STORY.chDone[level.ch],m:'happy'})}
   say(lines);
@@ -39,7 +40,7 @@ function onSolved(){
   checkRank(prevRank);
 }
 function onFailed(f,n){
-  failCount++;
+  failCount++;musicMood('low',26000);
   showCard(false,ui('mismatch'),`<div class="rmet"><div><b class="hl" style="color:var(--coral)">${f}</b><span>${ui('mRowsBad')}</span></div><div><b>${n-f}</b><span>${ui('mRowsOk')}</span></div><div><b>${n}</b><span>${ui('mRows')}</span></div></div>`,[{t:ui('fix'),p:1}]);
   const extra=hintUsed||hintBought()?null:failCount===3?STORY.discount:failCount===6?STORY.freeHint:null;
   updHud();
@@ -129,7 +130,32 @@ function drawProfile(){
 }
 
 /* ========== level tree ========== */
+/* phones: chapters as an accordion, levels as big cards */
+let treeOpen=null;
+function drawTreeList(){
+  const cur=CHAPTERS.findIndex((_,i)=>!chapterDone(i+1)||!quizPassed(i+1))+1||CHAPTERS.length;
+  if(treeOpen==null)treeOpen=cur;
+  $('#treeList').innerHTML=CHAPTERS.map((c,i)=>{
+    const ch=i+1,ls=LV.filter(l=>l.ch===ch),dn=ls.filter(l=>done.has(l.id)).length,open=treeOpen===ch,anyAv=ls.some(available);
+    const qa=chapterDone(ch),qp=quizPassed(ch);
+    return `<section class="tl-ch${open?' open':''}${anyAv?'':' lock'}">
+      <button class="tl-h" data-ch="${ch}"><b>${ch}</b><span><em>${tx(c)}</em><small>${ui('mmDone',{n:dn,N:ls.length})}${qp?' · '+ui('qPass').toLowerCase():''}</small></span>
+        <i class="tl-bar"><i style="width:${Math.round(dn/ls.length*100)}%"></i></i><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button>
+      <div class="tl-body">${ls.map(l=>{const d=done.has(l.id),av=available(l),st=(prog.lv[l.id]||{}).s||0;
+        return `<button class="tl-l${d?' done':av?' av':' lock'}" data-l="${l.id}" ${av?'':'disabled'}><b>${l.id}</b><span>${tx(l.t)}</span>
+          <i class="tl-st">${d?[1,2,4].map(b=>`<u class="${st&b?'on':''}"></u>`).join(''):av?ui('tlNew'):ui('tlLock')}</i></button>`}).join('')}
+        <button class="tl-q${qp?' pass':qa?' av':' lock'}" data-q="${ch}" ${qa?'':'disabled'}><span>${ui('quizNode')}</span><b>${qp?prog.quiz[ch].best+' / 5':qa?ui('qReady'):ui('tlLock')}</b></button>
+      </div></section>`}).join('');
+}
+$('#treeList').addEventListener('click',e=>{
+  const h=e.target.closest('[data-ch]');if(h){const ch=+h.dataset.ch;treeOpen=treeOpen===ch?0:ch;sfx('ui');drawTreeList();
+    const sec=$$('#treeList .tl-ch')[ch-1];if(treeOpen&&sec)sec.scrollIntoView({block:'nearest',behavior:'smooth'});return}
+  const l=e.target.closest('[data-l]');if(l){const lv=LV[l.dataset.l-1];if(!available(lv))return;sfx('ui');loadLevel(lv);closeMenu();return}
+  const q=e.target.closest('[data-q]');if(q&&chapterDone(+q.dataset.q))openQuiz(+q.dataset.q);
+});
 function drawTree(){
+  const mob=innerWidth<=760;document.body.classList.toggle('treeMob',mob);
+  if(mob){drawTreeList();return}
   const sv=$('#tree'),CW=138,RH=78,PX=6,PY=62,CHG=64,LX=380;
   const yOf=l=>PY+l.pos[1]*RH+(l.ch-1)*CHG, xOf=l=>PX+LX+l.pos[0]*CW;
   const qPos=ch=>{const ls=LV.filter(l=>l.ch===ch),c=Math.max(...ls.map(l=>l.pos[0]))+1,f=ls[0];return{x:PX+LX+c*CW,y:yOf(f)}};
@@ -209,6 +235,7 @@ function drawMachine(){
 const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
 let curScr='main';
 function openMenu(s){
+  window.keyCapture=null;
   curScr=s;$('#ov').classList.add('on');$('#result').classList.remove('on');
   $$('.scr').forEach(x=>x.classList.remove('on'));$(SCR[s]).classList.add('on');
   if(s!=='main'&&s!=='quiz')hideBubble();
@@ -264,7 +291,24 @@ function setCtl(x){
 }
 function drawSettings(){
   $('#setList').innerHTML=SET.filter(x=>x.only!==false).map(x=>x.g?`<div class="sgrp">${ui(x.g)}</div>`:
-    `<div class="srow"><span class="k">${ui(x.t)}</span>${setCtl(x)}</div>`).join('');
+    `<div class="srow"><span class="k">${ui(x.t)}</span>${setCtl(x)}</div>`).join('')
+    +`<div class="sgrp">${ui('gKeys')}</div>`
+    +KEYORDER.map(a=>`<div class="srow"><span class="k">${ui('k_'+a)}</span><div class="keys">${keysFor(a).map(k=>`<button class="kc" data-key="${a}">${keyLabel(k)}</button>`).join('')}</div></div>`).join('')
+    +`<div class="srow kfoot"><button class="tbtn" id="keyReset">${ui('kReset')}</button></div>`
+    +`<div class="sgrp">${ui('kMouse')}</div><div class="srow mhelp">${['m_wire','m_gate','m_del','m_cut','m_pan'].map(k=>`<p>${ui(k)}</p>`).join('')}</div>`;
+}
+function keyBind(btn){
+  const a=btn.dataset.key;$$('.kc.wait').forEach(x=>x.classList.remove('wait'));
+  btn.classList.add('wait');btn.textContent=ui('kPress');
+  window.keyCapture=e=>{
+    e.preventDefault();e.stopPropagation();
+    if(e.code==='Escape'&&a!=='menu'){window.keyCapture=null;drawSettings();return}
+    const c=combo(e);if(!c)return;
+    window.keyCapture=null;
+    const other=KEYORDER.find(x=>x!==a&&keysFor(x).includes(c));
+    if(other){toast(ui('kTaken',{k:keyLabel(c),a:ui('k_'+other)}));drawSettings();return}
+    settings.keys=Object.assign({},settings.keys,{[a]:c});save();sfx('ui');drawSettings();
+  };
 }
 function setVal(k,val){
   settings[k]=val;save();ensureAudio();sfx('ui');
@@ -276,6 +320,8 @@ function setVal(k,val){
   applySettings();drawSettings();
 }
 $('#setList').addEventListener('click',e=>{
+  const kb=e.target.closest('[data-key]');if(kb){keyBind(kb);return}
+  if(e.target.closest('#keyReset')){settings.keys={};save();sfx('ui');drawSettings();return}
   const dd=e.target.closest('[data-dd]');
   if(dd){const w=dd.parentElement,open=w.classList.contains('open');$$('.dd.open').forEach(x=>x.classList.remove('open'));if(!open){w.classList.add('open');const on=w.querySelector('.dd-o.on');if(on)on.scrollIntoView({block:'nearest'})}return}
   const b=e.target.closest('[data-k]');if(!b||b.type==='range')return;
