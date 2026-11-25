@@ -423,7 +423,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
   .chd .cs,#saved{display:none}#hintBtn{font-size:13px;padding:0 12px}#lvTitle{font-size:16px}#lvNum{font-size:24px}
   .srow .val{min-width:110px}.sbar{width:54px}
 }
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* reduced motion: the OS setting turns on settings.calm by default (body.calm), so no global override here — shrinking infinite animations to .01ms made them flicker */
 
 /* ===== v3.3 overrides ===== */
 /* formulas */
@@ -2448,12 +2448,14 @@ function bitPlace(){
   M.classList.toggle('ft',q.bottom-ch<pad);
 }
 /* a little physics: the window swings on the point you hold it by and settles on a spring */
-const PH={a:0,v:0,t:0,raf:0,el:null,stopT:0};
-function physStep(){
-  PH.v=(PH.v+(PH.t-PH.a)*.09)*.86;PH.a+=PH.v;
+const PH={a:0,v:0,t:0,raf:0,el:null,stopT:0,lt:0};
+function physStep(now){
+  // tuned for 60 fps; scale by the real frame time so 120/144 Hz screens swing at the same speed
+  const f=PH.lt?Math.min(3,Math.max(.25,(now-PH.lt)/16.67)):1;PH.lt=now;
+  PH.v=(PH.v+(PH.t-PH.a)*.09*f)*Math.pow(.86,f);PH.a+=PH.v*f;
   if(PH.el)PH.el.style.rotate=PH.a.toFixed(2)+'deg';
   if(Math.abs(PH.v)>.02||Math.abs(PH.t-PH.a)>.05)PH.raf=requestAnimationFrame(physStep);
-  else{PH.raf=0;PH.a=PH.t;if(PH.el){PH.el.style.rotate=PH.t?PH.t+'deg':'';if(!PH.t)PH.el.style.transformOrigin=''}}
+  else{PH.raf=0;PH.lt=0;PH.a=PH.t;if(PH.el){PH.el.style.rotate=PH.t?PH.t+'deg':'';if(!PH.t)PH.el.style.transformOrigin=''}}
 }
 function physKick(){if(!PH.raf&&!settings.calm)PH.raf=requestAnimationFrame(physStep)}
 function bitDrag(handle,isTab){
