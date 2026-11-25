@@ -33,9 +33,11 @@ ipcMain.on('app:quit',()=>app.quit());
 
 Menu.setApplicationMenu(null);
 app.whenReady().then(()=>{
-  const w=new BrowserWindow({width:1280,height:800,minWidth:800,minHeight:560,backgroundColor:'#F3F2EE',title:'Logic Lab',autoHideMenuBar:true,show:false,
+  const w=new BrowserWindow({width:1280,height:800,minWidth:800,minHeight:560,backgroundColor:'#F3F2EE',title:'Logic Lab',icon:path.join(__dirname,'icon.png'),autoHideMenuBar:true,show:false,
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,sandbox:false}});
   w.once('ready-to-show',()=>w.show());
+  w.on('enter-full-screen',()=>w.webContents.send('win:fs-changed',true));
+  w.on('leave-full-screen',()=>w.webContents.send('win:fs-changed',false));
   w.webContents.on('before-input-event',(ev,inp)=>{if(inp.key==='F11'&&inp.type==='keyDown')w.setFullScreen(!w.isFullScreen())});
   w.loadFile('index.html');
 });

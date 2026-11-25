@@ -1,7 +1,7 @@
 {
   "name": "logic-lab",
   "productName": "Logic Lab",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Logic Lab — logic gate puzzle game",
   "main": "main.js",
   "author": "Logic Lab",
@@ -10,6 +10,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "icon.png",
       "index.html",
       "node_modules/steamworks.js/**"
     ],
@@ -18,7 +19,8 @@
         "dir",
         "portable"
       ],
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "LogicLab-Portable-${version}.exe"
@@ -41,12 +43,16 @@
         "dir"
       ],
       "category": "Game",
-      "executableName": "logiclab"
-    }
+      "executableName": "logiclab",
+      "icon": "build/icon.png"
+    },
+    "afterPack": "scripts/afterPack.js"
   },
   "devDependencies": {
     "electron": "^33.2.1",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "resedit": "^2.0.3",
+    "pe-library": "^1.0.1"
   },
   "dependencies": {
     "steamworks.js": "^0.4.0"

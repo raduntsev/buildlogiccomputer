@@ -167,7 +167,8 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .w{fill:none;pointer-events:none;stroke-width:calc(var(--ww) * 1px);stroke-linejoin:round;stroke-linecap:round}
 .w0{stroke:var(--w0)}
 .w1{stroke:var(--w1)}
-.demo .w1{stroke-dasharray:2 9;animation:flow .5s linear infinite;stroke-width:calc(var(--ww) * 1px + 1px)}
+.wf{fill:none;pointer-events:none;stroke:var(--acc);stroke-width:max(1.5px,calc(var(--ww) * 1px - 2.5px));stroke-dasharray:5 23;stroke-linecap:round;animation:flow2 1.6s linear infinite}
+@keyframes flow2{to{stroke-dashoffset:-28}}
 @keyframes flow{to{stroke-dashoffset:-22}}
 .whit{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 12px);cursor:pointer}
 .whit:hover+.wsel,.wsel.on{stroke:rgba(220,235,58,.75)}
@@ -182,15 +183,15 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .pin-out{fill:var(--ink)}
 .pin-hit{fill:transparent;cursor:crosshair}
 .pin-hit:hover{fill:rgba(220,235,58,.6)}
-.short{fill:none;pointer-events:none;stroke:var(--coral);stroke-width:3;animation:pulse .5s steps(2) infinite}
-@keyframes pulse{50%{opacity:.2}}
+.short{fill:none;pointer-events:none;stroke:var(--coral);stroke-width:3;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
 .flag{cursor:pointer}
 .lbl{font:600 15px var(--font);text-anchor:middle;dominant-baseline:central}
 .jn{fill:var(--ink);pointer-events:none}
 .cut{fill:none;stroke:var(--coral);stroke-width:2.5;stroke-dasharray:6 5;stroke-linecap:round}
 .ghost{opacity:.55;pointer-events:none}
 .tmp{opacity:.8}
-.onb{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-dasharray:1 9;stroke-linecap:round;animation:flow 1s linear infinite;opacity:.5;pointer-events:none}
+.onb{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-dasharray:1 9;stroke-linecap:round;animation:flow 2.2s linear infinite;opacity:.5;pointer-events:none}
 
 body.hc{--w0:#8E9089;--mute:#62645E;--ink2:#2C2E31;--line:#AFAFA7;--grid:#C4C4BC;--grid2:#B1B1A9}
 body.calm *,body.calm *::before,body.calm *::after{animation:none!important;transition:none!important}
@@ -215,20 +216,20 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 /* ---------- Bit and the comm link ---------- */
 #mascot{position:fixed;right:18px;display:flex;align-items:flex-end;gap:10px;pointer-events:none;z-index:6}
 #mascot.off{display:none}
-#bit{width:78px;height:98px;pointer-events:auto;cursor:pointer;flex:0 0 auto;overflow:visible;animation:bob 3.4s ease-in-out infinite;transform-origin:50% 100%}
+#bit{width:78px;height:98px;pointer-events:auto;cursor:pointer;flex:0 0 auto;overflow:visible;transform-origin:50% 100%}
 @keyframes bob{50%{transform:translateY(-3px)}}
-#bit.jump{animation:jump .55s cubic-bezier(.3,1.5,.5,1) 2}
-@keyframes jump{40%{transform:translateY(-18px) scaleY(1.05)}75%{transform:translateY(0) scaleY(.93)}}
-#bit.shake{animation:shake .3s 3}
-@keyframes shake{25%{transform:translateX(-4px) rotate(-4deg)}75%{transform:translateX(4px) rotate(4deg)}}
-#bit .eye{transform-origin:40px 42px;transform-box:view-box;animation:blink 4.6s infinite}
+#bit.jump,#menuBit.jump #mbSvg{animation:jump .9s cubic-bezier(.3,1.3,.5,1) 1}
+@keyframes jump{40%{transform:translateY(-8px)}75%{transform:translateY(0) scaleY(.97)}}
+#bit.shake{animation:shake .6s 2}
+@keyframes shake{25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
+#bit .eye,.bitsvg .eye{transform-origin:40px 42px;transform-box:view-box;animation:blink 5.5s infinite}
 @keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
 #bit .arm-r{transform-origin:66px 50px;transform-box:view-box}
-#bit.wave .arm-r{animation:wave .45s ease-in-out 4}
-@keyframes wave{50%{transform:rotate(-40deg)}}
-#bit .m-open{animation:talk .2s steps(1) infinite}
+#bit.wave .arm-r{animation:wave .8s ease-in-out 2}
+@keyframes wave{50%{transform:rotate(-30deg)}}
+#bit .m-open{animation:talk .36s steps(1) infinite}
 @keyframes talk{50%{opacity:0}}
-#bit .spark{animation:spark 1.2s ease-in-out infinite}
+#bit .spark{animation:spark 2.6s ease-in-out infinite}
 @keyframes spark{50%{opacity:.35}}
 #chat{pointer-events:auto;width:min(380px,calc(100vw - 120px));background:var(--paper);border-radius:24px;box-shadow:var(--shadow),0 0 0 1px rgba(26,27,29,.04);position:relative;margin-bottom:46px;opacity:0;transform:translateY(8px) scale(.98);transform-origin:100% 100%;transition:opacity .16s,transform .16s;visibility:hidden;overflow:hidden}
 #chat.on{opacity:1;transform:none;visibility:visible}
@@ -257,7 +258,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 .fx-ring.g{stroke:var(--mute)}
 @keyframes ring{from{transform:scale(.3);opacity:.9}to{transform:scale(2.2);opacity:0}}
 .fx-bit{font:700 16px var(--font);fill:var(--ink);paint-order:stroke;stroke:var(--acc);stroke-width:6px;stroke-linejoin:round;animation:floatup 1.4s cubic-bezier(.2,.7,.4,1) forwards}
-@keyframes floatup{to{transform:translate(var(--dx),-90px);opacity:0}}
+@keyframes floatup{to{transform:translate(var(--dx),-60px);opacity:0}}
 
 /* ---------- checkpoint test ---------- */
 #quizBox{max-width:720px}
@@ -329,7 +330,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 .mo{display:inline-block;margin:0 .26em;font-style:normal;font-family:"STIX Two Text",serif}
 .mos{width:.74em;height:.74em;vertical-align:-.06em;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
 sub .mo{margin:0 .06em}
-.math .ov,.qb .ov,.qq .ov,#task .ov,#hint .ov,.tt .ov,#treeTip .ov{text-decoration:none;display:inline-block;border-top:.07em solid currentColor;padding-top:.08em;line-height:1.05}
+.math .ov,.qb .ov,.qq .ov,.dq .ov,#chatText .ov,#task .ov,#hint .ov,.tt .ov,#treeTip .ov{text-decoration:none;display:inline-block;border-top:.07em solid currentColor;padding-top:.08em;line-height:1.05}
 /* task card: formula + truth table, centred under the top bar */
 #top{grid-template-columns:1fr 1fr}
 #taskCard{position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:3;background:var(--paper);border-radius:26px;box-shadow:var(--shadow);padding:14px 16px 14px;max-width:min(980px,calc(100vw - 230px));display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -387,21 +388,21 @@ body.bitOn #bitTab{opacity:0;transform:scale(.6);pointer-events:none;position:ab
 #bitStage #bit{position:relative;z-index:1;width:88px;height:110px;animation:none}
 #chatMain{min-width:0;display:flex;flex-direction:column}
 #chatBody{flex:1}
-#bit .torso{transform-origin:40px 86px;transform-box:view-box;animation:breathe 3.2s ease-in-out infinite}
-@keyframes breathe{50%{transform:scaleY(1.035) translateY(-1px)}}
-#bit .ant{transform-origin:40px 20px;transform-box:view-box;animation:sway 2.6s ease-in-out infinite}
-@keyframes sway{25%{transform:rotate(-7deg)}75%{transform:rotate(6deg)}}
-#bit .arm-l{transform-origin:14px 50px;transform-box:view-box;animation:armL 3.2s ease-in-out infinite}
-#bit .arm-r{transform-origin:66px 50px;transform-box:view-box;animation:armR 3.2s ease-in-out infinite}
-@keyframes armL{50%{transform:rotate(12deg)}}
-@keyframes armR{50%{transform:rotate(-12deg)}}
-#bit .pupil{animation:look 6s ease-in-out infinite}
-@keyframes look{0%,30%,100%{transform:none}40%,55%{transform:translateX(3.5px)}65%,80%{transform:translate(-3px,1px)}}
-#bit.talk .torso{animation:chatter .26s ease-in-out infinite}
-@keyframes chatter{50%{transform:scaleY(.96) translateY(1.5px)}}
-#bit.talk .arm-r{animation:gesture .52s ease-in-out infinite}
-@keyframes gesture{50%{transform:rotate(-28deg)}}
-#bit.wave .arm-r{animation:wave .45s ease-in-out 4}
+#bit .torso,.bitsvg .torso{transform-origin:40px 86px;transform-box:view-box;animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{50%{transform:scaleY(1.018) translateY(-.6px)}}
+#bit .ant,.bitsvg .ant{transform-origin:40px 20px;transform-box:view-box;animation:sway 5.5s ease-in-out infinite}
+@keyframes sway{25%{transform:rotate(-3.5deg)}75%{transform:rotate(3deg)}}
+#bit .arm-l,.bitsvg .arm-l{transform-origin:14px 50px;transform-box:view-box;animation:armL 5s ease-in-out infinite}
+#bit .arm-r,.bitsvg .arm-r{transform-origin:66px 50px;transform-box:view-box;animation:armR 5s ease-in-out infinite}
+@keyframes armL{50%{transform:rotate(5deg)}}
+@keyframes armR{50%{transform:rotate(-5deg)}}
+#bit .pupil{animation:look 10s ease-in-out infinite}
+@keyframes look{0%,30%,100%{transform:none}40%,55%{transform:translateX(2.5px)}65%,80%{transform:translate(-2px,1px)}}
+#bit.talk .torso{animation:chatter .7s ease-in-out infinite}
+@keyframes chatter{50%{transform:scaleY(.985) translateY(.6px)}}
+#bit.talk .arm-r{animation:gesture 1.4s ease-in-out infinite}
+@keyframes gesture{50%{transform:rotate(-14deg)}}
+#bit.wave .arm-r{animation:wave .8s ease-in-out 2}
 @media (max-width:760px){
   #top{grid-template-rows:40px;height:40px}
   #taskCard{top:56px;max-width:calc(100vw - 16px);padding:10px}
@@ -419,3 +420,142 @@ body.bitOn #bitTab{opacity:0;transform:scale(.6);pointer-events:none;position:ab
 #stampTbl{align-items:flex-start}
 .met{flex:0 0 auto;min-height:0}
 @media (min-width:1100px){body.bitOn #result.on{padding-right:520px}}
+
+/* ================= v3.4 ================= */
+/* ---------- comm link: folds into the tab and back ---------- */
+#chat{transform:scale(.1);transform-origin:calc(100% - 30px) calc(100% - 30px);opacity:0;visibility:hidden;
+  transition:transform .5s cubic-bezier(.6,0,.3,1),opacity .28s ease .2s,visibility 0s linear .5s}
+#chat.on{transform:none;opacity:1;visibility:visible;transition:transform .5s cubic-bezier(.2,1.05,.35,1),opacity .2s ease,visibility 0s}
+#mascot.fl #chat{left:0;right:auto;transform-origin:30px calc(100% - 30px)}
+#mascot.ft #chat{top:0;bottom:auto;transform-origin:calc(100% - 30px) 30px}
+#mascot.fl.ft #chat{transform-origin:30px 30px}
+#chat .chd{cursor:grab}
+#bitTab{overflow:hidden;cursor:grab;transition:transform .35s cubic-bezier(.2,1.2,.4,1) .36s,opacity .25s ease .34s,background .2s}
+body.bitOn #bitTab{opacity:0;transform:scale(.6);transition:transform .2s,opacity .15s}
+body.mainScr:not(.bitOn) #bitTab{opacity:0;transform:scale(.6);pointer-events:none;transition:transform .2s,opacity .15s}
+body.bitDragging,body.bitDragging *{cursor:grabbing!important}
+body.bitDragging #chat,body.bitDragging #bitTab{transition:none}
+#bitTab svg{width:46px;height:57px;margin-top:22px;overflow:visible}
+#bitTab:hover svg{transform:translateY(-3px);transition:transform .3s}
+#bitMini .pupil,#mbSvg .pupil,.wr-bit .pupil{transform:translate(var(--px,0px),var(--py,0px));transition:transform .3s ease-out}
+#bitMini.peek{animation:peek 3.6s ease-in-out}
+@keyframes peek{0%{transform:none}22%,42%{transform:translateY(30px)}62%{transform:translateY(5px) rotate(-7deg)}80%{transform:translateY(5px) rotate(5deg)}100%{transform:none}}
+
+/* ---------- Bit in the main menu ---------- */
+.mcol{position:relative}
+#menuBit{position:absolute;left:0;top:0;z-index:2;cursor:pointer;transition-property:transform,opacity;transition-timing-function:linear,ease;transition-duration:1s,.3s;will-change:transform}
+#menuBit.hop{transition-timing-function:cubic-bezier(.35,-.55,.65,1),ease}
+#menuBit.enter{animation:mbIn .9s cubic-bezier(.2,1.2,.4,1)}
+@keyframes mbIn{from{opacity:0;scale:.5}}
+body.bitOn #menuBit{opacity:0;pointer-events:none}
+#mbSvg{width:100%;height:100%;display:block;overflow:visible;transform-origin:43% 97%}
+#mbSvg.flipx{scale:-1 1}
+#mbSvg .p{display:none}
+.a-solder .p-iron,.a-solder .p-chip,.a-read .p-book,.a-scope .p-mag,.a-carry .p-box,.a-nap .p-zz{display:inline!important}
+#menuBit .p-iron,#menuBit .p-mag{transform-origin:66px 50px;transform-box:view-box}
+.a-solder .arm-r,.a-solder .p-iron{animation:solder 2.4s ease-in-out infinite!important}
+@keyframes solder{0%,100%{transform:rotate(60deg)}50%{transform:rotate(56deg)}}
+.spk{opacity:0;animation:spk 1.3s steps(1) infinite}
+.spk.s2{animation-delay:.4s}.spk.s3{animation-delay:.85s}
+@keyframes spk{0%{opacity:1}25%{opacity:0}}
+.a-read .arm-l,.a-carry .arm-l{animation:none!important;transform:rotate(-127deg)}
+.a-read .arm-r,.a-carry .arm-r{animation:none!important;transform:rotate(127deg)}
+.a-read #mbSvg .pupil{animation:readx 3s ease-in-out infinite}
+@keyframes readx{0%,100%{transform:translate(-2.5px,3px)}50%{transform:translate(2.5px,3px)}}
+#menuBit .page{transform-origin:40px 60px;transform-box:view-box;animation:page 6s ease-in-out infinite}
+@keyframes page{0%,70%{transform:none;opacity:1}86%{transform:scaleX(-1);opacity:1}100%{transform:scaleX(-1);opacity:0}}
+.a-scope .arm-r,.a-scope .p-mag{animation:scope 4s ease-in-out infinite!important}
+@keyframes scope{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(14deg)}}
+.a-walk .leg-l,.a-carry .leg-l{animation:stepA .56s ease-in-out infinite}
+.a-walk .leg-r,.a-carry .leg-r{animation:stepB .56s ease-in-out infinite}
+@keyframes stepA{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes stepB{0%,100%{transform:translateY(-3px)}50%{transform:translateY(0)}}
+.a-walk .mb-body,.a-carry .mb-body{animation:walkbob .56s ease-in-out infinite}
+@keyframes walkbob{50%{transform:translateY(-1.2px)}}
+.a-nap .torso{animation-duration:7s!important}
+.p-zz text{opacity:0;animation:zz 3.4s ease-in-out infinite}
+.p-zz .z2{animation-delay:1.7s}
+@keyframes zz{0%{opacity:0;transform:translate(0,6px)}30%{opacity:1}100%{opacity:0;transform:translate(7px,-9px)}}
+#mbSay{position:absolute;left:80%;bottom:64%;width:max-content;max-width:290px;background:var(--paper);color:var(--ink);font-size:15px;font-weight:500;line-height:1.4;
+  padding:11px 15px;border-radius:18px 18px 18px 6px;box-shadow:var(--shadow),0 0 0 1px rgba(26,27,29,.05);opacity:0;transform:translateY(6px) scale(.96);transform-origin:0 100%;
+  pointer-events:none;transition:opacity .35s,transform .35s;text-wrap:pretty}
+#mbSay.on{opacity:1;transform:none}
+#menuBit.sl #mbSay{left:auto;right:80%;border-radius:18px 18px 6px 18px;transform-origin:100% 100%}
+
+/* ---------- settings controls ---------- */
+.srow{min-height:62px;gap:14px;flex-wrap:wrap}
+.srow .k{cursor:default}
+.sw{width:52px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:0 0 auto;transition:background .2s}
+.sw i{position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .25s cubic-bezier(.3,1.3,.5,1),background .2s}
+.sw.on{background:var(--ink)}
+.sw.on i{transform:translateX(22px);background:var(--acc)}
+.seg{display:flex;background:var(--card2);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{height:34px;padding:0 15px;border-radius:999px;font-size:14px;font-weight:500;color:var(--ink2)}
+.seg button:hover{color:var(--ink);background:rgba(255,255,255,.7)}
+.seg button.on{background:var(--ink);color:#fff}
+.dd{position:relative}
+.dd-b{height:40px;min-width:210px;padding:0 14px 0 16px;border-radius:999px;background:var(--card2);display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+.dd-b:hover{background:var(--line)}
+.dd-b svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.dd.open .dd-b{background:var(--ink);color:#fff}
+.dd.open .dd-b svg{transform:rotate(180deg)}
+.dd-l{position:absolute;right:0;top:calc(100% + 6px);min-width:100%;max-height:320px;overflow:auto;background:var(--paper);border-radius:18px;padding:6px;z-index:10;display:none;
+  box-shadow:0 18px 40px -12px rgba(26,27,29,.35),0 0 0 1px rgba(26,27,29,.06)}
+.dd.open .dd-l{display:block;animation:ddIn .16s ease-out}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}}
+.dd-o{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:12px;font-size:15px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dd-o:hover{background:var(--card2)}
+.dd-o.on{background:var(--acc)}
+.rng{display:flex;align-items:center;gap:14px}
+.rng input{-webkit-appearance:none;appearance:none;width:220px;height:6px;border-radius:6px;cursor:pointer;
+  background:linear-gradient(var(--ink),var(--ink)) 0 0/var(--v) 100% no-repeat,var(--line)}
+.rng input::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--acc);border:2px solid var(--ink)}
+.rng input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--acc);border:2px solid var(--ink)}
+.rng input:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
+.rng output{min-width:50px;text-align:right;font-size:14px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
+
+/* ---------- hint price ---------- */
+#hintBtn{display:inline-flex;align-items:center}
+.cost{font-size:12.5px;font-weight:500;opacity:.62;margin-left:9px;white-space:nowrap}
+
+/* ---------- knife and splice ---------- */
+.w.doom{stroke:var(--coral)!important}
+.gate.doom .gb{fill:var(--bad);stroke:var(--coral)}
+.gate.doom .gst{stroke:var(--coral)}
+.gate.doom .gl{fill:var(--coral)}
+.wins{fill:none;pointer-events:none;stroke:var(--acc);stroke-width:calc(var(--ww) * 1px + 10px);stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.ghost.ins .gb{fill:var(--acc-soft)}
+
+/* ---------- workshop ---------- */
+.sh-head{display:flex;align-items:baseline;gap:8px 22px;flex-wrap:wrap;margin-bottom:22px}
+.sh-bal b{font-size:64px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.sh-bal span{font-size:17px;color:var(--ink2);margin-left:10px;font-weight:500}
+.sh-sub{font-size:14px;color:var(--mute);font-weight:500}
+.sh-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;margin-bottom:12px;max-width:1100px}
+.sh-card{background:var(--paper);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);max-width:1100px}
+.sh-card h3{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+.sh-p{font-size:14.5px;color:var(--ink2);line-height:1.45;margin-bottom:16px}
+.sh-note{margin:16px 0 0;color:var(--mute)}
+.dq{font-size:22px;font-weight:600;line-height:1.3;letter-spacing:-.01em;margin-bottom:14px;text-wrap:balance}
+.dq sub{font-size:.62em}
+#drillQ .qfig{margin:0 0 14px;background:var(--card2);width:min(300px,100%)}
+.dqa{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
+#drillQ .qb{background:var(--card2);box-shadow:none;text-align:center;font-size:20px;padding:14px;font-variant-numeric:tabular-nums}
+#drillQ .qb:hover:not(:disabled){background:var(--ink);color:#fff}
+#drillQ .qb.ok{background:var(--acc);color:var(--ink)}
+#drillQ .qb.bad{background:var(--coral);color:#fff}
+.dfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:14px;color:var(--ink2);min-height:40px}
+.dfoot .tbtn{box-shadow:none;background:var(--ink);color:#fff}
+.er{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.er:last-child{border-bottom:0}
+.er b{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.er.got b{color:var(--ok-ink)}
+.wr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.wr{background:var(--card2);border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.wr.on{background:var(--acc-soft);box-shadow:inset 0 0 0 2px var(--ink)}
+.wr-bit{width:74px;height:92px;overflow:visible}
+.wr b{font-size:15px;font-weight:600}
+.wr .tbtn{height:36px;font-size:14px;box-shadow:none}
+.wr .tbtn:not(.primary){background:var(--paper)}
+@media (max-width:820px){.sh-grid{grid-template-columns:1fr}.sh-bal b{font-size:48px}}
+#ov.on~#mascot #bitTab{opacity:0;transform:scale(.6);pointer-events:none;transition:transform .2s,opacity .15s}

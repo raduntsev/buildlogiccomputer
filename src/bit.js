@@ -2,7 +2,7 @@
 const Bit={q:[],timer:null,typer:null,typing:false,mood:'idle',cur:null,log:store.get('ll_log',[])};
 let idleShown=false,idleT=null;
 
-function bitSVG(m){
+function bitSVG(m,wear){
   const ink='var(--ink)',acc='var(--acc)';
   let eye,mouth;
   if(m==='happy')eye=`<path d="M29,46 Q40,31 51,46" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
@@ -19,18 +19,20 @@ function bitSVG(m){
     shock:`<circle cx="40" cy="64" r="3.5" fill="none" stroke="${ink}" stroke-width="2.5"/>`}[m];
   const dot=m==='happy'||m==='talk'?acc:m==='shock'?'var(--coral)':ink;
   const glyph=m==='think'?'?':m==='happy'?'1':m==='sad'?'0':'';
-  return `<g class="legs"><path d="M31,72V86M49,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M24,90Q31,84 38,90ZM42,90Q49,84 56,90Z" fill="${ink}"/></g>
+  const ant=`<g class="ant"><path d="M40,20V9" stroke="${ink}" stroke-width="2.5"/><circle class="${m==='talk'||m==='happy'?'spark':''}" cx="40" cy="6" r="4.5" fill="${dot}" stroke="${ink}" stroke-width="${dot===acc?1.5:0}"/>
+  ${glyph?`<text x="51" y="10" font-family="Onest,sans-serif" font-weight="700" font-size="13" fill="${ink}">${glyph}</text>`:''}</g>`;
+  const w=wear===undefined?(typeof prog!=='undefined'&&prog.st&&prog.st.wear)||'':wear,hat=/^(hat|bowler|mortar)$/.test(w);
+  return `<g class="legs"><g class="leg-l"><path d="M31,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M24,90Q31,84 38,90Z" fill="${ink}"/></g><g class="leg-r"><path d="M49,72V86" stroke="${ink}" stroke-width="2.5"/><path d="M42,90Q49,84 56,90Z" fill="${ink}"/></g></g>
 <g class="torso">
- <g class="ant"><path d="M40,20V9" stroke="${ink}" stroke-width="2.5"/><circle class="${m==='talk'||m==='happy'?'spark':''}" cx="40" cy="6" r="4.5" fill="${dot}" stroke="${ink}" stroke-width="${dot===acc?1.5:0}"/>
-  ${glyph?`<text x="51" y="10" font-family="Onest,sans-serif" font-weight="700" font-size="13" fill="${ink}">${glyph}</text>`:''}</g>
+ ${hat?'':ant}
  <g class="arm-l"><path d="M14,50H6" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="5" cy="50" r="3.4" fill="${ink}"/></g>
  <g class="arm-r"><path d="M66,50H74" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="75" cy="50" r="3.4" fill="${ink}"/></g>
  <rect x="14" y="20" width="52" height="52" rx="12" fill="#fff" stroke="${ink}" stroke-width="2.5"/>
  <circle cx="59" cy="27" r="2.6" fill="var(--acc)" stroke="${ink}" stroke-width="1"/>
- ${eye}${mouth}
+ ${eye}${mouth}${w?wearSVG(w):''}${hat?ant:''}
 </g>`;
 }
-function bitMood(m){Bit.mood=m;$('#bit').innerHTML=bitSVG(m);$('#bit').classList.toggle('talk',m==='talk');if(!$('#bitMini').innerHTML)$('#bitMini').innerHTML=bitSVG('idle')}
+function bitMood(m){Bit.mood=m;$('#bit').innerHTML=bitSVG(m);$('#bit').classList.toggle('talk',m==='talk');if(!$('#bitMini').innerHTML)miniDraw()}
 function bitAnim(c){if(settings.calm)return;const b=$('#bit');b.classList.remove('jump','shake','wave');void b.getBoundingClientRect();b.classList.add(c);setTimeout(()=>b.classList.remove(c),1400)}
 
 const norm=l=>(typeof l==='string'||Array.isArray(l))?{t:l}:l;
@@ -53,7 +55,7 @@ function nextLine(){
   const L=Bit.q.shift(),box=$('#chat'),el=$('#chatText'),chs=$('#chatCh');
   Bit.cur=L||null;chs.innerHTML='';
   if(!L){box.classList.remove('on');document.body.classList.remove('bitOn');bitMood('idle');return}
-  box.classList.remove('logon');box.classList.add('on');document.body.classList.add('bitOn');document.body.classList.remove('bitWaiting');
+  box.classList.remove('logon');box.classList.add('on');bitPlace();document.body.classList.add('bitOn');document.body.classList.remove('bitWaiting');
   const text=tx(L.t);logPush(text);
   $('#chatMore').textContent=Bit.q.length&&!L.ch?ui('more'):'';
   const m=L.m||'idle',plain=text.replace(/<[^>]+>/g,'');
@@ -96,26 +98,33 @@ $('#bit').addEventListener('click',()=>{
 });
 function bitMenu(){
   const inLv=level&&!level.sandbox&&!$('#ov').classList.contains('on'),c=[];
-  if(inLv)c.push({t:hintUsed?UIS.cHintFree:UIS.cHint,f:giveHint},{t:UIS.cWhat,f:explain});
+  if(inLv)c.push({t:hintLabel(),f:giveHint},{t:UIS.cWhat,f:explain});
   c.push({t:UIS.cStats,f:statsLine},{t:UIS.cFact,f:()=>say([{t:pick(STORY.facts),m:'smug'}],{u:1})});
+  c.push({t:UIS.cEarn,f:()=>openMenu('shop')});
   if(inLv)c.push(bitMuted?{t:UIS.cUnmute,f:()=>{bitMuted=false;say([{t:UIS.unmuteR,m:'happy'}],{u:1})}}:{t:UIS.cMute,f:muteLevel});
   c.push({t:UIS.cNothing,f:hideBubble});
   return c;
 }
 function explain(){
   if(!level||level.sandbox){say([{t:STORY.sandbox}],{u:1});return}
-  say([{t:fmt(tx(STORY.about),{task:tx(level.task)}),m:'smug',ch:[{t:hintUsed?UIS.cHintFree:UIS.cHint,f:giveHint},{t:UIS.cGo,f:hideBubble}]}],{u:1});
+  say([{t:fmt(tx(STORY.about),{task:tx(level.task)}),m:'smug',ch:[{t:hintLabel(),f:giveHint},{t:UIS.cGo,f:hideBubble}]}],{u:1});
 }
 function muteLevel(){badge('SILENCE');say([STORY.mute],{u:1});bitMuted=true}
 function statsLine(){
-  const p=points(),n=LV.filter(l=>done.has(l.id)).length,share=n/LV.length;
+  const p=earned(),n=LV.filter(l=>done.has(l.id)).length,share=n/LV.length;
   const v=tx(STORY.verdict[share<.2?0:share<.5?1:share<.8?2:3]);
   say([{t:fmt(tx(STORY.stats),{r:tx(RANKS[rankIdx(p)][1]),p:num(p),n,N:LV.length,v}),m:'smug'}],{u:1});
 }
 function giveHint(){
   if(!level||level.sandbox){say([{t:STORY.noHint,m:'think'}],{u:1});return}
-  if(!hintUsed){hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save()}
-  $('#hint').classList.add('on');$('#hintBtn').textContent=ui('hint');
+  if(!hintUsed){
+    const c=hintPrice();
+    if(c>balance()){say([{t:fmt(tx(STORY.broke),{c:ptsN(c),b:ptsN(balance())}),m:'sad',ch:[{t:UIS.cEarn,f:()=>openMenu('shop')},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}],{u:1});return}
+    if(c){spend(c);sfx('coin')}
+    prog.hb=prog.hb||[];if(!prog.hb.includes(level.id))prog.hb.push(level.id);
+    hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save();updHud();
+  }
+  $('#hint').classList.add('on');
   say([{t:tx(pick(STORY.hintPre))+' '+tx(level.hint),m:'think'}],{u:1});
 }
 function levelIntro(){
@@ -137,3 +146,58 @@ function resetIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{
 const NS='http://www.w3.org/2000/svg';
 function fxRing(x,y,r=14,grey){if(settings.calm)return;const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);c.setAttribute('class','fx-ring'+(grey?' g':''));fxG.appendChild(c);setTimeout(()=>c.remove(),650)}
 function fxBits(x,y){if(settings.calm)return;for(let i=0;i<7;i++){const e=document.createElementNS(NS,'text');e.textContent=Math.random()<.65?'1':'0';e.setAttribute('x',x-5+(Math.random()-.5)*20);e.setAttribute('y',y+5);e.setAttribute('class','fx-bit');e.style.setProperty('--dx',((Math.random()-.5)*70)+'px');e.style.animationDelay=(i*.07)+'s';fxG.appendChild(e);setTimeout(()=>e.remove(),1700+i*70)}}
+
+/* ========== Bit's window: drag, flip, mini tab that watches you ========== */
+function miniDraw(){const m=$('#bitMini');m.innerHTML=bitSVG('idle');m.classList.add('bitsvg')}
+$('#bit').classList.add('bitsvg');
+const BP=Object.assign({dx:0,dy:0},store.get('ll_bitpos',{}));window.bitReady=1;
+function bitPlace(){
+  const M=$('#mascot');M.style.translate=`${BP.dx}px ${BP.dy}px`;
+  const r=$('#bitTab').getBoundingClientRect();if(!r.width)return;
+  // keep the tab on screen
+  const z=UI(),pad=8;let fx=0,fy=0;
+  if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
+  if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
+  if(fx||fy){BP.dx+=fx;BP.dy+=fy;M.style.translate=`${BP.dx}px ${BP.dy}px`}
+  const q=$('#bitTab').getBoundingClientRect(),cw=$('#chat').offsetWidth*z,ch=$('#chat').offsetHeight*z;
+  // open the window towards the free side of the screen
+  M.classList.toggle('fl',q.right-cw<pad&&q.left+cw<innerWidth-pad);
+  M.classList.toggle('ft',q.bottom-ch<pad);
+}
+function bitDrag(handle,isTab){
+  let st=null;
+  handle.addEventListener('pointerdown',e=>{
+    if(e.button!==0||(!isTab&&e.target.closest('button')))return;
+    st={x:e.clientX,y:e.clientY,dx:BP.dx,dy:BP.dy,moved:false,id:e.pointerId};
+  });
+  window.addEventListener('pointermove',e=>{
+    if(!st||e.pointerId!==st.id)return;
+    const ddx=e.clientX-st.x,ddy=e.clientY-st.y;
+    if(!st.moved&&Math.hypot(ddx,ddy)<5)return;
+    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging')}
+    const z=UI();BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z;bitPlace();
+  });
+  const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
+    if(mv){store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
+  window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+  handle.addEventListener('click',e=>{if(handle.dataset.dragged){e.stopImmediatePropagation();e.preventDefault()}},true);
+}
+bitDrag($('#chat .chd'),false);bitDrag($('#bitTab'),true);
+$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;BP.dx=0;BP.dy=0;store.set('ll_bitpos',BP,true);bitPlace()});
+window.addEventListener('resize',()=>bitPlace());
+
+// pupils follow the pointer on the small Bits (tab and menu)
+let eyeRAF=0,lastMX=innerWidth/2,lastMY=innerHeight/2,lastMove=Date.now();
+window.addEventListener('pointermove',e=>{lastMX=e.clientX;lastMY=e.clientY;lastMove=Date.now();if(!eyeRAF)eyeRAF=requestAnimationFrame(eyesFollow)},{passive:true});
+function eyesFollow(){
+  eyeRAF=0;
+  for(const sv of $$('.bitsvg.track')){
+    const r=sv.getBoundingClientRect();if(!r.width)continue;
+    const cx=r.left+r.width*.5,cy=r.top+r.height*.42,dx=lastMX-cx,dy=lastMY-cy,d=Math.hypot(dx,dy)||1,k=Math.min(1,d/160);
+    const flip=sv.classList.contains('flipx')?-1:1;
+    sv.style.setProperty('--px',(dx/d*4*k*flip).toFixed(2)+'px');sv.style.setProperty('--py',(dy/d*3.4*k).toFixed(2)+'px');
+  }
+}
+$('#bitMini').classList.add('track');
+// now and then the small Bit ducks and peeks back out
+(function peek(){setTimeout(()=>{const m=$('#bitMini');if(!settings.calm&&!document.body.classList.contains('bitOn')){m.classList.remove('peek');void m.getBoundingClientRect();m.classList.add('peek')}peek()},9000+Math.random()*9000)})();
