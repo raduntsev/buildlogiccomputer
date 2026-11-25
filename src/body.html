@@ -19,10 +19,10 @@
 <div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
 <aside id="palette" class="zz"></aside>
-<div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
+<div id="zoom" class="zz"><button class="tbtn" id="knifeBtn" data-t="knife" aria-pressed="false"></button><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
 
 <section id="sheet" class="zz">
-  <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button></div>
+  <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button><button id="sheetTog" aria-label="−"><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button></div>
   <div id="sheetBody">
     <div id="task"><div id="taskText"></div><div id="hint"></div></div>
     <div id="stampTbl"></div>
@@ -30,6 +30,8 @@
 </section>
 
 <div id="toast" class="zz"></div>
+<button id="selPop" data-t="delete"></button>
+<div id="loupe"><svg width="132" height="132"><rect width="132" height="132" fill="var(--bg)"/><g id="loupeG"><use href="#gridRect"/><use href="#world"/></g><circle cx="66" cy="66" r="3" fill="none" stroke="var(--coral)" stroke-width="1.5"/></svg></div>
 <div id="result"><div id="resCard" class="zz"><div id="resTitle"></div><div id="resSub"></div><div id="resBtns"></div></div></div>
 
 <div id="ov" class="on">
@@ -53,6 +55,7 @@
   <div class="scr zz" id="scrLevels">
     <h2 data-t="levels"></h2>
     <svg id="tree"></svg>
+    <div id="treeList"></div>
     <div id="treeTip"></div>
     <button class="mi small" data-go="main" data-t="back"></button>
   </div>
