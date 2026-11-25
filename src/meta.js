@@ -4,11 +4,11 @@ function starsHTML(s){return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
 const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
-function rankIdx(p=points()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});return r}
+function rankIdx(p=earned()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});return r}
 const quizPassed=ch=>!!(prog.quiz[ch]&&prog.quiz[ch].pass);
 const available=l=>l.req.every(r=>typeof r==='string'?quizPassed(+r.slice(1)):done.has(r));
 const chapterDone=ch=>LV.filter(l=>l.ch===ch).every(l=>done.has(l.id));
-function updHud(){const p=points();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(p)}</span>`}
+function updHud(){const p=earned(),b=balance();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(b)}</span>`;$('#hud').title=ui('balanceH')+': '+ptsN(b);if($('#hintBtn'))$('#hintBtn').innerHTML=hintLabel()}
 function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');clearTimeout(savedPing.t);savedPing.t=setTimeout(()=>el.classList.remove('on'),1400)}
 
 function onSolved(){
@@ -39,8 +39,11 @@ function onSolved(){
   checkRank(prevRank);
 }
 function onFailed(f,n){
+  failCount++;
   showCard(false,ui('mismatch'),`<div class="rmet"><div><b class="hl" style="color:var(--coral)">${f}</b><span>${ui('mRowsBad')}</span></div><div><b>${n-f}</b><span>${ui('mRowsOk')}</span></div><div><b>${n}</b><span>${ui('mRows')}</span></div></div>`,[{t:ui('fix'),p:1}]);
-  say([{t:pick(STORY.fail),m:'sad',ch:[{t:hintUsed?UIS.cHintFree:UIS.cHelp,f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
+  const extra=hintUsed||hintBought()?null:failCount===3?STORY.discount:failCount===6?STORY.freeHint:null;
+  updHud();
+  say([{t:extra||pick(STORY.fail),m:'sad',ch:[{t:hintLabel(),f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
 }
 function nextLevel(){return LV.find(l=>l.id>level.id&&available(l)&&!done.has(l.id))||LV.find(l=>available(l)&&!done.has(l.id))}
 function showCard(ok,title,html,btns){
@@ -112,14 +115,14 @@ $('#quizBox').addEventListener('click',e=>{
 
 /* ========== personnel file ========== */
 function drawProfile(){
-  const p=points(),r=rankIdx(p),nx=RANKS[r+1],lo=RANKS[r][0];
+  const p=earned(),r=rankIdx(p),nx=RANKS[r+1],lo=RANKS[r][0];
   const solved=LV.filter(l=>done.has(l.id)).length;
   let stars=0;for(const id in prog.lv){const s=prog.lv[id].s;stars+=(s&1?1:0)+(s&2?1:0)+(s&4?1:0)}
   const tests=CHAPTERS.filter((_,i)=>quizPassed(i+1)).length;
   const cell=(k,v,n)=>`<div class="pfc"><b>${v}<small> / ${n}</small></b><span>${ui(k)}</span></div>`;
   $('#profBox').innerHTML=`<div class="pf-k">${ui('rank')} ${r} / ${RANKS.length-1}</div><div class="pf-rank">${tx(RANKS[r][1])}</div>
     <div class="pf-bar"><i style="width:${nx?Math.round((p-lo)/(nx[0]-lo)*100):100}%"></i></div>
-    <div class="pf-next">${ui('points')}: ${num(p)}<br>${nx?ui('toNext',{r:tx(nx[1]),p:num(nx[0]-p)}):ui('maxRank')}</div>
+    <div class="pf-next">${ui('earnedT',{e:num(p),s:num(prog.st.spent||0)})}. ${ui('balanceH')}: ${ptsN(balance())}<br>${nx?ui('toNext',{r:tx(nx[1]),p:num(nx[0]-p)}):ui('maxRank')}</div>
     <div class="pf-grid">${cell('stLevels',solved,LV.length)}${cell('stStars',stars,LV.length*3)}${cell('stTests',tests,CHAPTERS.length)}${cell('stBadges',prog.badges.length,BADGES.length)}</div>
     <h3>${ui('badgesH')}</h3>
     <div class="bd-grid">${BADGES.map(b=>{const on=prog.badges.includes(b.id);return`<div class="bd${on?' on':''}"><i>${on?b.g:'?'}</i><b>${tx(b.n)}</b><span>${tx(b.d)}</span></div>`}).join('')}</div>`;
@@ -199,20 +202,22 @@ function drawMachine(){
   if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
+  if($('#mmShop'))$('#mmShop').textContent=ptsN(balance());
 }
 
 /* ========== menu ========== */
-const SCR={main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
+const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
 let curScr='main';
 function openMenu(s){
   curScr=s;$('#ov').classList.add('on');$('#result').classList.remove('on');
   $$('.scr').forEach(x=>x.classList.remove('on'));$(SCR[s]).classList.add('on');
   if(s!=='main'&&s!=='quiz')hideBubble();
-  if(s==='main')drawMachine();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();
+  document.body.classList.toggle('mainScr',s==='main');
+  if(s==='main'){drawMachine();requestAnimationFrame(menuBitStart)}else menuBitStop();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();if(s==='shop')drawShop();
   musicChapter(s==='quiz'&&QZ?QZ.ch:topChapter(),s==='quiz')
   $('#ov').scrollTop=0;
 }
-function closeMenu(){$('#ov').classList.remove('on');hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
+function closeMenu(){$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
 $('#btnMenu').onclick=()=>openMenu('main');
 $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
@@ -226,45 +231,64 @@ $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
 
 /* ========== settings ========== */
 const isDesk=!!window.desktop;
-const pct=v=>`<span class="sbar"><i style="width:${v}%"></i></span>${v?v+'%':ui('vOff')}`;
 const SET=[
   {g:'gGame'},
   {k:'lang',t:'sLang',o:['ru','en'],f:v=>v==='ru'?'Русский':'English'},
   {k:'bit',t:'sBit',o:['all','hints','off'],f:v=>ui({all:'vTalk',hints:'vHints',off:'vHidden'}[v])},
   {k:'txt',t:'sTxt',o:[30,16,0],f:v=>ui({30:'vSlow',16:'vNorm',0:'vInst'}[v])},
-  {k:'demo',t:'sDemo',o:[1.7,1,.45],f:v=>ui({1.7:'vSlow',1:'vNorm',.45:'vFast'}[v])},
+  {k:'demo',t:'sDemo',o:[1.7,1,.6],f:v=>ui({1.7:'vSlow',1:'vNorm',.6:'vFast'}[v])},
   {k:'gost',t:'sGost',o:[true,false],f:v=>v?ui('vGost'):ui('vAnsi')},
   {g:'gScreen'},
-  {k:'ui',t:'sUi',o:['auto',.75,.85,1,1.15,1.3,1.5,1.75,2],f:v=>v==='auto'?ui('vAuto')+', '+Math.round(autoUi()*100)+' %':Math.round(v*100)+'%'},
-  {k:'win',t:'sWin',o:['auto','1280x720','1366x768','1600x900','1920x1080','2560x1440','fs'],f:v=>v==='auto'?ui('vAsIs'):v==='fs'?ui('vFull'):v.replace('x',' × '),only:isDesk},
-  {k:'fs',t:'sFs',o:[false,true],f:v=>v?ui('vOn'):ui('vOff'),only:!isDesk},
-  {k:'ww',t:'sWw',o:[3,5,7,9],f:v=>ui({3:'vThin',5:'vNormal',7:'vThick',9:'vVThick'}[v])},
+  {k:'fs',t:'sFs',ty:'tog'},
+  {k:'win',t:'sWin',o:['auto','1280x720','1366x768','1600x900','1920x1080','2560x1440'],f:v=>v==='auto'?ui('vAsIs'):v.replace('x',' × '),only:isDesk,ty:'sel'},
+  {k:'ui',t:'sUi',o:['auto',.75,.85,1,1.15,1.3,1.5,1.75,2],f:v=>v==='auto'?ui('vAuto')+', '+Math.round(autoUi()*100)+' %':Math.round(v*100)+' %',ty:'sel'},
+  {k:'ww',t:'sWw',o:[3,5,7,9],f:v=>ui({3:'vThin',5:'vNormal',7:'vThick',9:'vVThick'}[v]),ty:'sel'},
   {k:'grid',t:'sGrid',o:['lines','dots','none'],f:v=>ui({dots:'vDots',lines:'vLines',none:'vNone'}[v])},
-  {k:'hc',t:'sHc',o:[false,true],f:v=>v?ui('vHigh'):ui('vReg')},
-  {k:'calm',t:'sCalm',o:[false,true],f:v=>v?ui('vMin'):ui('vAll')},
+  {k:'hc',t:'sHc2',ty:'tog'},
+  {k:'calm',t:'sCalm2',ty:'tog'},
   {g:'gSound'},
-  {k:'musicVol',t:'sMusic',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
-  {k:'sfxVol',t:'sSfx',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
-  {k:'voiceVol',t:'sVoice',o:[0,10,20,30,40,50,60,70,80,90,100],f:pct},
+  {k:'musicVol',t:'sMusic',ty:'rng'},
+  {k:'sfxVol',t:'sSfx',ty:'rng'},
+  {k:'voiceVol',t:'sVoice',ty:'rng'},
 ];
 function autoUi(){const m=Math.min(innerWidth,innerHeight*1.7);return m<700?.9:m<1500?1:m<2000?1.15:m<2700?1.35:1.6}
 function UI(){return settings.ui==='auto'?autoUi():settings.ui}
+const optKey=v=>String(v);
+function setCtl(x){
+  const v=settings[x.k];
+  if(x.ty==='tog')return `<button class="sw${v?' on':''}" role="switch" aria-checked="${!!v}" data-k="${x.k}" data-tog="1"><i></i></button>`;
+  if(x.ty==='rng')return `<div class="rng"><input type="range" min="0" max="100" step="5" value="${v}" data-k="${x.k}" style="--v:${v}%"><output>${v?v+' %':ui('vOff')}</output></div>`;
+  if(x.ty==='sel')return `<div class="dd"><button class="dd-b" data-k="${x.k}" data-dd="1" aria-haspopup="listbox"><span>${x.f(v)}</span><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button>
+    <div class="dd-l" role="listbox">${x.o.map(o=>`<button class="dd-o${optKey(o)===optKey(v)?' on':''}" role="option" data-k="${x.k}" data-v="${optKey(o)}">${x.f(o)}</button>`).join('')}</div></div>`;
+  return `<div class="seg">${x.o.map(o=>`<button class="${optKey(o)===optKey(v)?'on':''}" data-k="${x.k}" data-v="${optKey(o)}">${x.f(o)}</button>`).join('')}</div>`;
+}
 function drawSettings(){
   $('#setList').innerHTML=SET.filter(x=>x.only!==false).map(x=>x.g?`<div class="sgrp">${ui(x.g)}</div>`:
-    `<div class="srow"><span class="k" data-k="${x.k}" data-d="1">${ui(x.t)}</span><button class="ar" data-k="${x.k}" data-d="-1" aria-label="−">‹</button><span class="val">${x.f(settings[x.k])}</span><button class="ar" data-k="${x.k}" data-d="1" aria-label="+">›</button></div>`).join('');
+    `<div class="srow"><span class="k">${ui(x.t)}</span>${setCtl(x)}</div>`).join('');
+}
+function setVal(k,val){
+  settings[k]=val;save();ensureAudio();sfx('ui');
+  if(k==='win'){settings.fs=false;applyWindow()}
+  if(k==='fs')applyFs();
+  if(k==='gost')badge('NOTATION');
+  if(k==='lang'){LANG=settings.lang;applyLang()}
+  if(k==='bit'){if(val==='off')menuBitStop();else if(curScr==='main'&&$('#ov').classList.contains('on'))menuBitStart()}
+  applySettings();drawSettings();
 }
 $('#setList').addEventListener('click',e=>{
-  const b=e.target.closest('[data-k]');if(!b)return;
-  const d=SET.find(x=>x.k===b.dataset.k),n=d.o.length;let i=d.o.findIndex(v=>v===settings[d.k]);if(i<0)i=0;
-  const wrap=!/Vol$/.test(d.k)&&d.k!=='ui';
-  let j=i+(+b.dataset.d);j=wrap?(j+n)%n:clamp(j,0,n-1);
-  settings[d.k]=d.o[j];save();ensureAudio();sfx('ui');
-  if(d.k==='win')applyWindow();
-  if(d.k==='fs')applyFs();
-  if(d.k==='gost')badge('NOTATION');
-  if(d.k==='lang'){LANG=settings.lang;applyLang()}
-  applySettings();drawSettings();
+  const dd=e.target.closest('[data-dd]');
+  if(dd){const w=dd.parentElement,open=w.classList.contains('open');$$('.dd.open').forEach(x=>x.classList.remove('open'));if(!open){w.classList.add('open');const on=w.querySelector('.dd-o.on');if(on)on.scrollIntoView({block:'nearest'})}return}
+  const b=e.target.closest('[data-k]');if(!b||b.type==='range')return;
+  const d=SET.find(x=>x.k===b.dataset.k);
+  if(b.dataset.tog){setVal(d.k,!settings[d.k]);return}
+  if(b.dataset.v!=null){const val=d.o.find(o=>optKey(o)===b.dataset.v);setVal(d.k,val)}
 });
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.dd'))$$('.dd.open').forEach(x=>x.classList.remove('open'))});
+$('#setList').addEventListener('input',e=>{
+  const r=e.target;if(r.type!=='range')return;const v=+r.value;settings[r.dataset.k]=v;
+  r.style.setProperty('--v',v+'%');r.nextElementSibling.textContent=v?v+' %':ui('vOff');musicGain();
+});
+$('#setList').addEventListener('change',e=>{const r=e.target;if(r.type!=='range')return;save();ensureAudio();sfx('ui')});
 function applySettings(quiet){
   const r=document.documentElement.style;r.setProperty('--ui',UI());r.setProperty('--ww',settings.ww);
   document.body.classList.toggle('calm',!!settings.calm);document.body.classList.toggle('hc',!!settings.hc);
@@ -277,17 +301,21 @@ function applySettings(quiet){
   if(level){buildChrome();if(quiet)fit();else render()}
 }
 function applyWindow(){
-  if(!isDesk||settings.win==='auto')return;
-  if(settings.win==='fs')window.desktop.setFullScreen(true);
-  else{const [w,h]=settings.win.split('x').map(Number);window.desktop.setSize(w,h)}
+  if(!isDesk)return;
+  if(settings.win==='fs'){settings.win='auto';settings.fs=true}
+  if(settings.fs){window.desktop.setFullScreen(true);return}
+  if(settings.win==='auto')return;
+  const [w,h]=settings.win.split('x').map(Number);window.desktop.setSize(w,h);
 }
 function applyFs(){
+  if(isDesk){window.desktop.setFullScreen(!!settings.fs);return}
   try{
     if(settings.fs&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{settings.fs=false;drawSettings();toast(ui('fsDenied'))});
     if(!settings.fs&&document.fullscreenElement)document.exitFullscreen();
   }catch(e){settings.fs=false;toast(ui('fsNA'))}
 }
-document.addEventListener('fullscreenchange',()=>{settings.fs=!!document.fullscreenElement;if(curScr==='settings')drawSettings();setTimeout(()=>applySettings(true),100)});
+if(isDesk&&window.desktop.onFullScreen)window.desktop.onFullScreen(on=>{settings.fs=!!on;save();if(curScr==='settings')drawSettings();setTimeout(()=>applySettings(true),100)});
+document.addEventListener('fullscreenchange',()=>{if(isDesk)return;settings.fs=!!document.fullscreenElement;if(curScr==='settings')drawSettings();setTimeout(()=>applySettings(true),100)});
 let rstArm=0;
 $('#setReset').onclick=()=>{const b=$('#setReset');
   if(!rstArm){rstArm=1;b.innerHTML=ui('reset')+' <span class="v">— '+ui('resetSure')+'</span>';setTimeout(()=>{rstArm=0;b.textContent=ui('reset')},3000);return}
@@ -309,13 +337,16 @@ function applyLang(){
 /* ========== boot ========== */
 window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true);else{setSheet(sheetH);render()}});
 (function boot(){
+  if(settings.demo===.45)settings.demo=.6;
   applyLang();
   applySettings(true);
   applyWindow();
-  bitMood('idle');
+  bitMood('idle');dailyCheck();
   const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);
   loadLevel(l&&available(l)?l:LV[0]);
   prog.badges.forEach(steamAch);
+  if($('#ov').classList.contains('on')&&curScr==='main'){document.body.classList.add('mainScr');setTimeout(menuBitStart,400)}
+  bitPlace();
   setTimeout(()=>{
     if(!store.get('ll_pro',false)){say(STORY.prologue);store.set('ll_pro',true,true)}
     else say([{t:pick(STORY.welcome),m:'smug',wave:1}]);

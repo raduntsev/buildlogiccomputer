@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('desktop',{
   achievement:id=>ipcRenderer.send('steam:ach',id),
   setSize:(w,h)=>ipcRenderer.invoke('win:size',w,h),
   setFullScreen:on=>ipcRenderer.invoke('win:fs',on),
+  onFullScreen:cb=>ipcRenderer.on('win:fs-changed',(e,on)=>cb(on)),
   quit:()=>ipcRenderer.send('app:quit')
 });

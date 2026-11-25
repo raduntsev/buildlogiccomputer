@@ -4,6 +4,8 @@
 
 - 60 уровней в 10 главах: логические элементы, универсальный И-НЕ, сумматоры, триггеры, автоматы, регистры, АЛУ, испытания с лимитом элементов, счётчик команд.
 - Контрольный тест после каждой главы, три звезды на уровень, допуски от «Испытуемого» до «Архитектора Машины», 26 бейджей.
+- Баллы можно тратить: подсказки в уровнях и гардероб Бита в Мастерской. Если баллов не хватает, их можно заработать в разминке (короткие вопросы по логике) и за ежедневный вход.
+- Бит живёт в главном меню: паяет, читает инструкцию, ходит по схеме Машины и комментирует ваши успехи.
 - Обозначения элементов по ГОСТ 2.743 или ANSI.
 - Русский и английский язык.
 
@@ -13,10 +15,10 @@
 
 | Файл | Для чего |
 |---|---|
-| [`downloads/LogicLab-3.3.html`](downloads/LogicLab-3.3.html) | Вся игра одним файлом. Откройте в браузере, интернет не нужен. |
-| [`downloads/LogicLab-Windows-lite-3.3.zip`](downloads/LogicLab-Windows-lite-3.3.zip) | Windows 10/11, 1,3 МБ. Распакуйте и запустите `LogicLab.exe` (файл `resources.neu` должен лежать рядом). |
-| [`downloads/LogicLab-Portable-3.3.0.exe`](downloads/LogicLab-Portable-3.3.0.exe) | Windows, полная версия на Electron (74 МБ), запускается без установки. Это та же сборка, что пойдёт в Steam. |
-| [`downloads/LogicLab-3.3.0.apk`](downloads/LogicLab-3.3.0.apk) | Android 5.1 и новее. Отладочная подпись: при установке разрешите «Установку из неизвестных источников». |
+| [`downloads/LogicLab-3.4.html`](downloads/LogicLab-3.4.html) | Вся игра одним файлом. Откройте в браузере, интернет не нужен. |
+| [`downloads/LogicLab-Windows-lite-3.4.zip`](downloads/LogicLab-Windows-lite-3.4.zip) | Windows 10/11, 1,3 МБ. Распакуйте и запустите `LogicLab.exe` (файл `resources.neu` должен лежать рядом). |
+| [`downloads/LogicLab-Portable-3.4.0.exe`](downloads/LogicLab-Portable-3.4.0.exe) | Windows, полная версия на Electron (74 МБ), запускается без установки. Это та же сборка, что пойдёт в Steam. |
+| [`downloads/LogicLab-3.4.0.apk`](downloads/LogicLab-3.4.0.apk) | Android 5.1 и новее. Отладочная подпись: при установке разрешите «Установку из неизвестных источников». |
 
 Программы не подписаны сертификатом, поэтому Windows может показать окно SmartScreen: «Подробнее» → «Выполнить в любом случае».
 
@@ -39,7 +41,7 @@ npx electron-builder --win dir portable --x64     # desktop/dist/win-unpacked и
 npx electron-builder --linux dir --x64            # desktop/dist/linux-unpacked
 ```
 
-На Windows то же самое делает `build-steam.bat`. Выпуск в Steam (App ID, 26 достижений, облачные сохранения, загрузка через SteamPipe) описан в [`steam/STEAM.md`](steam/STEAM.md).
+Иконку с Битом и номер версии в `.exe` записывает хук `desktop/scripts/afterPack.js` (на чистом JavaScript, wine не нужен). На Windows то же самое делает `build-steam.bat`. Выпуск в Steam (App ID, 26 достижений, облачные сохранения, загрузка через SteamPipe) описан в [`steam/STEAM.md`](steam/STEAM.md).
 
 **Android (Capacitor)**
 
@@ -54,7 +56,7 @@ cd android && ./gradlew assembleDebug             # app/build/outputs/apk/debug/
 **Лёгкая сборка для Windows (Neutralino)**
 
 ```bash
-cp dist/offline.html neu/resources/index.html
+cp dist/offline.html neu/resources/index.html && cp neu/icon.png neu/resources/
 cd neu && npx @neutralinojs/neu update && npx @neutralinojs/neu build --release
 ```
 
@@ -66,7 +68,9 @@ src/          исходники игры
   levels.js   60 уровней (тексты на двух языках, таблицы истинности, эталон по числу элементов)
   content.js  реплики Бита, контрольные тесты, бейджи, допуски
   editor.js   редактор схем, симулятор, проверка, звук
-  bit.js      маскот и окно «канал связи»
+  bit.js      маскот, окно «канал связи» (перетаскивается, сворачивается в мини-окно)
+  econ.js     баллы: баланс, цена подсказки, разминка, ежедневный бонус, Мастерская и гардероб Бита
+  menubit.js  Бит в главном меню
   meta.js     прогресс, результат, тесты, личное дело, дерево уровней, меню, настройки
   style.css   интерфейс; body.html — разметка
   font-*.css  встроенные шрифты Onest и STIX Two для офлайн-сборок
@@ -75,8 +79,9 @@ web/          готовая браузерная версия (для GitHub Pa
 desktop/      оболочка Electron + Steamworks
 android-app/  проект Capacitor для Android
 neu/          лёгкая оболочка Neutralino
+art/          иконка приложения (Бит)
 steam/        инструкция по выпуску в Steam, таблица достижений, скрипты SteamPipe, тексты страницы
-downloads/    готовые файлы версии 3.3
+downloads/    готовые файлы версии 3.4
 ```
 
 Шрифты: [Onest](https://fonts.google.com/specimen/Onest) и [STIX Two Text](https://fonts.google.com/specimen/STIX+Two+Text), лицензия SIL Open Font License.
