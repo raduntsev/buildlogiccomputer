@@ -36,10 +36,11 @@
 
 <div id="toast" class="zz"></div>
 <button id="selPop" data-t="delete"></button>
-<div id="loupe"><svg width="132" height="132"><rect width="132" height="132" fill="var(--bg)"/><g id="loupeG"><use href="#gridRect"/><use href="#world"/></g><circle cx="66" cy="66" r="3" fill="none" stroke="var(--coral)" stroke-width="1.5"/></svg></div>
+<div id="loupe"><svg width="132" height="132"><rect width="132" height="132" fill="var(--bg)"/><g id="loupeG"><use data-href="#gridRect"/><use data-href="#world"/></g><circle cx="66" cy="66" r="3" fill="none" stroke="var(--coral)" stroke-width="1.5"/></svg></div>
 <div id="result"><div id="resCard" class="zz"><div id="resTitle"></div><div id="resSub"></div><div id="resBtns"></div></div></div>
 
 <div id="ov" class="on">
+  <div id="ovBg" aria-hidden="true"></div>
   <div class="scr on zz" id="scrMain">
    <div class="mcol">
     <div class="brand">Logic Lab</div>
@@ -94,6 +95,7 @@
   </div>
 </div>
 
+<div id="bitDock" class="zz" aria-hidden="true"></div>
 <div id="mascot" class="zz">
   <button id="bitTab" aria-label="Bit"><svg id="bitMini" viewBox="8 -2 64 80"></svg></button>
   <div id="chat" role="log" aria-live="polite">

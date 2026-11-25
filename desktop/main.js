@@ -14,7 +14,9 @@ function appId(){
 try{
   steamworks=require('steamworks.js');
   steam=steamworks.init(appId());
-  steamworks.electronEnableSteamOverlay();
+  // The overlay hook forces the window to repaint 60 times a second and moves the GPU in-process.
+  // Only worth it when Steam actually launched the game (it sets SteamGameId); the portable build skips it.
+  if(process.env.SteamGameId||process.env.SteamAppId)steamworks.electronEnableSteamOverlay();
 }catch(e){steam=null;console.log('Steam not available:',e.message)}
 
 // One save file in the user data folder. Configure Steam Auto-Cloud to sync it (see STEAM.md).

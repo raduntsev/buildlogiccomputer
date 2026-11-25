@@ -132,3 +132,28 @@ Object.assign(STORY,{
   menuProgress:['Узел «{u}» собран на {p} %. Я бы на вашем месте поторопился. Я бы вообще всё сделал сам, но у меня лапки.','The “{u}” unit is {p}% assembled. I would hurry if I were you. I would do it all myself, but I only have little arms.'],
   menuShop:['У вас скопились баллы. В Мастерской есть бабочка. Я ни на что не намекаю. Я прямо говорю.','You have points piling up. There is a bow tie in the Workshop. I am not hinting. I am saying it outright.']
 });
+
+/* ========== main menu parallax: the dot grid, the menu and the Machine drift apart as the mouse moves ========== */
+(function(){
+  const bg=$('#ovBg'),cols=$$('#scrMain .mcol');
+  const D=[[bg,-14],[cols[0],5],[cols[1],12]];    // px at the edge of the screen; negative = moves against the mouse
+  let tx=0,ty=0,x=0,y=0,raf=0;
+  const on=()=>document.body.classList.contains('mainScr')&&!settings.calm&&!TOUCH;
+  function step(){
+    raf=0;
+    const k=on()?.08:.2;if(!on()){tx=0;ty=0}
+    x+=(tx-x)*k;y+=(ty-y)*k;
+    const done=Math.abs(tx-x)<.002&&Math.abs(ty-y)<.002;if(done){x=tx;y=ty}
+    for(const [el,d] of D)if(el)el.style.translate=x||y?`${(x*d).toFixed(2)}px ${(y*d).toFixed(2)}px`:'';
+    if(!done)raf=requestAnimationFrame(step);
+  }
+  window.addEventListener('pointermove',e=>{
+    if(e.pointerType!=='mouse'||!on())return;
+    tx=clamp(e.clientX/innerWidth*2-1,-1,1);ty=clamp(e.clientY/innerHeight*2-1,-1,1);
+    if(!raf)raf=requestAnimationFrame(step);
+  },{passive:true});
+  // leaving the main screen or the window: settle back to the middle
+  const home=()=>{tx=0;ty=0;if(!raf)raf=requestAnimationFrame(step)};
+  document.addEventListener('pointerleave',home);
+  new MutationObserver(()=>{if(!on())home()}).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();

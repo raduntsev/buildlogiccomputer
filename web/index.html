@@ -238,7 +238,9 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .rsub{color:#C9CBC4;font-size:15px;line-height:1.45}
 
 /* ---------- full-screen screens ---------- */
-#ov{position:fixed;inset:0;z-index:5;background-color:var(--bg);background-image:radial-gradient(var(--grid2) 1px,transparent 1.2px);background-size:22px 22px;display:none;overflow:auto}
+#ov{position:fixed;inset:0;z-index:5;background-color:var(--bg);display:none;overflow:auto}
+/* the dot grid is its own layer so the parallax only moves pixels, it never repaints the screen */
+#ovBg{position:fixed;inset:-24px;z-index:-1;pointer-events:none;background-image:radial-gradient(var(--grid2) 1px,transparent 1.2px);background-size:22px 22px;will-change:translate}
 #ov.on{display:block}
 .scr{display:none;min-height:100%;padding:56px 6vw 64px}
 .scr.on{display:block}
@@ -794,6 +796,42 @@ body.treeMob #treeList{display:block}
   .chd #chatX{width:40px;height:40px}
   #chatX svg{width:20px;height:20px}
 }
+
+/* ---------- main menu: exactly one screen tall (the screen is zoomed by --ui, so divide it back out) ---------- */
+#scrMain.on{min-height:calc(100vh / var(--ui));height:calc(100vh / var(--ui))}
+#scrMain .mcol{will-change:translate}
+@media (max-width:760px){#scrMain.on{height:auto}}
+
+/* ---------- Bit's dock: where the magnet pulls him back; the zoom buttons slide aside while he is away ---------- */
+#zoom{transition:bottom .15s,right .32s cubic-bezier(.2,1,.3,1)}
+#bitDock{position:fixed;right:16px;bottom:178px;width:60px;height:60px;border-radius:16px;border:2px dashed var(--mute);pointer-events:none;z-index:6;opacity:0;transform:scale(.86);transition:opacity .18s,transform .22s cubic-bezier(.2,1.3,.4,1),background .15s,border-color .15s}
+body.bitDragging #bitDock{opacity:.7;transform:none}
+body.bitNear #bitDock{opacity:1;transform:scale(1.08);background:var(--acc-soft);border-style:solid;border-color:var(--ink)}
+#mascot{transition:translate .32s cubic-bezier(.2,1,.3,1)}
+body.bitDragging #mascot{transition:none;will-change:translate}
+body.bitDragging.bitNear #mascot{transition:translate .14s ease-out}
+body.bitDragging #chat{will-change:rotate}
+@media (max-width:760px){#bitDock{display:none}}
+
+/* ---------- gate tooltip in the palette: name, formula and truth table ---------- */
+#gtip{position:fixed;left:0;top:0;z-index:7;pointer-events:none;background:var(--paper);border-radius:18px;box-shadow:var(--shadow),0 0 0 1px rgba(26,27,29,.05);padding:14px 16px 14px;min-width:170px;max-width:250px;opacity:0;visibility:hidden;transform:translateX(-6px);transition:opacity .12s,transform .16s,visibility 0s .16s}
+#gtip.on{opacity:1;visibility:visible;transform:none;transition:opacity .12s,transform .16s,visibility 0s}
+.gt-h{display:flex;align-items:baseline;gap:8px;font-size:17px;font-weight:600;line-height:1.1}
+.gt-h span{font-size:12px;font-weight:500;color:var(--mute)}
+.gt-f{font-family:"STIX Two Text","Onest",serif;font-size:19px;margin:8px 0 4px;white-space:nowrap}
+.gt-f .ov{text-decoration:none;display:inline-block;border-top:.07em solid currentColor;padding-top:.08em;line-height:1.05}
+.gt-f sub,.gtt sub{font-size:.62em}
+.gt-d{font-size:13px;line-height:1.3;color:var(--ink2);margin-bottom:10px}
+table.gtt{border-collapse:separate;border-spacing:3px 3px;margin:-3px;font-variant-numeric:tabular-nums}
+.gtt th{font-family:"STIX Two Text","Onest",serif;font-weight:400;font-size:17px;color:var(--ink);padding:0 4px;text-align:center}
+.gtt td{min-width:32px;height:26px;padding:0 6px;text-align:center;border-radius:8px;background:var(--card2);font-size:14px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.gtt td.o{background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);font-weight:600}
+.gtt td.o.one{background:var(--acc);box-shadow:none}
+.gtt .sep{min-width:0;width:2px;padding:0;background:var(--ink);border-radius:1px}
+.gtt th.sep{background:none}
+body.calm #gtip{transform:none}
+/* the palette stops above the bottom sheet and scrolls instead of sliding under it */
+@media (min-width:761px){#palette{max-height:calc((100vh - var(--dock,180px)) / var(--ui) - 96px)}}
 </style>
 </head>
 <body>
@@ -835,10 +873,11 @@ body.treeMob #treeList{display:block}
 
 <div id="toast" class="zz"></div>
 <button id="selPop" data-t="delete"></button>
-<div id="loupe"><svg width="132" height="132"><rect width="132" height="132" fill="var(--bg)"/><g id="loupeG"><use href="#gridRect"/><use href="#world"/></g><circle cx="66" cy="66" r="3" fill="none" stroke="var(--coral)" stroke-width="1.5"/></svg></div>
+<div id="loupe"><svg width="132" height="132"><rect width="132" height="132" fill="var(--bg)"/><g id="loupeG"><use data-href="#gridRect"/><use data-href="#world"/></g><circle cx="66" cy="66" r="3" fill="none" stroke="var(--coral)" stroke-width="1.5"/></svg></div>
 <div id="result"><div id="resCard" class="zz"><div id="resTitle"></div><div id="resSub"></div><div id="resBtns"></div></div></div>
 
 <div id="ov" class="on">
+  <div id="ovBg" aria-hidden="true"></div>
   <div class="scr on zz" id="scrMain">
    <div class="mcol">
     <div class="brand">Logic Lab</div>
@@ -893,6 +932,7 @@ body.treeMob #treeList{display:block}
   </div>
 </div>
 
+<div id="bitDock" class="zz" aria-hidden="true"></div>
 <div id="mascot" class="zz">
   <button id="bitTab" aria-label="Bit"><svg id="bitMini" viewBox="8 -2 64 80"></svg></button>
   <div id="chat" role="log" aria-live="polite">
@@ -927,8 +967,9 @@ const num=n=>Number(n).toLocaleString(LANG==='en'?'en-US':'ru-RU');
 const store=(()=>{
   const D=window.desktop;let mem=null,t=null;
   if(D&&D.loadSave){try{mem=JSON.parse(D.loadSave()||'{}')||{}}catch(e){mem={}}}
-  const flush=()=>{clearTimeout(t);t=null;if(mem&&D)try{D.writeSave(JSON.stringify(mem))}catch(e){}};
-  if(mem)window.addEventListener('beforeunload',flush);
+  // timed saves go out asynchronously so the game never waits on the disk; on exit the write is synchronous
+  const flush=sync=>{clearTimeout(t);t=null;if(mem&&D)try{(sync!==true&&D.writeSaveAsync?D.writeSaveAsync:D.writeSave)(JSON.stringify(mem))}catch(e){}};
+  if(mem)window.addEventListener('beforeunload',()=>flush(true));
   return{
     get(k,d){if(mem)return k in mem?JSON.parse(JSON.stringify(mem[k])):d;try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
     set(k,v,quiet){if(mem){mem[k]=JSON.parse(JSON.stringify(v));clearTimeout(t);t=setTimeout(flush,400)}else{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}if(!quiet&&window.savedPing)savedPing()},
@@ -1511,7 +1552,13 @@ function ioY(n,i){return (i-(n-1)/2)*80}
 const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.length+level.outs.length))):level.sandbox?640:Math.min(700,260+60*(level.ins.length+level.outs.length+(level.clk?1:0))+(level.gates.length>2?60:0));
 
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
-function persist(){saves[level.id]={gates:C.gates,wires:C.wires};save()}
+/* the circuit is written out 0.3 s after the last edit, not on every click */
+let persistT=0;
+function persist(){saves[level.id]={gates:C.gates,wires:C.wires};clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
+function persistNow(){if(persistT){clearTimeout(persistT);persistT=0;save()}}
+window.addEventListener('beforeunload',()=>{persistNow();store.flush(true)});
+window.addEventListener('pagehide',()=>{persistNow();store.flush(true)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){persistNow();store.flush()}});
 
 function loadLevel(l){
   if(l.sandbox)l.gates=sandboxGates();
@@ -1692,12 +1739,21 @@ function onSeg(p,a,b){
   return false;
 }
 
+/* pan and zoom only move the camera; the circuit itself is rebuilt only when it changes */
+const gridPat=$('#grid');
+function viewXf(){
+  const t=`translate(${view.x},${view.y}) scale(${view.z})`;
+  world.setAttribute('transform',t);fxG.setAttribute('transform',t);gridPat.setAttribute('patternTransform',t);
+  placeSelPop();
+}
+/* pointer moves fire far more often than the screen redraws: draw once per frame */
+let renderRAF=0;
+function renderSoon(){if(!renderRAF)renderRAF=requestAnimationFrame(()=>{renderRAF=0;render()})}
 function render(){
-  const z=view.z;
-  world.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);fxG.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);
-  $('#grid').setAttribute('patternTransform',`translate(${view.x},${view.y}) scale(${z})`);
+  if(renderRAF){cancelAnimationFrame(renderRAF);renderRAF=0}
+  viewXf();
   const gost=settings.gost, v=sim.v;
-  let s='';
+  let s='';const parts=[],K=k=>{if(s){parts.push(k,s);s=''}};
   const dm=cut&&cut.pts.length>1?cutHits():{wires:new Set(),gates:new Set()},insW=(ghost&&ghost.ins&&ghost.ins.w.id)||(act&&act.kind==='gate'&&act.ins&&act.ins.w.id);
   // wires
   for(const w of C.wires){
@@ -1705,27 +1761,27 @@ function render(){
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
-    s+=`<path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;
+    s+=`<path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
-  for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;
+  for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;K('jn');
   // onboarding ghost
   if(level.id===1&&!C.wires.length&&!tmp){
     const a=pinPos('I0','o',0),b=pinPos('O0','i',0);
-    s+=`<path class="onb" d="${toD(autoRoute(a,b))}"/>`;
+    s+=`<path class="onb" d="${toD(autoRoute(a,b))}"/>`;K('onb');
   }
   // gates
   for(const g of C.gates){
     s+=`<g class="gate${sel&&sel.g===g.id?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
-    s+=`</g>`;
+    s+=`</g>`;K('g'+g.id);
   }
   const sh=new Set(shorts());
   // pins of gates
   for(const g of C.gates){
     const P=gPins(g.type);
     P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
-    P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});
+    P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});K('p'+g.id);
   }
   // level inputs (flags)
   const ins=ioIns();
@@ -1737,7 +1793,7 @@ function render(){
     if(isC)s+=`<path d="${lit?`M${n.x-49},${n.y+4}h4v-8h5v8h5v-8h4`:`M${n.x-13},${n.y+4}h4v-8h5v8h5v-8h4`}" fill="none" stroke="${lit?'var(--acc)':'var(--ink)'}" stroke-width="1.6"/>`;
     s+=`<text class="lbl" x="${lit?n.x-43:n.x-7}" y="${n.y}" fill="var(--ink)" style="${isC?'display:none':''}">${subS(k)}</text>`;
     s+=`<text class="lbl" x="${lit?n.x-7:n.x-43}" y="${n.y}" fill="${lit?'var(--acc)':'var(--ink2)'}" style="font-size:13px">${isC?'C':val}</text></g>`;
-    s+=`<path class="gst" d="M${n.x+12},${n.y}H${n.x+20}"/>`+pinOut(n.x+20,n.y)+`<circle class="pin-hit" data-pin="I${i}|o|0" cx="${n.x+20}" cy="${n.y}" r="11"/>`;
+    s+=`<path class="gst" d="M${n.x+12},${n.y}H${n.x+20}"/>`+pinOut(n.x+20,n.y)+`<circle class="pin-hit" data-pin="I${i}|o|0" cx="${n.x+20}" cy="${n.y}" r="11"/>`;K('i'+i);
   });
   // outputs (lamps)
   const ov_=readOuts();
@@ -1749,7 +1805,7 @@ function render(){
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
-    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;
+    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
   });
   // temp wire
   if(tmp){
@@ -1757,17 +1813,29 @@ function render(){
     let t=tmp.cur,pts=tmp.pts;
     if(hover&&hover.k==='i')t=pinPos(hover.g,'i',hover.p);
     s+=`<path class="w w${v[tmp.from.g+':'+tmp.from.p]|0} tmp" d="${roundD(route(sp,pts,t))}"/>`;
-    pts.forEach(p=>s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="3"/>`);
+    pts.forEach(p=>s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="3"/>`);K('tmp');
   }
-  if(ghost)s+=`<g class="ghost${ghost.ins?' ins':''}" transform="translate(${ghost.x},${ghost.y})">${gateSVG(ghost.type,gost)}</g>`;
-  if(cut&&cut.pts.length>1)s+=`<path class="cut" d="${toD(cut.pts.map(p=>({x:p.x,y:p.y})))}"/>`;
-  world.innerHTML=s;
+  if(ghost)s+=`<g class="ghost${ghost.ins?' ins':''}" transform="translate(${ghost.x},${ghost.y})">${gateSVG(ghost.type,gost)}</g>`;K('ghost');
+  if(cut&&cut.pts.length>1)s+=`<path class="cut" d="${toD(cut.pts.map(p=>({x:p.x,y:p.y})))}"/>`;K('cut');
+  patchWorld(parts);
   board.classList.toggle('demo',demoOn);
   placeSelPop();
   renderTable();
   $('#undo').disabled=!undoS.length;$('#redo').disabled=!redoS.length;
 }
 
+/* each wire, gate, input and lamp is its own <g>; only the ones whose markup changed are rebuilt,
+   so flipping an input repaints a few wires instead of the whole board */
+const worldParts=new Map();
+function patchWorld(parts){
+  const seen=new Set();let ref=world.firstChild;
+  for(let i=0;i<parts.length;i+=2){
+    const k=parts[i],h=parts[i+1];let c=worldParts.get(k);seen.add(k);
+    if(!c||c.h!==h){if(c){if(c.el===ref)ref=ref.nextSibling;c.el.remove()}const el=document.createElementNS('http://www.w3.org/2000/svg','g');el.innerHTML=h;c={h,el};worldParts.set(k,c)}
+    if(c.el===ref)ref=ref.nextSibling;else world.insertBefore(c.el,ref);
+  }
+  for(const [k,c] of worldParts)if(!seen.has(k)){c.el.remove();worldParts.delete(k)}
+}
 function placeSelPop(){
   const b=$('#selPop');if(!b)return;
   let w=null;
@@ -1797,7 +1865,7 @@ function buildChrome(){
   $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.remove('on');
   $('#hintBtn').style.display=level.hint?'':'none';$('#hintBtn').innerHTML=hintLabel();
   $('#verify').style.display=level.sandbox?'none':'';
-  const pal=$('#palette');
+  const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
     +(level.sandbox&&level.gates.length<ALL_GATES.length?`<div class="pnote">${ui('sbMore',{n:ALL_GATES.length-level.gates.length})}</div>`:'');
   updCount();
@@ -1813,7 +1881,7 @@ function placeCard(){
 window.addEventListener('resize',()=>{if(level)placeCard()});
 function renderTable(){
   const w=$('#ttWrap'),card=$('#taskCard');
-  if(level.sandbox||!level.vec.length){w.innerHTML='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
+  if(level.sandbox||!level.vec.length){w.innerHTML='';w._h='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
   card.classList.remove('notable');card.style.display='';
   const ins=level.ins,outs=level.outs,isSeq=level.seq||level.clk,V=level.vec;
   const live=isSeq?-1:V.findIndex(r=>ins.every((k,i)=>r.in[k]===liveIn[i]));
@@ -1825,8 +1893,8 @@ function renderTable(){
   if(ins.length)h+=`<tr class="ttsep"><th></th><td colspan="${V.length}"></td></tr>`;
   outs.forEach((k,j)=>h+=`<tr class="out"><th>${lab(disp(k))}</th>${V.map((r,ri)=>{const mk=rowMark&&rowMark[ri],bad=mk&&!mk.ok&&mk.act[k]!==r.out[k];
     return `<td class="${cc(ri)}${bad&&ri!==demoRow?' wrong':''}" data-row="${ri}">${r.out[k]}${bad?`<span class="act">${mk.act[k]}</span>`:''}</td>`}).join('')}</tr>`);
-  w.innerHTML=h+'</table>';
-  placeCard();
+  h+='</table>';
+  if(h!==w._h){w.innerHTML=h;w._h=h;placeCard()}
 }
 $('#ttWrap').addEventListener('click',e=>{
   const tr=e.target.closest('tr[data-row]');if(!tr||demoOn||level.seq||level.clk)return;
@@ -1838,7 +1906,7 @@ $('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 /* sheet resize */
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
 function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(44)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
-function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';$('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
@@ -1859,7 +1927,7 @@ function fit(){
   view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
   render();
 }
-function zoomAt(f,cx,cy){const nz=clamp(view.z*f,.3,3);const k=nz/view.z;view.x=cx-(cx-view.x)*k;view.y=cy-(cy-view.y)*k;view.z=nz;render()}
+function zoomAt(f,cx,cy){const nz=clamp(view.z*f,.3,3);const k=nz/view.z;view.x=cx-(cx-view.x)*k;view.y=cy-(cy-view.y)*k;view.z=nz;viewXf()}
 $('#zIn').onclick=()=>zoomAt(1.2,innerWidth/2,innerHeight/2);
 $('#zOut').onclick=()=>zoomAt(1/1.2,innerWidth/2,innerHeight/2);
 $('#zFit').onclick=fit;
@@ -1878,10 +1946,13 @@ function nearestIn(p,r){
 function loupe(x,y){
   const L=$('#loupe'),R=66,Z=2.2;
   let ly=y-R-90;if(ly<8)ly=y+70;const lx=clamp(x-R,8,innerWidth-2*R-8);
+  // the loupe mirrors the board with <use>; it is linked only while shown, otherwise every
+  // board change would restyle a hidden copy of the whole circuit
+  if(!L.classList.contains('on'))for(const u of $$('#loupeG use'))u.setAttribute('href',u.dataset.href);
   L.style.transform=`translate(${lx}px,${ly}px)`;L.classList.add('on');
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
-function loupeOff(){$('#loupe').classList.remove('on')}
+function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
@@ -2030,24 +2101,24 @@ window.addEventListener('pointermove',e=>{
   }
   const p=toW(e.clientX,e.clientY);
   if(ghost&&e.pointerType==='touch')loupe(e.clientX,e.clientY);
-  if(ghost){ghost.x=snap(p.x-30);ghost.y=snap(p.y-GATES[ghost.type].h/2);ghost.ins=wireUnder(ghost.x,ghost.y,ghost.type);if(ghost.ins)ghost.y=ghost.ins.y;render();return}
+  if(ghost){ghost.x=snap(p.x-30);ghost.y=snap(p.y-GATES[ghost.type].h/2);ghost.ins=wireUnder(ghost.x,ghost.y,ghost.type);if(ghost.ins)ghost.y=ghost.ins.y;renderSoon();return}
   if(tmp){
     tmp.cur=p;
     const el=document.elementFromPoint(e.clientX,e.clientY);const h=el?hitInfo(el):{type:'empty'};
-    hover=h.type==='pin'&&h.k==='i'?h:nearestIn(p,(e.pointerType==='touch'?40:16)/view.z);render();
+    hover=h.type==='pin'&&h.k==='i'?h:nearestIn(p,(e.pointerType==='touch'?40:16)/view.z);renderSoon();
     if(e.pointerType==='touch'&&tmp.mode==='drag')loupe(e.clientX,e.clientY);
   }
   if(!act)return;
   const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
-  if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;render()}
+  if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;viewXf()}
   else if(act.kind==='gate'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
-      act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;render()}
+      act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
   }else if(act.kind==='branch'&&dist>5){
-    startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};render();
-  }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';render()}
+    startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};renderSoon();
+  }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';renderSoon()}
 });
 window.addEventListener('pointerup',e=>{
   ptrs.delete(e.pointerId);
@@ -2268,6 +2339,63 @@ function startMusic(){
     while(mus.next<AC.currentTime+.3){playStep(mus.step,mus.next,root,sc,sp);mus.next+=sp;mus.step=(mus.step+1)%64}},100);
 }
 
+/* ========== palette: truth table of a gate on hover (long press on touch) ========== */
+const GATE_INFO={
+  NOT :{f:()=>'Y = '+ov('A'),d:['Инвертирует вход: 0 → 1, 1 → 0','Inverts the input: 0 → 1, 1 → 0']},
+  AND :{f:()=>'Y = A ∧ B',d:['1, только если оба входа 1','1 only when both inputs are 1']},
+  OR  :{f:()=>'Y = A ∨ B',d:['1, если хотя бы один вход 1','1 when at least one input is 1']},
+  NAND:{f:()=>'Y = '+ov('A ∧ B'),d:['0, только если оба входа 1','0 only when both inputs are 1']},
+  NOR :{f:()=>'Y = '+ov('A ∨ B'),d:['1, только если оба входа 0','1 only when both inputs are 0']},
+  XOR :{n:['Исключающее ИЛИ','Exclusive OR'],f:()=>'Y = A ⊕ B',d:['1, если входы разные','1 when the inputs differ']},
+  XNOR:{n:['Равнозначность','Equivalence'],f:()=>'Y = '+ov('A ⊕ B'),d:['1, если входы одинаковые','1 when the inputs are equal']},
+  DFF :{n:['D-триггер','D flip-flop'],f:()=>'Q<sub>n+1</sub> = D',d:['По фронту C запоминает D, в остальное время хранит Q','Stores D on the rising edge of C, otherwise keeps Q']}
+};
+function gateTipHTML(t){
+  const G=GATES[t],I=GATE_INFO[t]||{f:()=>'',d:''};
+  let tb='<table class="gtt">';
+  if(t==='DFF'){
+    tb+='<tr><th>D</th><th>C</th><th class="sep"></th><th>Q<sub>n+1</sub></th></tr>';
+    for(const [d,c,q,one] of [['0','↑','0',0],['1','↑','1',1],['×','0, 1, ↓','Q<sub>n</sub>',0]])
+      tb+=`<tr><td>${d}</td><td>${c}</td><td class="sep"></td><td class="o${one?' one':''}">${q}</td></tr>`;
+  }else{
+    const n=G.ins,names=n===1?['A']:['A','B'];
+    tb+='<tr>'+names.map(k=>`<th>${k}</th>`).join('')+'<th class="sep"></th><th>Y</th></tr>';
+    for(let r=0;r<1<<n;r++){
+      const ins=names.map((_,i)=>(r>>(n-1-i))&1),y=G.f(ins)[0];
+      tb+='<tr>'+ins.map(v=>`<td>${v}</td>`).join('')+`<td class="sep"></td><td class="o${y?' one':''}">${y}</td></tr>`;
+    }
+  }
+  tb+='</table>';
+  const nm=I.n||G.n;
+  return `<div class="gt-h"><b>${tx(nm)}</b>${LANG==='en'?'':`<span>${G.n[1]}</span>`}</div><div class="gt-f math">${mathHTML(I.f())}</div><div class="gt-d">${tx(I.d)}</div>${tb}`;
+}
+const gtip=(()=>{
+  const el=document.createElement('div');el.id='gtip';el.className='zz';el.setAttribute('role','tooltip');document.body.appendChild(el);
+  let cur=null,lp=null;
+  function show(it){
+    const t=it.dataset.type;if(!GATES[t])return;
+    if(cur!==t){el.innerHTML=gateTipHTML(t);cur=t}
+    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z;
+    let x,y;
+    if(pr.width<pr.height&&pr.right+12+w<innerWidth-8){x=pr.right+12;y=clamp(ir.top+ir.height/2-h/2,8,innerHeight-h-8)}  // column palette: to the right
+    else{x=clamp(ir.left+ir.width/2-w/2,8,innerWidth-w-8);y=Math.max(8,pr.top-h-12)}                                  // row palette (phone): above
+    el.style.left=(x/z)+'px';el.style.top=(y/z)+'px';el.classList.add('on');
+  }
+  function hide(){el.classList.remove('on');clearTimeout(lp&&lp.t);lp=null}
+  const pal=$('#palette');
+  pal.addEventListener('pointerover',e=>{if(e.pointerType!=='mouse'||ghost)return;const it=e.target.closest('.pi');if(it)show(it)});
+  pal.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hide()});
+  // touch: hold a gate still for a moment to see its table; letting go then does not place it
+  pal.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'){hide();return}
+    const it=e.target.closest('.pi');if(!it)return;
+    lp={x:e.clientX,y:e.clientY,shown:false,t:setTimeout(()=>{if(lp){lp.shown=true;show(it)}},420)};
+  });
+  window.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8)hide()},{passive:true});
+  pal.addEventListener('pointerup',()=>{if(lp&&lp.shown)ghost=null;hide()},true);
+  window.addEventListener('pointerup',()=>{if(lp)hide()});
+  return {hide};
+})();
 
 /* ========== Bit: mascot and comm link ========== */
 const Bit={q:[],timer:null,typer:null,typing:false,mood:'idle',cur:null,log:store.get('ll_log',[])};
@@ -2423,10 +2551,50 @@ function miniDraw(){const m=$('#bitMini');m.innerHTML=bitSVG('idle');m.classList
 $('#bit').classList.add('bitsvg');
 const BP=Object.assign({dx:0,dy:0,my:0},store.get('ll_bitpos',{}));window.bitReady=1;
 const isMob=()=>innerWidth<=760;
+/* Desktop: Bit lives in a dock at the bottom right, next to the zoom buttons. It can be dragged anywhere
+   on the free part of the screen: it never leaves the window and slides off the toolbar, the palette,
+   the task card and the bottom sheet. Near the dock it is pulled in like a magnet; while it is away,
+   the zoom buttons move into the corner and come back when Bit returns. */
+const SNAP_R=72;                       // magnet radius around the dock, screen px
+const BIT={adj:{x:0,y:0},near:false,raf:0,dragging:false,home:true};
+const rectOf=el=>{const r=el.getBoundingClientRect();return r.width&&r.height?{x:r.left,y:r.top,w:r.width,h:r.height}:null};
+const hits=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function bitObstacles(){
+  if($('#ov').classList.contains('on')||!level)return [];
+  const z=UI(),o=[];
+  for(const el of $$('#top .tb>*,#palette,#taskCard')){const r=rectOf(el);if(r)o.push(r)}
+  // the sheet and the zoom buttons animate, so use where they are going rather than where they are
+  const sh=(14+sheetH)*z;o.push({x:16*z,y:innerHeight-sh,w:innerWidth-32*z,h:sh});
+  if(!BIT.home){const zm=$('#zoom');if(zm.offsetWidth){const w=zm.offsetWidth*z,h=zm.offsetHeight*z;o.push({x:innerWidth-16*z-w,y:innerHeight-(sheetH+26)*z-h,w,h})}}
+  return o;
+}
+/* move rectangle r into the free area: inside the window and off every obstacle.
+   Candidates are the window edges and the sides of every obstacle; the nearest free spot wins. */
+function fitRect(r,obs,pad){
+  const x0=pad,y0=pad,x1=Math.max(pad,innerWidth-pad-r.w),y1=Math.max(pad,innerHeight-pad-r.h);
+  const cx=clamp(r.x,x0,x1),cy=clamp(r.y,y0,y1);
+  const free=(x,y)=>!obs.some(o=>x<o.x+o.w+pad-.5&&x+r.w>o.x-pad+.5&&y<o.y+o.h+pad-.5&&y+r.h>o.y-pad+.5);
+  if(free(cx,cy))return {x:cx-r.x,y:cy-r.y};
+  const xs=[cx,x0,x1],ys=[cy,y0,y1];
+  for(const o of obs){xs.push(o.x-pad-r.w,o.x+o.w+pad);ys.push(o.y-pad-r.h,o.y+o.h+pad)}
+  let best=null;
+  for(const x of xs)if(x>=x0-.5&&x<=x1+.5)for(const y of ys)if(y>=y0-.5&&y<=y1+.5&&free(x,y)){
+    const d=Math.hypot(x-r.x,y-r.y);if(!best||d<best.d)best={x,y,d};
+  }
+  return best?{x:best.x-r.x,y:best.y-r.y}:{x:cx-r.x,y:cy-r.y};
+}
+function zoomPlace(){
+  const zm=$('#zoom');
+  if(innerWidth<=760){zm.style.right='8px';return}
+  zm.style.right=(settings.bit!=='off'&&BIT.home?92:16)+'px';
+}
+function bitPlaceSoon(){if(!BIT.raf)BIT.raf=requestAnimationFrame(()=>{BIT.raf=0;bitPlace()})}
 function bitPlace(){
+  if(BIT.raf){cancelAnimationFrame(BIT.raf);BIT.raf=0}
   const M=$('#mascot'),T=$('#bitTab'),mob=isMob(),z=UI(),pad=8;
   M.classList.toggle('mob',mob);
   if(mob){ // phone: the tab moves on its own, the comm link drops down from the top
+    BIT.home=false;zoomPlace();
     M.style.translate='';T.style.translate=`${BP.dx}px ${BP.dy}px`;
     const r=T.getBoundingClientRect();
     if(r.width){let fx=0,fy=0;
@@ -2437,15 +2605,35 @@ function bitPlace(){
     $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;
   }
   T.style.translate='';$('#chat').style.top='';
-  M.style.translate=`${BP.dx}px ${BP.dy}px`;
-  const r=T.getBoundingClientRect();if(!r.width)return;
-  let fx=0,fy=0;
-  if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
-  if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
-  if(fx||fy){BP.dx+=fx;BP.dy+=fy;M.style.translate=`${BP.dx}px ${BP.dy}px`}
-  const q=T.getBoundingClientRect(),cw=$('#chat').offsetWidth*z,ch=$('#chat').offsetHeight*z;
-  M.classList.toggle('fl',q.right-cw<pad&&q.left+cw<innerWidth-pad);
-  M.classList.toggle('ft',q.bottom-ch<pad);
+  // the dock = the mascot box with no offset, from its right/bottom (translate may be mid-animation,
+  // so the drawn rectangle is not used); the rest is plain arithmetic
+  const cs=getComputedStyle(M),mw=M.offsetWidth*z,mh=M.offsetHeight*z;
+  if(!mw||cs.display==='none')return;
+  const H={x:innerWidth-parseFloat(cs.right)*z-mw,y:innerHeight-parseFloat(cs.bottom)*z-mh,w:mw,h:mh};
+  // magnet: near the dock Bit is pulled in and the dock lights up
+  const d=Math.hypot(BP.dx,BP.dy)*z;
+  BIT.near=d<SNAP_R;BIT.home=d<1||(BIT.dragging&&BIT.near);
+  const pull=BIT.dragging&&BIT.near?.22:1;   // how much of the offset survives inside the magnet
+  let dx=BP.dx*pull,dy=BP.dy*pull;
+  const obs=bitObstacles();
+  // the tab stays on the free part of the screen
+  if(!BIT.home){const f=fitRect({x:H.x+dx*z,y:H.y+dy*z,w:H.w,h:H.h},obs,pad);dx+=f.x/z;dy+=f.y/z;if(!BIT.dragging){BP.dx=dx;BP.dy=dy}}
+  // the open window: pick the corner it unfolds from, then nudge it so it fits as well
+  const chat=$('#chat'),open=chat.classList.contains('on');let ax=0,ay=0,fl=false,ft=false;
+  if(open){
+    const cw=chat.offsetWidth*z,ch=chat.offsetHeight*z,tx=H.x+dx*z,ty=H.y+dy*z;
+    let best=null;
+    for(const L of [false,true])for(const Tp of [false,true]){
+      const r={x:L?tx:tx+H.w-cw,y:Tp?ty:ty+H.h-ch,w:cw,h:ch},f=fitRect(r,obs,pad),cost=Math.hypot(f.x,f.y)+(L?1:0)+(Tp?1:0);
+      if(!best||cost<best.cost)best={cost,L,Tp,f};
+    }
+    fl=best.L;ft=best.Tp;ax=best.f.x/z;ay=best.f.y/z;
+  }
+  BIT.adj={x:ax,y:ay};
+  M.style.translate=`${(dx+ax).toFixed(1)}px ${(dy+ay).toFixed(1)}px`;
+  M.classList.toggle('fl',fl);M.classList.toggle('ft',ft);
+  document.body.classList.toggle('bitNear',BIT.dragging&&BIT.near);
+  zoomPlace();
 }
 /* a little physics: the window swings on the point you hold it by and settles on a spring */
 const PH={a:0,v:0,t:0,raf:0,el:null,stopT:0,lt:0};
@@ -2458,6 +2646,7 @@ function physStep(now){
   else{PH.raf=0;PH.lt=0;PH.a=PH.t;if(PH.el){PH.el.style.rotate=PH.t?PH.t+'deg':'';if(!PH.t)PH.el.style.transformOrigin=''}}
 }
 function physKick(){if(!PH.raf&&!settings.calm)PH.raf=requestAnimationFrame(physStep)}
+function bitDock(){BP.dx=0;BP.dy=0;BP.my=0;store.set('ll_bitpos',BP,true);bitPlace()}
 function bitDrag(handle,isTab){
   let st=null;
   handle.addEventListener('pointerdown',e=>{
@@ -2469,26 +2658,35 @@ function bitDrag(handle,isTab){
     const ddx=e.clientX-st.x,ddy=e.clientY-st.y;
     if(!st.moved&&Math.hypot(ddx,ddy)<5)return;
     const mob=isMob(),vert=mob&&!isTab;
-    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging');
+    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging');BIT.dragging=!mob;
+      // start from where Bit is actually drawn (the open window may have been nudged to fit)
+      if(!mob){st.dx+=BIT.adj.x;st.dy+=BIT.adj.y}
       // swing around the grab point
       PH.el=isTab?$('#bitTab'):$('#chat');
       if(!settings.calm){const r=PH.el.getBoundingClientRect(),z=UI();PH.el.style.transformOrigin=`${(e.clientX-r.left)/z}px ${(e.clientY-r.top)/z}px`}}
     const z=UI();
     if(vert){BP.my=st.my+ddy/z}else{BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z}
-    bitPlace();
+    if(!mob){const n=Math.hypot(BP.dx,BP.dy)*z<SNAP_R;if(n&&!BIT.near)sfx('pick')}
+    bitPlaceSoon();
     const now=performance.now(),dt=Math.max(8,now-st.lt),vx=(e.clientX-st.lx)/dt*16;st.lx=e.clientX;st.lt=now;
     PH.t=vert?0:clamp(vx*1.1,-9,9);physKick();
     clearTimeout(PH.stopT);PH.stopT=setTimeout(()=>{PH.t=0;physKick()},90);
   });
   const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
     PH.t=0;physKick();
-    if(mv){store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
+    if(mv){
+      const snap=BIT.dragging&&Math.hypot(BP.dx,BP.dy)*UI()<SNAP_R;BIT.dragging=false;
+      if(snap){BP.dx=0;BP.dy=0;sfx('place')}
+      bitPlace();
+      store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
   window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
   handle.addEventListener('click',e=>{if(handle.dataset.dragged){e.stopImmediatePropagation();e.preventDefault()}},true);
 }
 bitDrag($('#chat .chd'),false);bitDrag($('#bitTab'),true);
-$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;BP.dx=0;BP.dy=0;BP.my=0;store.set('ll_bitpos',BP,true);bitPlace()});
-window.addEventListener('resize',()=>bitPlace());
+$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;bitDock()});
+window.addEventListener('resize',bitPlaceSoon);
+// the window grows while Bit types: keep it on screen
+try{new ResizeObserver(()=>{if(!BIT.dragging)bitPlaceSoon()}).observe($('#chat'))}catch(e){}
 
 // pupils follow the pointer on the small Bits (tab and menu)
 let eyeRAF=0,lastMX=innerWidth/2,lastMY=innerHeight/2,lastMove=Date.now();
@@ -2797,6 +2995,31 @@ Object.assign(STORY,{
   menuShop:['У вас скопились баллы. В Мастерской есть бабочка. Я ни на что не намекаю. Я прямо говорю.','You have points piling up. There is a bow tie in the Workshop. I am not hinting. I am saying it outright.']
 });
 
+/* ========== main menu parallax: the dot grid, the menu and the Machine drift apart as the mouse moves ========== */
+(function(){
+  const bg=$('#ovBg'),cols=$$('#scrMain .mcol');
+  const D=[[bg,-14],[cols[0],5],[cols[1],12]];    // px at the edge of the screen; negative = moves against the mouse
+  let tx=0,ty=0,x=0,y=0,raf=0;
+  const on=()=>document.body.classList.contains('mainScr')&&!settings.calm&&!TOUCH;
+  function step(){
+    raf=0;
+    const k=on()?.08:.2;if(!on()){tx=0;ty=0}
+    x+=(tx-x)*k;y+=(ty-y)*k;
+    const done=Math.abs(tx-x)<.002&&Math.abs(ty-y)<.002;if(done){x=tx;y=ty}
+    for(const [el,d] of D)if(el)el.style.translate=x||y?`${(x*d).toFixed(2)}px ${(y*d).toFixed(2)}px`:'';
+    if(!done)raf=requestAnimationFrame(step);
+  }
+  window.addEventListener('pointermove',e=>{
+    if(e.pointerType!=='mouse'||!on())return;
+    tx=clamp(e.clientX/innerWidth*2-1,-1,1);ty=clamp(e.clientY/innerHeight*2-1,-1,1);
+    if(!raf)raf=requestAnimationFrame(step);
+  },{passive:true});
+  // leaving the main screen or the window: settle back to the middle
+  const home=()=>{tx=0;ty=0;if(!raf)raf=requestAnimationFrame(step)};
+  document.addEventListener('pointerleave',home);
+  new MutationObserver(()=>{if(!on())home()}).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
+
 /* ========== progress: stars, points, clearance ========== */
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
 function starsHTML(s){return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
@@ -3051,7 +3274,7 @@ $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   const g=b.dataset.go;
   if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
-  if(g==='quit'){store.flush();window.desktop&&window.desktop.quit&&window.desktop.quit();return}
+  if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
   openMenu(g);
 }));
 

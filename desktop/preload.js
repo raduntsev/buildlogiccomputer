@@ -2,6 +2,7 @@ const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('desktop',{
   loadSave:()=>ipcRenderer.sendSync('save:load'),
   writeSave:data=>ipcRenderer.sendSync('save:write',data),
+  writeSaveAsync:data=>ipcRenderer.send('save:write',data),
   steamLang:()=>ipcRenderer.sendSync('steam:lang'),
   achievement:id=>ipcRenderer.send('steam:ach',id),
   setSize:(w,h)=>ipcRenderer.invoke('win:size',w,h),

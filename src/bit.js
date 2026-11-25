@@ -152,10 +152,50 @@ function miniDraw(){const m=$('#bitMini');m.innerHTML=bitSVG('idle');m.classList
 $('#bit').classList.add('bitsvg');
 const BP=Object.assign({dx:0,dy:0,my:0},store.get('ll_bitpos',{}));window.bitReady=1;
 const isMob=()=>innerWidth<=760;
+/* Desktop: Bit lives in a dock at the bottom right, next to the zoom buttons. It can be dragged anywhere
+   on the free part of the screen: it never leaves the window and slides off the toolbar, the palette,
+   the task card and the bottom sheet. Near the dock it is pulled in like a magnet; while it is away,
+   the zoom buttons move into the corner and come back when Bit returns. */
+const SNAP_R=72;                       // magnet radius around the dock, screen px
+const BIT={adj:{x:0,y:0},near:false,raf:0,dragging:false,home:true};
+const rectOf=el=>{const r=el.getBoundingClientRect();return r.width&&r.height?{x:r.left,y:r.top,w:r.width,h:r.height}:null};
+const hits=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function bitObstacles(){
+  if($('#ov').classList.contains('on')||!level)return [];
+  const z=UI(),o=[];
+  for(const el of $$('#top .tb>*,#palette,#taskCard')){const r=rectOf(el);if(r)o.push(r)}
+  // the sheet and the zoom buttons animate, so use where they are going rather than where they are
+  const sh=(14+sheetH)*z;o.push({x:16*z,y:innerHeight-sh,w:innerWidth-32*z,h:sh});
+  if(!BIT.home){const zm=$('#zoom');if(zm.offsetWidth){const w=zm.offsetWidth*z,h=zm.offsetHeight*z;o.push({x:innerWidth-16*z-w,y:innerHeight-(sheetH+26)*z-h,w,h})}}
+  return o;
+}
+/* move rectangle r into the free area: inside the window and off every obstacle.
+   Candidates are the window edges and the sides of every obstacle; the nearest free spot wins. */
+function fitRect(r,obs,pad){
+  const x0=pad,y0=pad,x1=Math.max(pad,innerWidth-pad-r.w),y1=Math.max(pad,innerHeight-pad-r.h);
+  const cx=clamp(r.x,x0,x1),cy=clamp(r.y,y0,y1);
+  const free=(x,y)=>!obs.some(o=>x<o.x+o.w+pad-.5&&x+r.w>o.x-pad+.5&&y<o.y+o.h+pad-.5&&y+r.h>o.y-pad+.5);
+  if(free(cx,cy))return {x:cx-r.x,y:cy-r.y};
+  const xs=[cx,x0,x1],ys=[cy,y0,y1];
+  for(const o of obs){xs.push(o.x-pad-r.w,o.x+o.w+pad);ys.push(o.y-pad-r.h,o.y+o.h+pad)}
+  let best=null;
+  for(const x of xs)if(x>=x0-.5&&x<=x1+.5)for(const y of ys)if(y>=y0-.5&&y<=y1+.5&&free(x,y)){
+    const d=Math.hypot(x-r.x,y-r.y);if(!best||d<best.d)best={x,y,d};
+  }
+  return best?{x:best.x-r.x,y:best.y-r.y}:{x:cx-r.x,y:cy-r.y};
+}
+function zoomPlace(){
+  const zm=$('#zoom');
+  if(innerWidth<=760){zm.style.right='8px';return}
+  zm.style.right=(settings.bit!=='off'&&BIT.home?92:16)+'px';
+}
+function bitPlaceSoon(){if(!BIT.raf)BIT.raf=requestAnimationFrame(()=>{BIT.raf=0;bitPlace()})}
 function bitPlace(){
+  if(BIT.raf){cancelAnimationFrame(BIT.raf);BIT.raf=0}
   const M=$('#mascot'),T=$('#bitTab'),mob=isMob(),z=UI(),pad=8;
   M.classList.toggle('mob',mob);
   if(mob){ // phone: the tab moves on its own, the comm link drops down from the top
+    BIT.home=false;zoomPlace();
     M.style.translate='';T.style.translate=`${BP.dx}px ${BP.dy}px`;
     const r=T.getBoundingClientRect();
     if(r.width){let fx=0,fy=0;
@@ -166,15 +206,35 @@ function bitPlace(){
     $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;
   }
   T.style.translate='';$('#chat').style.top='';
-  M.style.translate=`${BP.dx}px ${BP.dy}px`;
-  const r=T.getBoundingClientRect();if(!r.width)return;
-  let fx=0,fy=0;
-  if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
-  if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
-  if(fx||fy){BP.dx+=fx;BP.dy+=fy;M.style.translate=`${BP.dx}px ${BP.dy}px`}
-  const q=T.getBoundingClientRect(),cw=$('#chat').offsetWidth*z,ch=$('#chat').offsetHeight*z;
-  M.classList.toggle('fl',q.right-cw<pad&&q.left+cw<innerWidth-pad);
-  M.classList.toggle('ft',q.bottom-ch<pad);
+  // the dock = the mascot box with no offset, from its right/bottom (translate may be mid-animation,
+  // so the drawn rectangle is not used); the rest is plain arithmetic
+  const cs=getComputedStyle(M),mw=M.offsetWidth*z,mh=M.offsetHeight*z;
+  if(!mw||cs.display==='none')return;
+  const H={x:innerWidth-parseFloat(cs.right)*z-mw,y:innerHeight-parseFloat(cs.bottom)*z-mh,w:mw,h:mh};
+  // magnet: near the dock Bit is pulled in and the dock lights up
+  const d=Math.hypot(BP.dx,BP.dy)*z;
+  BIT.near=d<SNAP_R;BIT.home=d<1||(BIT.dragging&&BIT.near);
+  const pull=BIT.dragging&&BIT.near?.22:1;   // how much of the offset survives inside the magnet
+  let dx=BP.dx*pull,dy=BP.dy*pull;
+  const obs=bitObstacles();
+  // the tab stays on the free part of the screen
+  if(!BIT.home){const f=fitRect({x:H.x+dx*z,y:H.y+dy*z,w:H.w,h:H.h},obs,pad);dx+=f.x/z;dy+=f.y/z;if(!BIT.dragging){BP.dx=dx;BP.dy=dy}}
+  // the open window: pick the corner it unfolds from, then nudge it so it fits as well
+  const chat=$('#chat'),open=chat.classList.contains('on');let ax=0,ay=0,fl=false,ft=false;
+  if(open){
+    const cw=chat.offsetWidth*z,ch=chat.offsetHeight*z,tx=H.x+dx*z,ty=H.y+dy*z;
+    let best=null;
+    for(const L of [false,true])for(const Tp of [false,true]){
+      const r={x:L?tx:tx+H.w-cw,y:Tp?ty:ty+H.h-ch,w:cw,h:ch},f=fitRect(r,obs,pad),cost=Math.hypot(f.x,f.y)+(L?1:0)+(Tp?1:0);
+      if(!best||cost<best.cost)best={cost,L,Tp,f};
+    }
+    fl=best.L;ft=best.Tp;ax=best.f.x/z;ay=best.f.y/z;
+  }
+  BIT.adj={x:ax,y:ay};
+  M.style.translate=`${(dx+ax).toFixed(1)}px ${(dy+ay).toFixed(1)}px`;
+  M.classList.toggle('fl',fl);M.classList.toggle('ft',ft);
+  document.body.classList.toggle('bitNear',BIT.dragging&&BIT.near);
+  zoomPlace();
 }
 /* a little physics: the window swings on the point you hold it by and settles on a spring */
 const PH={a:0,v:0,t:0,raf:0,el:null,stopT:0,lt:0};
@@ -187,6 +247,7 @@ function physStep(now){
   else{PH.raf=0;PH.lt=0;PH.a=PH.t;if(PH.el){PH.el.style.rotate=PH.t?PH.t+'deg':'';if(!PH.t)PH.el.style.transformOrigin=''}}
 }
 function physKick(){if(!PH.raf&&!settings.calm)PH.raf=requestAnimationFrame(physStep)}
+function bitDock(){BP.dx=0;BP.dy=0;BP.my=0;store.set('ll_bitpos',BP,true);bitPlace()}
 function bitDrag(handle,isTab){
   let st=null;
   handle.addEventListener('pointerdown',e=>{
@@ -198,26 +259,35 @@ function bitDrag(handle,isTab){
     const ddx=e.clientX-st.x,ddy=e.clientY-st.y;
     if(!st.moved&&Math.hypot(ddx,ddy)<5)return;
     const mob=isMob(),vert=mob&&!isTab;
-    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging');
+    if(!st.moved){st.moved=true;try{handle.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('bitDragging');BIT.dragging=!mob;
+      // start from where Bit is actually drawn (the open window may have been nudged to fit)
+      if(!mob){st.dx+=BIT.adj.x;st.dy+=BIT.adj.y}
       // swing around the grab point
       PH.el=isTab?$('#bitTab'):$('#chat');
       if(!settings.calm){const r=PH.el.getBoundingClientRect(),z=UI();PH.el.style.transformOrigin=`${(e.clientX-r.left)/z}px ${(e.clientY-r.top)/z}px`}}
     const z=UI();
     if(vert){BP.my=st.my+ddy/z}else{BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z}
-    bitPlace();
+    if(!mob){const n=Math.hypot(BP.dx,BP.dy)*z<SNAP_R;if(n&&!BIT.near)sfx('pick')}
+    bitPlaceSoon();
     const now=performance.now(),dt=Math.max(8,now-st.lt),vx=(e.clientX-st.lx)/dt*16;st.lx=e.clientX;st.lt=now;
     PH.t=vert?0:clamp(vx*1.1,-9,9);physKick();
     clearTimeout(PH.stopT);PH.stopT=setTimeout(()=>{PH.t=0;physKick()},90);
   });
   const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
     PH.t=0;physKick();
-    if(mv){store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
+    if(mv){
+      const snap=BIT.dragging&&Math.hypot(BP.dx,BP.dy)*UI()<SNAP_R;BIT.dragging=false;
+      if(snap){BP.dx=0;BP.dy=0;sfx('place')}
+      bitPlace();
+      store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
   window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
   handle.addEventListener('click',e=>{if(handle.dataset.dragged){e.stopImmediatePropagation();e.preventDefault()}},true);
 }
 bitDrag($('#chat .chd'),false);bitDrag($('#bitTab'),true);
-$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;BP.dx=0;BP.dy=0;BP.my=0;store.set('ll_bitpos',BP,true);bitPlace()});
-window.addEventListener('resize',()=>bitPlace());
+$('#chat .chd').addEventListener('dblclick',e=>{if(e.target.closest('button'))return;bitDock()});
+window.addEventListener('resize',bitPlaceSoon);
+// the window grows while Bit types: keep it on screen
+try{new ResizeObserver(()=>{if(!BIT.dragging)bitPlaceSoon()}).observe($('#chat'))}catch(e){}
 
 // pupils follow the pointer on the small Bits (tab and menu)
 let eyeRAF=0,lastMX=innerWidth/2,lastMY=innerHeight/2,lastMove=Date.now();
