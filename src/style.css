@@ -584,7 +584,7 @@ body.bitOn #menuBit{opacity:0;pointer-events:none}
 @keyframes scopeArm{0%,100%{transform:rotate(-74deg)}50%{transform:rotate(-48deg)}}
 /* dragging the comm link: see-through, legs dangle */
 body.bitDragging #chat.on{opacity:.72}
-body.bitDragging #bitTab{opacity:.75}
+body.bitDragging:not(.bitOn) #bitTab{opacity:.75}
 body.bitDragging #bit .legs{transform-origin:40px 72px;transform-box:view-box;animation:dangle .7s ease-in-out infinite}
 @keyframes dangle{25%{transform:rotate(7deg)}75%{transform:rotate(-7deg)}}
 /* delete button next to the selection */

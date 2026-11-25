@@ -335,7 +335,7 @@ function buildChrome(){
 /* the task card sits level with the top buttons when it fits between them, otherwise below them */
 function placeCard(){
   const card=$('#taskCard');if(card.style.display==='none')return;
-  const L=$('#top .tb').getBoundingClientRect(),R=$('#top .tb.r').getBoundingClientRect();
+  const vis=q=>$$(q).map(x=>x.getBoundingClientRect()).filter(r=>r.width),L={right:Math.max(0,...vis('#top .tb:not(.r)>*').map(r=>r.right))},R={left:Math.min(innerWidth,...vis('#top .tb.r>*').map(r=>r.left))};
   card.style.top='';card.classList.remove('low');
   const r=card.getBoundingClientRect();
   if(innerWidth<=760||r.left<L.right+12||r.right>R.left-12)card.classList.add('low');
@@ -382,7 +382,9 @@ function fit(){
   level.outs.forEach((_,i)=>{const n=nodePos('O'+i);pts.push({x:n.x,y:n.y-40},{x:n.x+60,y:n.y+40})});
   C.gates.forEach(g=>pts.push({x:g.x,y:g.y},{x:g.x+GW,y:g.y+GATES[g.type].h}));
   const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
-  const L=level.gates.length?$('#palette').getBoundingClientRect().right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=0,W=innerWidth-L-24-MW,H=innerHeight-T-(sheetH+14)*UI()-24;
+  const mob=innerWidth<=760,pr=$('#palette').getBoundingClientRect();
+  const L=level.gates.length&&!mob?pr.right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=0,W=innerWidth-L-24-MW;
+  const B=mob&&level.gates.length&&pr.height?pr.top-12:innerHeight-(sheetH+14)*UI()-24,H=B-T;
   const z=clamp(Math.min(W/(x1-x0+40),H/(y1-y0+40)),.3,1.6);
   view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
   render();

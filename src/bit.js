@@ -204,7 +204,7 @@ function bitDrag(handle,isTab){
     if(vert){BP.my=st.my+ddy/z}else{BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z}
     bitPlace();
     const now=performance.now(),dt=Math.max(8,now-st.lt),vx=(e.clientX-st.lx)/dt*16;st.lx=e.clientX;st.lt=now;
-    PH.t=vert?0:clamp(vx*1.6,-14,14);physKick();
+    PH.t=vert?0:clamp(vx*1.1,-9,9);physKick();
     clearTimeout(PH.stopT);PH.stopT=setTimeout(()=>{PH.t=0;physKick()},90);
   });
   const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
