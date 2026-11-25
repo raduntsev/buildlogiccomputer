@@ -662,6 +662,8 @@ window.addEventListener('keydown',e=>{
   e.preventDefault();KEYACT[act_]();
 });
 $('#undo').onclick=undo;$('#redo').onclick=redo;
+// icon buttons: name and current hotkey in the tooltip
+function toolTips(){for(const el of $$('[data-tl]')){const a=el.dataset.tl,k=KEYDEF[a]?keysFor(a)[0]:'',t=ui(a);el.setAttribute('aria-label',t);el.title=k?t+' ('+keyLabel(k)+')':t}}
 $('#btnClear').onclick=()=>{if(!C.gates.length&&!C.wires.length)return;snapshot();C={gates:[],wires:[]};changed()};
 
 let tT;function toast(t,ms=2600){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('on'),ms)}

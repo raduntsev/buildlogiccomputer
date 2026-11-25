@@ -12,14 +12,19 @@
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><button class="tbtn" id="undo" data-t="undo"></button><button class="tbtn" id="redo" data-t="redo"></button></div>
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="tools" role="toolbar">
+    <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="ib" id="redo" data-tl="redo"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <i class="tsep"></i>
+    <button class="ib" id="knifeBtn" data-tl="knife" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88"/><path d="M14.47 14.48L20 20"/><path d="M8.12 8.12L12 12"/></svg></button>
+  </div></div>
   <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 
 <div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
 <aside id="palette" class="zz"></aside>
-<div id="zoom" class="zz"><button class="tbtn" id="knifeBtn" data-t="knife" aria-pressed="false"></button><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
+<div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
 
 <section id="sheet" class="zz">
   <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button><button id="sheetTog" aria-label="−"><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button></div>
@@ -94,7 +99,7 @@
   <div id="chat" role="log" aria-live="polite">
     <div id="bitStage"><svg id="bit" viewBox="0 0 80 100" aria-label="Bit"></svg></div>
     <div id="chatMain">
-      <div class="chd"><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button><button id="chatX" aria-label="×">×</button></div>
+      <div class="chd"><button id="chatX" data-tl="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="cn" data-t="bitName"></span><span class="cs" data-t="chan"></span><button id="chatLogBtn" data-t="log"></button></div>
       <div id="chatBody"><div id="chatText"></div><div id="chatCh"></div><div id="chatMore"></div></div>
       <div id="chatLog"></div>
     </div>
