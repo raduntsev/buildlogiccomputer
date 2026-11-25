@@ -252,7 +252,7 @@ $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   const g=b.dataset.go;
   if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
-  if(g==='quit'){store.flush();window.desktop&&window.desktop.quit&&window.desktop.quit();return}
+  if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
   openMenu(g);
 }));
 

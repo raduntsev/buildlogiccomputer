@@ -19,8 +19,9 @@ const num=n=>Number(n).toLocaleString(LANG==='en'?'en-US':'ru-RU');
 const store=(()=>{
   const D=window.desktop;let mem=null,t=null;
   if(D&&D.loadSave){try{mem=JSON.parse(D.loadSave()||'{}')||{}}catch(e){mem={}}}
-  const flush=()=>{clearTimeout(t);t=null;if(mem&&D)try{D.writeSave(JSON.stringify(mem))}catch(e){}};
-  if(mem)window.addEventListener('beforeunload',flush);
+  // timed saves go out asynchronously so the game never waits on the disk; on exit the write is synchronous
+  const flush=sync=>{clearTimeout(t);t=null;if(mem&&D)try{(sync!==true&&D.writeSaveAsync?D.writeSaveAsync:D.writeSave)(JSON.stringify(mem))}catch(e){}};
+  if(mem)window.addEventListener('beforeunload',()=>flush(true));
   return{
     get(k,d){if(mem)return k in mem?JSON.parse(JSON.stringify(mem[k])):d;try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
     set(k,v,quiet){if(mem){mem[k]=JSON.parse(JSON.stringify(v));clearTimeout(t);t=setTimeout(flush,400)}else{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}if(!quiet&&window.savedPing)savedPing()},

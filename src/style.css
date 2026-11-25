@@ -136,7 +136,9 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .rsub{color:#C9CBC4;font-size:15px;line-height:1.45}
 
 /* ---------- full-screen screens ---------- */
-#ov{position:fixed;inset:0;z-index:5;background-color:var(--bg);background-image:radial-gradient(var(--grid2) 1px,transparent 1.2px);background-size:22px 22px;display:none;overflow:auto}
+#ov{position:fixed;inset:0;z-index:5;background-color:var(--bg);display:none;overflow:auto}
+/* the dot grid is its own layer so the parallax only moves pixels, it never repaints the screen */
+#ovBg{position:fixed;inset:-24px;z-index:-1;pointer-events:none;background-image:radial-gradient(var(--grid2) 1px,transparent 1.2px);background-size:22px 22px;will-change:translate}
 #ov.on{display:block}
 .scr{display:none;min-height:100%;padding:56px 6vw 64px}
 .scr.on{display:block}
@@ -692,3 +694,39 @@ body.treeMob #treeList{display:block}
   .chd #chatX{width:40px;height:40px}
   #chatX svg{width:20px;height:20px}
 }
+
+/* ---------- main menu: exactly one screen tall (the screen is zoomed by --ui, so divide it back out) ---------- */
+#scrMain.on{min-height:calc(100vh / var(--ui));height:calc(100vh / var(--ui))}
+#scrMain .mcol{will-change:translate}
+@media (max-width:760px){#scrMain.on{height:auto}}
+
+/* ---------- Bit's dock: where the magnet pulls him back; the zoom buttons slide aside while he is away ---------- */
+#zoom{transition:bottom .15s,right .32s cubic-bezier(.2,1,.3,1)}
+#bitDock{position:fixed;right:16px;bottom:178px;width:60px;height:60px;border-radius:16px;border:2px dashed var(--mute);pointer-events:none;z-index:6;opacity:0;transform:scale(.86);transition:opacity .18s,transform .22s cubic-bezier(.2,1.3,.4,1),background .15s,border-color .15s}
+body.bitDragging #bitDock{opacity:.7;transform:none}
+body.bitNear #bitDock{opacity:1;transform:scale(1.08);background:var(--acc-soft);border-style:solid;border-color:var(--ink)}
+#mascot{transition:translate .32s cubic-bezier(.2,1,.3,1)}
+body.bitDragging #mascot{transition:none;will-change:translate}
+body.bitDragging.bitNear #mascot{transition:translate .14s ease-out}
+body.bitDragging #chat{will-change:rotate}
+@media (max-width:760px){#bitDock{display:none}}
+
+/* ---------- gate tooltip in the palette: name, formula and truth table ---------- */
+#gtip{position:fixed;left:0;top:0;z-index:7;pointer-events:none;background:var(--paper);border-radius:18px;box-shadow:var(--shadow),0 0 0 1px rgba(26,27,29,.05);padding:14px 16px 14px;min-width:170px;max-width:250px;opacity:0;visibility:hidden;transform:translateX(-6px);transition:opacity .12s,transform .16s,visibility 0s .16s}
+#gtip.on{opacity:1;visibility:visible;transform:none;transition:opacity .12s,transform .16s,visibility 0s}
+.gt-h{display:flex;align-items:baseline;gap:8px;font-size:17px;font-weight:600;line-height:1.1}
+.gt-h span{font-size:12px;font-weight:500;color:var(--mute)}
+.gt-f{font-family:"STIX Two Text","Onest",serif;font-size:19px;margin:8px 0 4px;white-space:nowrap}
+.gt-f .ov{text-decoration:none;display:inline-block;border-top:.07em solid currentColor;padding-top:.08em;line-height:1.05}
+.gt-f sub,.gtt sub{font-size:.62em}
+.gt-d{font-size:13px;line-height:1.3;color:var(--ink2);margin-bottom:10px}
+table.gtt{border-collapse:separate;border-spacing:3px 3px;margin:-3px;font-variant-numeric:tabular-nums}
+.gtt th{font-family:"STIX Two Text","Onest",serif;font-weight:400;font-size:17px;color:var(--ink);padding:0 4px;text-align:center}
+.gtt td{min-width:32px;height:26px;padding:0 6px;text-align:center;border-radius:8px;background:var(--card2);font-size:14px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.gtt td.o{background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);font-weight:600}
+.gtt td.o.one{background:var(--acc);box-shadow:none}
+.gtt .sep{min-width:0;width:2px;padding:0;background:var(--ink);border-radius:1px}
+.gtt th.sep{background:none}
+body.calm #gtip{transform:none}
+/* the palette stops above the bottom sheet and scrolls instead of sliding under it */
+@media (min-width:761px){#palette{max-height:calc((100vh - var(--dock,180px)) / var(--ui) - 96px)}}

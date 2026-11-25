@@ -41,7 +41,13 @@ function ioY(n,i){return (i-(n-1)/2)*80}
 const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.length+level.outs.length))):level.sandbox?640:Math.min(700,260+60*(level.ins.length+level.outs.length+(level.clk?1:0))+(level.gates.length>2?60:0));
 
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
-function persist(){saves[level.id]={gates:C.gates,wires:C.wires};save()}
+/* the circuit is written out 0.3 s after the last edit, not on every click */
+let persistT=0;
+function persist(){saves[level.id]={gates:C.gates,wires:C.wires};clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
+function persistNow(){if(persistT){clearTimeout(persistT);persistT=0;save()}}
+window.addEventListener('beforeunload',()=>{persistNow();store.flush(true)});
+window.addEventListener('pagehide',()=>{persistNow();store.flush(true)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){persistNow();store.flush()}});
 
 function loadLevel(l){
   if(l.sandbox)l.gates=sandboxGates();
@@ -222,12 +228,21 @@ function onSeg(p,a,b){
   return false;
 }
 
+/* pan and zoom only move the camera; the circuit itself is rebuilt only when it changes */
+const gridPat=$('#grid');
+function viewXf(){
+  const t=`translate(${view.x},${view.y}) scale(${view.z})`;
+  world.setAttribute('transform',t);fxG.setAttribute('transform',t);gridPat.setAttribute('patternTransform',t);
+  placeSelPop();
+}
+/* pointer moves fire far more often than the screen redraws: draw once per frame */
+let renderRAF=0;
+function renderSoon(){if(!renderRAF)renderRAF=requestAnimationFrame(()=>{renderRAF=0;render()})}
 function render(){
-  const z=view.z;
-  world.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);fxG.setAttribute('transform',`translate(${view.x},${view.y}) scale(${z})`);
-  $('#grid').setAttribute('patternTransform',`translate(${view.x},${view.y}) scale(${z})`);
+  if(renderRAF){cancelAnimationFrame(renderRAF);renderRAF=0}
+  viewXf();
   const gost=settings.gost, v=sim.v;
-  let s='';
+  let s='';const parts=[],K=k=>{if(s){parts.push(k,s);s=''}};
   const dm=cut&&cut.pts.length>1?cutHits():{wires:new Set(),gates:new Set()},insW=(ghost&&ghost.ins&&ghost.ins.w.id)||(act&&act.kind==='gate'&&act.ins&&act.ins.w.id);
   // wires
   for(const w of C.wires){
@@ -235,27 +250,27 @@ function render(){
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
-    s+=`<path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;
+    s+=`<path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
-  for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;
+  for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;K('jn');
   // onboarding ghost
   if(level.id===1&&!C.wires.length&&!tmp){
     const a=pinPos('I0','o',0),b=pinPos('O0','i',0);
-    s+=`<path class="onb" d="${toD(autoRoute(a,b))}"/>`;
+    s+=`<path class="onb" d="${toD(autoRoute(a,b))}"/>`;K('onb');
   }
   // gates
   for(const g of C.gates){
     s+=`<g class="gate${sel&&sel.g===g.id?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
-    s+=`</g>`;
+    s+=`</g>`;K('g'+g.id);
   }
   const sh=new Set(shorts());
   // pins of gates
   for(const g of C.gates){
     const P=gPins(g.type);
     P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
-    P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});
+    P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});K('p'+g.id);
   }
   // level inputs (flags)
   const ins=ioIns();
@@ -267,7 +282,7 @@ function render(){
     if(isC)s+=`<path d="${lit?`M${n.x-49},${n.y+4}h4v-8h5v8h5v-8h4`:`M${n.x-13},${n.y+4}h4v-8h5v8h5v-8h4`}" fill="none" stroke="${lit?'var(--acc)':'var(--ink)'}" stroke-width="1.6"/>`;
     s+=`<text class="lbl" x="${lit?n.x-43:n.x-7}" y="${n.y}" fill="var(--ink)" style="${isC?'display:none':''}">${subS(k)}</text>`;
     s+=`<text class="lbl" x="${lit?n.x-7:n.x-43}" y="${n.y}" fill="${lit?'var(--acc)':'var(--ink2)'}" style="font-size:13px">${isC?'C':val}</text></g>`;
-    s+=`<path class="gst" d="M${n.x+12},${n.y}H${n.x+20}"/>`+pinOut(n.x+20,n.y)+`<circle class="pin-hit" data-pin="I${i}|o|0" cx="${n.x+20}" cy="${n.y}" r="11"/>`;
+    s+=`<path class="gst" d="M${n.x+12},${n.y}H${n.x+20}"/>`+pinOut(n.x+20,n.y)+`<circle class="pin-hit" data-pin="I${i}|o|0" cx="${n.x+20}" cy="${n.y}" r="11"/>`;K('i'+i);
   });
   // outputs (lamps)
   const ov_=readOuts();
@@ -279,7 +294,7 @@ function render(){
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
-    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;
+    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
   });
   // temp wire
   if(tmp){
@@ -287,17 +302,29 @@ function render(){
     let t=tmp.cur,pts=tmp.pts;
     if(hover&&hover.k==='i')t=pinPos(hover.g,'i',hover.p);
     s+=`<path class="w w${v[tmp.from.g+':'+tmp.from.p]|0} tmp" d="${roundD(route(sp,pts,t))}"/>`;
-    pts.forEach(p=>s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="3"/>`);
+    pts.forEach(p=>s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="3"/>`);K('tmp');
   }
-  if(ghost)s+=`<g class="ghost${ghost.ins?' ins':''}" transform="translate(${ghost.x},${ghost.y})">${gateSVG(ghost.type,gost)}</g>`;
-  if(cut&&cut.pts.length>1)s+=`<path class="cut" d="${toD(cut.pts.map(p=>({x:p.x,y:p.y})))}"/>`;
-  world.innerHTML=s;
+  if(ghost)s+=`<g class="ghost${ghost.ins?' ins':''}" transform="translate(${ghost.x},${ghost.y})">${gateSVG(ghost.type,gost)}</g>`;K('ghost');
+  if(cut&&cut.pts.length>1)s+=`<path class="cut" d="${toD(cut.pts.map(p=>({x:p.x,y:p.y})))}"/>`;K('cut');
+  patchWorld(parts);
   board.classList.toggle('demo',demoOn);
   placeSelPop();
   renderTable();
   $('#undo').disabled=!undoS.length;$('#redo').disabled=!redoS.length;
 }
 
+/* each wire, gate, input and lamp is its own <g>; only the ones whose markup changed are rebuilt,
+   so flipping an input repaints a few wires instead of the whole board */
+const worldParts=new Map();
+function patchWorld(parts){
+  const seen=new Set();let ref=world.firstChild;
+  for(let i=0;i<parts.length;i+=2){
+    const k=parts[i],h=parts[i+1];let c=worldParts.get(k);seen.add(k);
+    if(!c||c.h!==h){if(c){if(c.el===ref)ref=ref.nextSibling;c.el.remove()}const el=document.createElementNS('http://www.w3.org/2000/svg','g');el.innerHTML=h;c={h,el};worldParts.set(k,c)}
+    if(c.el===ref)ref=ref.nextSibling;else world.insertBefore(c.el,ref);
+  }
+  for(const [k,c] of worldParts)if(!seen.has(k)){c.el.remove();worldParts.delete(k)}
+}
 function placeSelPop(){
   const b=$('#selPop');if(!b)return;
   let w=null;
@@ -327,7 +354,7 @@ function buildChrome(){
   $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.remove('on');
   $('#hintBtn').style.display=level.hint?'':'none';$('#hintBtn').innerHTML=hintLabel();
   $('#verify').style.display=level.sandbox?'none':'';
-  const pal=$('#palette');
+  const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
     +(level.sandbox&&level.gates.length<ALL_GATES.length?`<div class="pnote">${ui('sbMore',{n:ALL_GATES.length-level.gates.length})}</div>`:'');
   updCount();
@@ -343,7 +370,7 @@ function placeCard(){
 window.addEventListener('resize',()=>{if(level)placeCard()});
 function renderTable(){
   const w=$('#ttWrap'),card=$('#taskCard');
-  if(level.sandbox||!level.vec.length){w.innerHTML='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
+  if(level.sandbox||!level.vec.length){w.innerHTML='';w._h='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
   card.classList.remove('notable');card.style.display='';
   const ins=level.ins,outs=level.outs,isSeq=level.seq||level.clk,V=level.vec;
   const live=isSeq?-1:V.findIndex(r=>ins.every((k,i)=>r.in[k]===liveIn[i]));
@@ -355,8 +382,8 @@ function renderTable(){
   if(ins.length)h+=`<tr class="ttsep"><th></th><td colspan="${V.length}"></td></tr>`;
   outs.forEach((k,j)=>h+=`<tr class="out"><th>${lab(disp(k))}</th>${V.map((r,ri)=>{const mk=rowMark&&rowMark[ri],bad=mk&&!mk.ok&&mk.act[k]!==r.out[k];
     return `<td class="${cc(ri)}${bad&&ri!==demoRow?' wrong':''}" data-row="${ri}">${r.out[k]}${bad?`<span class="act">${mk.act[k]}</span>`:''}</td>`}).join('')}</tr>`);
-  w.innerHTML=h+'</table>';
-  placeCard();
+  h+='</table>';
+  if(h!==w._h){w.innerHTML=h;w._h=h;placeCard()}
 }
 $('#ttWrap').addEventListener('click',e=>{
   const tr=e.target.closest('tr[data-row]');if(!tr||demoOn||level.seq||level.clk)return;
@@ -368,7 +395,7 @@ $('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 /* sheet resize */
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
 function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(44)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
-function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';$('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
@@ -389,7 +416,7 @@ function fit(){
   view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
   render();
 }
-function zoomAt(f,cx,cy){const nz=clamp(view.z*f,.3,3);const k=nz/view.z;view.x=cx-(cx-view.x)*k;view.y=cy-(cy-view.y)*k;view.z=nz;render()}
+function zoomAt(f,cx,cy){const nz=clamp(view.z*f,.3,3);const k=nz/view.z;view.x=cx-(cx-view.x)*k;view.y=cy-(cy-view.y)*k;view.z=nz;viewXf()}
 $('#zIn').onclick=()=>zoomAt(1.2,innerWidth/2,innerHeight/2);
 $('#zOut').onclick=()=>zoomAt(1/1.2,innerWidth/2,innerHeight/2);
 $('#zFit').onclick=fit;
@@ -408,10 +435,13 @@ function nearestIn(p,r){
 function loupe(x,y){
   const L=$('#loupe'),R=66,Z=2.2;
   let ly=y-R-90;if(ly<8)ly=y+70;const lx=clamp(x-R,8,innerWidth-2*R-8);
+  // the loupe mirrors the board with <use>; it is linked only while shown, otherwise every
+  // board change would restyle a hidden copy of the whole circuit
+  if(!L.classList.contains('on'))for(const u of $$('#loupeG use'))u.setAttribute('href',u.dataset.href);
   L.style.transform=`translate(${lx}px,${ly}px)`;L.classList.add('on');
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
-function loupeOff(){$('#loupe').classList.remove('on')}
+function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
@@ -560,24 +590,24 @@ window.addEventListener('pointermove',e=>{
   }
   const p=toW(e.clientX,e.clientY);
   if(ghost&&e.pointerType==='touch')loupe(e.clientX,e.clientY);
-  if(ghost){ghost.x=snap(p.x-30);ghost.y=snap(p.y-GATES[ghost.type].h/2);ghost.ins=wireUnder(ghost.x,ghost.y,ghost.type);if(ghost.ins)ghost.y=ghost.ins.y;render();return}
+  if(ghost){ghost.x=snap(p.x-30);ghost.y=snap(p.y-GATES[ghost.type].h/2);ghost.ins=wireUnder(ghost.x,ghost.y,ghost.type);if(ghost.ins)ghost.y=ghost.ins.y;renderSoon();return}
   if(tmp){
     tmp.cur=p;
     const el=document.elementFromPoint(e.clientX,e.clientY);const h=el?hitInfo(el):{type:'empty'};
-    hover=h.type==='pin'&&h.k==='i'?h:nearestIn(p,(e.pointerType==='touch'?40:16)/view.z);render();
+    hover=h.type==='pin'&&h.k==='i'?h:nearestIn(p,(e.pointerType==='touch'?40:16)/view.z);renderSoon();
     if(e.pointerType==='touch'&&tmp.mode==='drag')loupe(e.clientX,e.clientY);
   }
   if(!act)return;
   const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
-  if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;render()}
+  if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;viewXf()}
   else if(act.kind==='gate'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
-      act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;render()}
+      act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
   }else if(act.kind==='branch'&&dist>5){
-    startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};render();
-  }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';render()}
+    startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};renderSoon();
+  }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';renderSoon()}
 });
 window.addEventListener('pointerup',e=>{
   ptrs.delete(e.pointerId);
@@ -798,3 +828,60 @@ function startMusic(){
     while(mus.next<AC.currentTime+.3){playStep(mus.step,mus.next,root,sc,sp);mus.next+=sp;mus.step=(mus.step+1)%64}},100);
 }
 
+/* ========== palette: truth table of a gate on hover (long press on touch) ========== */
+const GATE_INFO={
+  NOT :{f:()=>'Y = '+ov('A'),d:['Инвертирует вход: 0 → 1, 1 → 0','Inverts the input: 0 → 1, 1 → 0']},
+  AND :{f:()=>'Y = A ∧ B',d:['1, только если оба входа 1','1 only when both inputs are 1']},
+  OR  :{f:()=>'Y = A ∨ B',d:['1, если хотя бы один вход 1','1 when at least one input is 1']},
+  NAND:{f:()=>'Y = '+ov('A ∧ B'),d:['0, только если оба входа 1','0 only when both inputs are 1']},
+  NOR :{f:()=>'Y = '+ov('A ∨ B'),d:['1, только если оба входа 0','1 only when both inputs are 0']},
+  XOR :{n:['Исключающее ИЛИ','Exclusive OR'],f:()=>'Y = A ⊕ B',d:['1, если входы разные','1 when the inputs differ']},
+  XNOR:{n:['Равнозначность','Equivalence'],f:()=>'Y = '+ov('A ⊕ B'),d:['1, если входы одинаковые','1 when the inputs are equal']},
+  DFF :{n:['D-триггер','D flip-flop'],f:()=>'Q<sub>n+1</sub> = D',d:['По фронту C запоминает D, в остальное время хранит Q','Stores D on the rising edge of C, otherwise keeps Q']}
+};
+function gateTipHTML(t){
+  const G=GATES[t],I=GATE_INFO[t]||{f:()=>'',d:''};
+  let tb='<table class="gtt">';
+  if(t==='DFF'){
+    tb+='<tr><th>D</th><th>C</th><th class="sep"></th><th>Q<sub>n+1</sub></th></tr>';
+    for(const [d,c,q,one] of [['0','↑','0',0],['1','↑','1',1],['×','0, 1, ↓','Q<sub>n</sub>',0]])
+      tb+=`<tr><td>${d}</td><td>${c}</td><td class="sep"></td><td class="o${one?' one':''}">${q}</td></tr>`;
+  }else{
+    const n=G.ins,names=n===1?['A']:['A','B'];
+    tb+='<tr>'+names.map(k=>`<th>${k}</th>`).join('')+'<th class="sep"></th><th>Y</th></tr>';
+    for(let r=0;r<1<<n;r++){
+      const ins=names.map((_,i)=>(r>>(n-1-i))&1),y=G.f(ins)[0];
+      tb+='<tr>'+ins.map(v=>`<td>${v}</td>`).join('')+`<td class="sep"></td><td class="o${y?' one':''}">${y}</td></tr>`;
+    }
+  }
+  tb+='</table>';
+  const nm=I.n||G.n;
+  return `<div class="gt-h"><b>${tx(nm)}</b>${LANG==='en'?'':`<span>${G.n[1]}</span>`}</div><div class="gt-f math">${mathHTML(I.f())}</div><div class="gt-d">${tx(I.d)}</div>${tb}`;
+}
+const gtip=(()=>{
+  const el=document.createElement('div');el.id='gtip';el.className='zz';el.setAttribute('role','tooltip');document.body.appendChild(el);
+  let cur=null,lp=null;
+  function show(it){
+    const t=it.dataset.type;if(!GATES[t])return;
+    if(cur!==t){el.innerHTML=gateTipHTML(t);cur=t}
+    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z;
+    let x,y;
+    if(pr.width<pr.height&&pr.right+12+w<innerWidth-8){x=pr.right+12;y=clamp(ir.top+ir.height/2-h/2,8,innerHeight-h-8)}  // column palette: to the right
+    else{x=clamp(ir.left+ir.width/2-w/2,8,innerWidth-w-8);y=Math.max(8,pr.top-h-12)}                                  // row palette (phone): above
+    el.style.left=(x/z)+'px';el.style.top=(y/z)+'px';el.classList.add('on');
+  }
+  function hide(){el.classList.remove('on');clearTimeout(lp&&lp.t);lp=null}
+  const pal=$('#palette');
+  pal.addEventListener('pointerover',e=>{if(e.pointerType!=='mouse'||ghost)return;const it=e.target.closest('.pi');if(it)show(it)});
+  pal.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hide()});
+  // touch: hold a gate still for a moment to see its table; letting go then does not place it
+  pal.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'){hide();return}
+    const it=e.target.closest('.pi');if(!it)return;
+    lp={x:e.clientX,y:e.clientY,shown:false,t:setTimeout(()=>{if(lp){lp.shown=true;show(it)}},420)};
+  });
+  window.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8)hide()},{passive:true});
+  pal.addEventListener('pointerup',()=>{if(lp&&lp.shown)ghost=null;hide()},true);
+  window.addEventListener('pointerup',()=>{if(lp)hide()});
+  return {hide};
+})();
