@@ -2467,7 +2467,7 @@ window.addEventListener('pointerup',e=>{
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if((a.kind==='toggle'||a.kind==='io')&&a.moved){sfx('place');persist();render();return}
   {const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
-    if(dbl&&C.io&&C.io[a.id]){snapshot();delete C.io[a.id];if(!Object.keys(C.io).length)delete C.io;persist();render()}}
+    if(dbl&&C.io&&C.io[a.id]){snapshot();delete C.io[a.id];if(!Object.keys(C.io).length)delete C.io;persist();render();return}}
   if(a.kind==='io')return;
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
