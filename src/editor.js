@@ -608,7 +608,7 @@ function loupe(x,y){
 function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
 function odTip(el){const t=$('#odTip');if(!el){t.classList.remove('on');return}
   const k=level.outs[+el.dataset.od],d=k!=null&&outDesc(level,k);if(!d){t.classList.remove('on');return}
-  t.innerHTML=`<b>${subS(disp(k))}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
+  t.innerHTML=`<b>${esc(disp(k)).replace(/(\D)(\d+)$/,"$1<sub>$2</sub>")}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
   t.classList.add('on');const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';t.style.top=Math.max(8,r.top-t.offsetHeight-8)+'px'}
 board.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-od]');if(el&&!act&&e.pointerType!=='touch')odTip(el)});
 board.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('[data-od]'))odTip(null)});
