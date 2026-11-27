@@ -338,6 +338,8 @@ function render(){
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
     s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
+  for(const w of C.wires)if(w.n){const a=noteAt(w);s+=`<text class="wnote" x="${a.x}" y="${a.y}" text-anchor="${a.h?'middle':'start'}"${WCOL[w.c]?` style="fill:${WCOL[w.c]}"`:''}>${esc(w.n)}</text>`}
+  K('wnotes');
   for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;K('jn');
   // onboarding ghost
   if(level.id===1&&!C.wires.length&&!tmp){
@@ -417,7 +419,21 @@ function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();
   if(!on)return;const w=selWire();
   p.innerHTML=['',...Object.keys(WCOL)].map(k=>`<button role="menuitemradio" aria-checked="${(w.c||'')===k}" data-wc="${k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('');
   const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px'}
-function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn)wcolPop(false)}
+function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit)}}
+function noteAt(w){const P=wirePts(w);let b=null;for(let i=0;i<P.length-1;i++){const a=P[i],c=P[i+1],l=Math.abs(a.x-c.x)+Math.abs(a.y-c.y);if(!b||l>b.l)b={l,a,c}}
+  const h=b.a.y===b.c.y,m={x:(b.a.x+b.c.x)/2,y:(b.a.y+b.c.y)/2};return h?{x:m.x,y:m.y-9,h}:{x:m.x+8,y:m.y,h}}
+let noteW=null;
+function wnoteOpen(on){const p=$('#wnotePop'),i=$('#wnoteIn'),b=$('#wnoteBtn');const w=on&&selWire();
+  if(!w){if(noteW){noteW=null;p.classList.remove('on');b.setAttribute('aria-expanded',false)}return}
+  noteW=w.id;wcolPop(false);i.value=w.n||'';i.placeholder=ui('wnotePh');i.setAttribute('aria-label',ui('wnote'));
+  const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px';
+  p.classList.add('on');b.setAttribute('aria-expanded',true);i.focus();i.select()}
+function wnoteCommit(){const w=noteW&&C.wires.find(x=>x.id===noteW);const v=$('#wnoteIn').value.trim().slice(0,40);wnoteOpen(false);
+  if(!w||(w.n||'')===v)return;snapshot();if(v)w.n=v;else delete w.n;changed();sfx('place')}
+$('#wnoteBtn').onclick=e=>{e.stopPropagation();if(noteW)wnoteCommit();else wnoteOpen(true);sfx('ui')};
+$('#wnotePop').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#wnoteIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();wnoteCommit()}else if(e.key==='Escape'){e.preventDefault();wnoteOpen(false)}});
+$('#wnoteIn').addEventListener('blur',()=>{if(noteW)wnoteCommit()});
 $('#wcolBtn').onclick=e=>{e.stopPropagation();wcolPop(!$('#wcolPop').classList.contains('on'));sfx('ui')};
 $('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
@@ -664,7 +680,7 @@ function spliceIn(g,ins){
   const w=ins.w;
   C.wires=C.wires.filter(x=>x!==w);
   const pre=(w.pts||[]).filter(p=>p.x<g.x),post=(w.pts||[]).filter(p=>p.x>g.x+GW);
-  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre,...(w.c?{c:w.c}:{})});
+  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre,...(w.c?{c:w.c}:{}),...(w.n?{n:w.n}:{})});
   C.wires.push({id:'w'+(nextId++),from:{g:g.id,p:0},to:{g:w.to.g,p:w.to.p},pts:post,...(w.c?{c:w.c}:{})});
   sfx('relay');
 }
