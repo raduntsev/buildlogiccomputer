@@ -813,7 +813,7 @@ body.calm #gtip{transform:none}
 .gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
 .gt-h:hover .gt-n .alt{opacity:1;transform:none}
 
-.odhit{fill:transparent}
+.odhit{fill:transparent;cursor:grab}
 #odTip{position:fixed;z-index:7;pointer-events:none;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:7px 14px;font-size:13px;color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .12s}
 #odTip.on{opacity:1}
 #odTip b{font-weight:700}
