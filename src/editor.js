@@ -58,11 +58,11 @@ function loadLevel(l){
   undoS=[];redoS=[];sel=null;rowMark=null;
   liveIn=ioIns().map(()=>0);
   resetSim();
-  store.set('ll_last',l.id,true);
+  if(!l.sandbox)store.set('ll_last',l.id,true);
   buildChrome();
   fit();
   update();
-  hintUsed=false;failCount=0;bitMuted=false;levelStart=Date.now();idleShown=false;resetIdle();
+  hintUsed=false;failCount=0;bitMuted=false;levelStart=Date.now();idleShown=false;resetIdle();hintBtnDraw();
   levelIntro();
   musicChapter(l.sandbox?topChapter():l.ch);
   if(TOUCH&&l.gates.length&&!store.get('ll_tip',false)){store.set('ll_tip',true,true);setTimeout(()=>toast(ui('touchTip'),7000),1800)}
@@ -351,8 +351,8 @@ function buildChrome(){
   $('#lvTitle').textContent=tx(level.t);
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
-  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.remove('on');
-  $('#hintBtn').style.display=level.hint?'':'none';$('#hintBtn').innerHTML=hintLabel();
+  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
+  $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
   $('#verify').style.display=level.sandbox?'none':'';
   const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
@@ -393,14 +393,15 @@ $('#hintBtn').onclick=e=>{e.stopPropagation();if(sheetH<160)setSheet(220);giveHi
 $('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 
 /* sheet resize */
+const SHEET_MIN=52;
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
-function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(44)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
-function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(SHEET_MIN)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
+function setSheet(h){sheetH=clamp(h,SHEET_MIN,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
   g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
-  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(44);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
+  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
 })();
 
 /* ========== view ========== */

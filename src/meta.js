@@ -1,6 +1,6 @@
 /* ========== progress: stars, points, clearance ========== */
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
-function starsHTML(s){return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
+function starsHTML(s){if(!s)return '';return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
 const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
@@ -8,7 +8,7 @@ function rankIdx(p=earned()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});retu
 const quizPassed=ch=>!!(prog.quiz[ch]&&prog.quiz[ch].pass);
 const available=l=>l.req.every(r=>typeof r==='string'?quizPassed(+r.slice(1)):done.has(r));
 const chapterDone=ch=>LV.filter(l=>l.ch===ch).every(l=>done.has(l.id));
-function updHud(){const p=earned(),b=balance();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(b)}</span>`;$('#hud').title=ui('balanceH')+': '+ptsN(b);if($('#hintBtn'))$('#hintBtn').innerHTML=hintLabel()}
+function updHud(){const p=earned(),b=balance();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(b)}</span>`;$('#hud').title=ui('balanceH')+': '+ptsN(b);hintBtnDraw()}
 function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');clearTimeout(savedPing.t);savedPing.t=setTimeout(()=>el.classList.remove('on'),1400)}
 
 function onSolved(){
@@ -224,7 +224,7 @@ function drawMachine(){
   sv.innerHTML=s;
   const n=on.filter(Boolean).length;
   $('#machineCap').textContent=ui('machineCap',{n,N:10});
-  const lv=store.get('ll_last',1),solved=LV.filter(l=>done.has(l.id)).length;
+  const lv=LV.some(l=>l.id===store.get('ll_last',1))?store.get('ll_last',1):((LV.find(l=>available(l)&&!done.has(l.id))||LV[0]).id),solved=LV.filter(l=>done.has(l.id)).length;
   if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);

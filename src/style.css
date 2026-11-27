@@ -65,14 +65,18 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 /* ---------- zoom ---------- */
 #zoom{position:fixed;right:16px;z-index:4;display:flex;gap:4px;transition:bottom .15s}
-#zoom .tbtn{height:36px;padding:0 14px;font-size:14px}
+#zoom{gap:0;padding:3px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+#zoom .tbtn{height:34px;padding:0 14px;font-size:14px;box-shadow:none;background:transparent}
+#zoom .tbtn:hover{background:var(--card2)}
+#zoom #zOut,#zoom #zIn{width:34px;padding:0;justify-content:center}
 
 /* ---------- bottom dock ---------- */
 #sheet{position:fixed;left:16px;right:16px;bottom:14px;background:var(--paper);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:3;overflow:hidden}
 #grip{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 10px 0 18px;cursor:ns-resize;touch-action:none;position:relative}
 #grip::before{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:4px;background:var(--line)}
-#lvNum{font-size:30px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
-#lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em}
+#lvNum{font-size:30px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1}
+#lvHead{display:inline-flex;align-items:baseline;gap:12px;min-width:0}
+#lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #lvStars{font-size:15px;letter-spacing:2px}
 .st{color:var(--line)}.st.on{color:var(--ink)}
 #saved{font-size:12px;color:var(--mute);opacity:0;transition:opacity .3s;display:inline-flex;align-items:center;gap:6px}
@@ -518,6 +522,10 @@ body.bitOn #menuBit{opacity:0;pointer-events:none}
 
 /* ---------- hint price ---------- */
 #hintBtn{display:inline-flex;align-items:center}
+#hintBtn.owned{padding:0 11px;background:var(--acc-soft);transition:background .2s}
+#hintBtn .hk{font-weight:600;width:14px;text-align:center}
+#hintBtn .hko{display:inline-block;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .25s ease,opacity .2s ease,margin .25s ease}
+#hintBtn.owned:hover .hko,#hintBtn.owned:focus-visible .hko{max-width:240px;opacity:1;margin-left:6px}
 .cost{font-size:12.5px;font-weight:500;opacity:.62;margin-left:9px;white-space:nowrap}
 
 /* ---------- knife and splice ---------- */

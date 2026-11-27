@@ -17,6 +17,11 @@ let failCount=0;
 function hintBought(){return !!(level&&(prog.hb||[]).includes(level.id))}
 function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;return failCount>=6?0:failCount>=3?HINT_COST/2:HINT_COST}
 function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
+function hintBtnDraw(){
+  const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
+  b.classList.toggle('owned',own);b.setAttribute('aria-label',ui('hintAsk')+(own?': '+ui('hintOpen'):''));
+  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
+}
 function dailyCheck(){
   const d=today();if(prog.st.day===d)return;
   prog.st.day=d;prog.st.daily=(prog.st.daily||0)+DAILY_PTS;save();updHud();drawShopHead();if($('#mmShop'))$('#mmShop').textContent=ptsN(balance());
@@ -133,7 +138,7 @@ $('#shopBox').addEventListener('click',e=>{
 });
 
 Object.assign(UIS,{
-  shop:['Мастерская','Workshop'],hintAsk:['Подскажи','Hint'],hintOpen:['уже открыта','already open'],free:['бесплатно','free'],
+  shop:['Мастерская','Workshop'],hintAsk:['Подсказка','Hint'],hintOpen:['уже куплено','already bought'],free:['бесплатно','free'],
   dailyToast:['Смена началась: +{p}','Shift started: +{p}'],onAcc:['на счету','in your account'],earnedT:['Заработано {e}, потрачено {s}','Earned {e}, spent {s}'],
   drill:['Разминка','Warm-up'],drillAbout:['Короткие вопросы по логике. За каждый верный ответ +{p}.','Short logic questions. +{p} for every correct answer.'],
   drillLeft:['Сегодня можно заработать ещё {p}','You can still earn {p} today'],drillCap:['Лимит разминки на сегодня исчерпан. Отвечать всё равно можно.','Today’s warm-up limit is reached. You can keep answering anyway.'],
