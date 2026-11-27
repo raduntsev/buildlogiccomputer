@@ -279,6 +279,7 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 @keyframes flow2{to{stroke-dashoffset:-28}}
 @keyframes flow{to{stroke-dashoffset:-22}}
 .whit{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 12px);cursor:pointer}
+.whit.on{cursor:move}
 .whit:hover+.wsel,.wsel.on{stroke:rgba(220,235,58,.75)}
 .wsel{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 8px);pointer-events:none;stroke-linejoin:round;stroke-linecap:round}
 .gb{fill:var(--paper);stroke:var(--ink);stroke-width:1.8}
@@ -1896,7 +1897,7 @@ function render(){
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
-    s+=`<path class="whit" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
+    s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
   for(const p of junctions())s+=`<circle class="jn" cx="${p.x}" cy="${p.y}" r="${settings.ww*.6+2.5}"/>`;K('jn');
   // onboarding ghost
@@ -2121,6 +2122,22 @@ function nearestOnWire(w,p){
   }
   return{pt:best.q,pre:pl.slice(1,best.i+1)};
 }
+/* a selected wire is dragged by one segment; both ends stay on their pins. The pin stubs never move,
+   so the segment next to a pin gets a 10 px stub before it. Double-click a wire to hand it back to the router. */
+function segGrab(w,p){
+  const pl=wirePts(w),s=pl[0],t=pl[pl.length-1],P=[s,{x:s.x+10,y:s.y}];
+  for(const q of [...pl.slice(1,-1),{x:t.x-10,y:t.y},t]){const z=P[P.length-1];if(z.x!==q.x||z.y!==q.y)P.push({x:q.x,y:q.y})}
+  let best=null;
+  for(let j=1;j<P.length-2;j++){const a=P[j],b=P[j+1];if(a.x!==b.x&&a.y!==b.y)continue;
+    const q={x:clamp(p.x,Math.min(a.x,b.x),Math.max(a.x,b.x)),y:clamp(p.y,Math.min(a.y,b.y),Math.max(a.y,b.y))},d=Math.hypot(q.x-p.x,q.y-p.y);
+    if(!best||d<best.d)best={d,j,h:a.y===b.y}}
+  return best&&best.d<24/view.z?{P,j:best.j,h:best.h}:null;
+}
+board.addEventListener('dblclick',e=>{
+  const h=hitInfo(e.target);if(h.type!=='wire')return;
+  const w=C.wires.find(x=>x.id===h.id);if(!w||!w.pts||!w.pts.length)return;
+  snapshot();w.pts=[];changed();
+});
 function startWire(from,pts,cur){tmp={from,pts:pts.map(p=>({x:p.x,y:p.y})),cur,mode:'drag'};sfx('pick')}
 function finishWire(to){
   if(!tmp)return;
@@ -2232,7 +2249,9 @@ board.addEventListener('pointerdown',e=>{
     return;
   }
   if(h.type==='wire'){
-    const w=C.wires.find(x=>x.id===h.id);const n=nearestOnWire(w,p);
+    const w=C.wires.find(x=>x.id===h.id);
+    if(sel&&sel.w===w.id){const g=segGrab(w,p);if(g){act=Object.assign({kind:'seg',sx:e.clientX,sy:e.clientY,w,moved:false},g);return}}
+    const n=nearestOnWire(w,p);
     act={kind:'branch',sx:e.clientX,sy:e.clientY,w,n};return;
   }
   if(h.type==='gate'){
@@ -2266,6 +2285,12 @@ window.addEventListener('pointermove',e=>{
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
       act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
+  }else if(act.kind==='seg'){
+    if(!act.moved&&dist>4){act.moved=true;snapshot()}
+    if(act.moved){const P=act.P.map(q=>({x:q.x,y:q.y})),j=act.j;
+      if(act.h){const y=snap(p.y,10);P[j].y=P[j+1].y=y}
+      else{let x=snap(p.x,10);if(j===1)x=Math.max(x,P[0].x+10);if(j+2===P.length-1)x=Math.min(x,P[P.length-1].x-10);P[j].x=P[j+1].x=x}
+      act.w.pts=P.slice(1,-1);sel.at=p;renderSoon()}
   }else if(act.kind==='branch'&&dist>5){
     startWire(act.w.from,[...act.n.pre,act.n.pt],p);act={kind:'wire',sx:act.sx,sy:act.sy,branch:true};renderSoon();
   }else if(act.kind==='cut'||act.kind==='rclick'){cut.pts.push(p);if(act.kind==='rclick'&&dist>6)act.kind='cut';renderSoon()}
@@ -2292,6 +2317,7 @@ window.addEventListener('pointerup',e=>{
     tmp=null;hover=null;render();return;                      // released anywhere else: the wire is dropped
   }
   if(a.kind==='branch'){sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render();return}
+  if(a.kind==='seg'){if(a.moved){sfx('place');changed()}else{sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render()}return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
