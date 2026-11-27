@@ -874,6 +874,13 @@ body.calm #gtip{transform:none}
   #palette::-webkit-scrollbar{display:none}
   .pi{min-height:0}
 }
+/* gate card: interactive only while shown (to hover the name); the name cross-fades to the other language */
+#gtip.on{pointer-events:auto}
+.gt-n{display:grid}
+.gt-n>span{grid-area:1/1;font:inherit;color:inherit;transition:opacity .2s,transform .2s}
+.gt-n .alt{opacity:0;transform:translateY(3px)}
+.gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
+.gt-h:hover .gt-n .alt{opacity:1;transform:none}
 </style>
 </head>
 <body>
@@ -2425,24 +2432,32 @@ function gateTipHTML(t){
   }
   tb+='</table>';
   const nm=I.n||G.n;
-  return `<div class="gt-h"><b>${tx(nm)}</b>${LANG==='en'?'':`<span>${G.n[1]}</span>`}</div><div class="gt-f math">${mathHTML(I.f())}</div><div class="gt-d">${tx(I.d)}</div>${tb}`;
+  // one card: name (hover it to see the other language), formula, table
+  const other=LANG==='en'?nm[0]:G.n[1];
+  return `<div class="gt-h"><b class="gt-n"><span>${tx(nm)}</span>${other&&other!==tx(nm)?`<span class="alt" lang="${LANG==='en'?'ru':'en'}">${other}</span>`:''}</b></div><div class="gt-f math">${mathHTML(I.f())}</div>${tb}`;
 }
 const gtip=(()=>{
   const el=document.createElement('div');el.id='gtip';el.className='zz';el.setAttribute('role','tooltip');document.body.appendChild(el);
-  let cur=null,lp=null;
+  let cur=null,lp=null,hideT=0;
   function show(it){
     const t=it.dataset.type;if(!GATES[t])return;
     if(cur!==t){el.innerHTML=gateTipHTML(t);cur=t}
-    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z;
-    let x,y;
-    if(pr.width<pr.height&&pr.right+12+w<innerWidth-8){x=pr.right+12;y=clamp(ir.top+ir.height/2-h/2,8,innerHeight-h-8)}  // column palette: to the right
-    else{x=clamp(ir.left+ir.width/2-w/2,8,innerWidth-w-8);y=Math.max(8,pr.top-h-12)}                                  // row palette (phone): above
+    clearTimeout(hideT);
+    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z,g=12,m=8;
+    // try every side of the palette in turn; the first one that fits on screen without covering the palette (and so the gate) wins
+    const cx=clamp(ir.left+ir.width/2-w/2,m,innerWidth-w-m),cy=clamp(ir.top+ir.height/2-h/2,m,innerHeight-h-m);
+    const C=[[pr.right+g,cy],[cx,pr.top-g-h],[cx,pr.bottom+g],[pr.left-g-w,cy]];
+    const fits=([x,y])=>x>=m&&y>=m&&x+w<=innerWidth-m&&y+h<=innerHeight-m;
+    const [x,y]=C.find(fits)||[clamp(pr.right+g,m,innerWidth-w-m),cy];
     el.style.left=(x/z)+'px';el.style.top=(y/z)+'px';el.classList.add('on');
   }
   function hide(){el.classList.remove('on');clearTimeout(lp&&lp.t);lp=null}
   const pal=$('#palette');
   pal.addEventListener('pointerover',e=>{if(e.pointerType!=='mouse'||ghost)return;const it=e.target.closest('.pi');if(it)show(it)});
-  pal.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hide()});
+  // a short grace period lets the mouse cross the gap to the card (to hover its name)
+  pal.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){clearTimeout(hideT);hideT=setTimeout(hide,160)}});
+  el.addEventListener('pointerenter',()=>clearTimeout(hideT));
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hide()});
   // touch: hold a gate still for a moment to see its table; letting go then does not place it
   pal.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse'){hide();return}

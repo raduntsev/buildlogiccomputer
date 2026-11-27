@@ -772,3 +772,10 @@ body.calm #gtip{transform:none}
   #palette::-webkit-scrollbar{display:none}
   .pi{min-height:0}
 }
+/* gate card: interactive only while shown (to hover the name); the name cross-fades to the other language */
+#gtip.on{pointer-events:auto}
+.gt-n{display:grid}
+.gt-n>span{grid-area:1/1;font:inherit;color:inherit;transition:opacity .2s,transform .2s}
+.gt-n .alt{opacity:0;transform:translateY(3px)}
+.gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
+.gt-h:hover .gt-n .alt{opacity:1;transform:none}
