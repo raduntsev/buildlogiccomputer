@@ -333,6 +333,7 @@ function render(){
   for(const w of C.wires){
     const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0,doom=dm.wires.has(w.id);
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
+    s+=`<path class="wgap" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
     s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
