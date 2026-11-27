@@ -2734,7 +2734,7 @@ function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;r
 function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
 function hintBtnDraw(){
   const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
-  b.classList.toggle('owned',own);b.setAttribute('aria-label',ui('hintAsk')+(own?': '+ui('hintOpen'):''));
+  b.classList.toggle('owned',own);if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
   b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
 }
 function dailyCheck(){
@@ -3036,7 +3036,7 @@ Object.assign(STORY,{
 
 /* ========== progress: stars, points, clearance ========== */
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
-function starsHTML(s){if(!s)return '';return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
+function starsHTML(s){return [[1,'starSolved'],[2,'starNoHint'],[4,'starPar']].filter(([b])=>s&b).map(([,k])=>`<span class="st on" title="${ui(k,{p:level?level.par:''})}">★</span>`).join('')}
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
 const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
@@ -3049,7 +3049,7 @@ function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');c
 
 function onSolved(){
   const id=level.id,first=!done.has(id),prevRank=rankIdx(),old=prog.lv[id]||{s:0,g:999};
-  const bits=1|(hintUsed?0:2)|(C.gates.length<=level.par?4:0);
+  const bits=1|(hintUsed||hintBought()?0:2)|(C.gates.length<=level.par?4:0);
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
   done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
@@ -3082,6 +3082,7 @@ function onFailed(f,n){
   updHud();
   say([{t:extra||pick(STORY.fail),m:'sad',ch:[{t:hintLabel(),f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
 }
+function lastLevel(){const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);return l&&available(l)?l:(LV.find(x=>available(x)&&!done.has(x.id))||LV[0])}
 function nextLevel(){return LV.find(l=>l.id>level.id&&available(l)&&!done.has(l.id))||LV.find(l=>available(l)&&!done.has(l.id))}
 function showCard(ok,title,html,btns){
   const st=$('#resTitle');st.className=ok?'':'bad';st.style.animation='none';void st.offsetWidth;st.style.animation='';
@@ -3260,7 +3261,7 @@ function drawMachine(){
   sv.innerHTML=s;
   const n=on.filter(Boolean).length;
   $('#machineCap').textContent=ui('machineCap',{n,N:10});
-  const lv=LV.some(l=>l.id===store.get('ll_last',1))?store.get('ll_last',1):((LV.find(l=>available(l)&&!done.has(l.id))||LV[0]).id),solved=LV.filter(l=>done.has(l.id)).length;
+  const lv=lastLevel().id,solved=LV.filter(l=>done.has(l.id)).length;
   if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
@@ -3286,7 +3287,7 @@ $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   ensureAudio();sfx('ui');
   const g=b.dataset.go;
-  if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
+  if(g==='continue'){if(!level||level.sandbox)loadLevel(lastLevel());closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
   if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
   openMenu(g);
@@ -3424,8 +3425,7 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
   applySettings(true);
   applyWindow();
   bitMood('idle');dailyCheck();
-  const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);
-  loadLevel(l&&available(l)?l:LV[0]);
+  loadLevel(lastLevel());
   prog.badges.forEach(steamAch);
   if($('#ov').classList.contains('on')&&curScr==='main'){document.body.classList.add('mainScr');setTimeout(menuBitStart,400)}
   bitPlace();
