@@ -672,7 +672,7 @@ function updCount(){const el=$('#pcount');if(el){el.textContent=C.gates.length+'
   m.innerHTML=`<div class="met${level.max&&C.gates.length>level.max?' over':''}"><b>${C.gates.length}${level.max?`<small>/ ${level.max}</small>`:''}</b><span>${ui('mGates')}</span></div><div class="met"><b>${level.par}${best!=null&&best<999?`<small>${ui('mYours',{n:best})}</small>`:''}</b><span>${ui('mPar')}</span></div>`;
 }
 function disp(k){return (LANG==='en'&&level.dl&&level.dl[k])||k}
-function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);sel=null;sfx('remove');changed()}
+function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);if(hover&&hover.g===id)hover=null;sel=null;multiNorm();sfx('remove');changed()}
 function segX(a,b,c,d){
   const o=(p,q,r)=>Math.sign((q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x));
   return o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b);
