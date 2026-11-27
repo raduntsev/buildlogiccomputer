@@ -13,7 +13,7 @@ function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');c
 
 function onSolved(){
   const id=level.id,first=!done.has(id),prevRank=rankIdx(),old=prog.lv[id]||{s:0,g:999};
-  const bits=1|(hintUsed?0:2)|(C.gates.length<=level.par?4:0);
+  const bits=1|(hintUsed||hintBought()?0:2)|(C.gates.length<=level.par?4:0);
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
   done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
