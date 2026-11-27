@@ -766,6 +766,15 @@ body.calm #gtip{transform:none}
 #toolsTog svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 #toolDock.hide #toolsTog svg{transform:rotate(180deg)}
 #toolDock.hide #tools{display:none}
+.w.wc{stroke:var(--wc)}
+.w0.wc{opacity:.38}
+#wcolBtn .wcdot{fill:var(--wc,transparent);stroke:none}
+#wcolPop{position:fixed;z-index:4;display:none;transform:translateY(-50%);gap:6px;padding:6px 8px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+#wcolPop.on{display:flex}
+#wcolPop button{width:22px;height:22px;border-radius:50%;background:var(--wc,var(--w1));box-shadow:inset 0 0 0 2px var(--paper)}
+#wcolPop button:not([style]){background:linear-gradient(135deg,var(--w1) 50%,var(--w0) 50%)}
+#wcolPop button[aria-checked=true]{outline:2px solid var(--ink);outline-offset:1px}
+#wcolPop button:hover{transform:scale(1.12)}
 @media (max-width:760px){#toolDock{right:8px;top:calc((56px + 100vh - var(--dock,180px))/2)}}
 /* one spacing grid: 16px from the screen edges on desktop, 8px on phones; equal palette cells */
 .pi{min-height:64px;justify-content:center}

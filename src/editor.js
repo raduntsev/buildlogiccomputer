@@ -334,7 +334,7 @@ function render(){
     const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0,doom=dm.wires.has(w.id);
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
     s+=`<path class="wgap" d="${d}"/>`;
-    s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
+    s+=`<path class="w w${val}${doom?' doom':''}${WCOL[w.c]?' wc" style="--wc:'+WCOL[w.c]:''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
     s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
@@ -411,7 +411,20 @@ function patchWorld(parts){
   }
   for(const [k,c] of worldParts)if(!seen.has(k)){c.el.remove();worldParts.delete(k)}
 }
+const WCOL={r:'#D9483B',o:'#E08A1E',g:'#3E9B4F',b:'#2F6FD0',v:'#8A4FC8'};
+function selWire(){return sel&&sel.w?C.wires.find(x=>x.id===sel.w):null}
+function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();p.classList.toggle('on',on);b.setAttribute('aria-expanded',on);
+  if(!on)return;const w=selWire();
+  p.innerHTML=['',...Object.keys(WCOL)].map(k=>`<button role="menuitemradio" aria-checked="${(w.c||'')===k}" data-wc="${k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('');
+  const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px'}
+function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn)wcolPop(false)}
+$('#wcolBtn').onclick=e=>{e.stopPropagation();wcolPop(!$('#wcolPop').classList.contains('on'));sfx('ui')};
+$('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
+  const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;changed()}wcolPop(false);sfx('place')});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
 function placeSelPop(){
+  wcolSync();
   const b=$('#selPop');if(!b)return;
   let w=null;
   if(sel&&!demoOn&&!(act&&act.moved)){
@@ -651,8 +664,8 @@ function spliceIn(g,ins){
   const w=ins.w;
   C.wires=C.wires.filter(x=>x!==w);
   const pre=(w.pts||[]).filter(p=>p.x<g.x),post=(w.pts||[]).filter(p=>p.x>g.x+GW);
-  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre});
-  C.wires.push({id:'w'+(nextId++),from:{g:g.id,p:0},to:{g:w.to.g,p:w.to.p},pts:post});
+  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre,...(w.c?{c:w.c}:{})});
+  C.wires.push({id:'w'+(nextId++),from:{g:g.id,p:0},to:{g:w.to.g,p:w.to.p},pts:post,...(w.c?{c:w.c}:{})});
   sfx('relay');
 }
 
