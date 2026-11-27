@@ -290,6 +290,7 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .gl.s{font-size:11px;font-weight:500}
 .gate{cursor:move}
 .gate.sel .gb{fill:var(--acc-soft)}
+.gate.src .gb{fill:rgba(220,235,58,.28)}
 .msel{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:6 5;pointer-events:none;opacity:.55}
 .mbox{fill:rgba(220,235,58,.18);stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}
 .pin-in{fill:var(--ink)}
@@ -1944,7 +1945,7 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)||multi.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     s+=`</g>`;K('g'+g.id);
@@ -2023,7 +2024,9 @@ function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();
 function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');$('#netBtn').disabled=!w||demoOn;if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw()}
 let netOn=false;
 function netOf(w){return C.wires.filter(x=>x.from.g===w.from.g&&x.from.p===w.from.p)}
-function netHL(){const w=netOn&&selWire();if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
+function netHL(){const w=netOn&&selWire();
+  if(!w&&sel&&sel.g&&!demoOn){const id=sel.g,I=C.wires.filter(x=>x.to.g===id);return{w:new Set(C.wires.filter(x=>x.to.g===id||x.from.g===id).map(x=>x.id)),n:new Set(I.map(x=>x.from.g).filter(g=>g!==id)),src:true}}
+  if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
 function nodeName(id,p,k){if(id[0]==='I')return ioIns()[+id.slice(1)];if(id[0]==='O')return disp(level.outs[+id.slice(1)]);
   const g=nodePos(id);if(!g)return id;const P=gPins(g.type)[k],n=tx(GATES[g.type].n)+' №'+id.slice(1);return P&&P.length>1?n+' · '+ui(k==='o'?'pinO':'pinI')+' '+(p+1):n}
 function netDraw(){const box=$('#netInsp'),w=selWire();if(!netOn||!w)return;const N=netOf(w),val=sim.v[w.from.g+':'+w.from.p]|0,c=N.every(x=>x.c===w.c)?w.c||'':null,notes=N.filter(x=>x.n).map(x=>x.n);
