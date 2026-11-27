@@ -290,6 +290,8 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .gl.s{font-size:11px;font-weight:500}
 .gate{cursor:move}
 .gate.sel .gb{fill:var(--acc-soft)}
+.msel{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:6 5;pointer-events:none;opacity:.55}
+.mbox{fill:rgba(220,235,58,.18);stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}
 .pin-in{fill:var(--ink)}
 .pin-out{fill:var(--ink)}
 .pin-hit{fill:transparent;cursor:crosshair}
@@ -1103,7 +1105,7 @@ const UIS={
   gKeys:['Управление','Controls'],kPress:['нажмите клавишу…','press a key…'],kReset:['Сбросить клавиши','Reset keys'],kTaken:['Клавиша {k} уже занята: «{a}»','{k} is already used by “{a}”'],
   kMouse:['Мышь и касания','Mouse and touch'],
   k_undo:['Отменить','Undo'],k_redo:['Вернуть','Redo'],k_del:['Удалить выбранное','Delete selection'],k_verify:['Проверить схему','Test the circuit'],k_menu:['Меню / отмена','Menu / cancel'],
-  k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
+  k_selall:['Выделить всё','Select all'],k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
   m_wire:['Провод: протяните от выхода к входу','Wire: drag from an output to an input'],m_cut:['Резать: правая кнопка с протяжкой, на телефоне — ножницы','Cut: drag with the right button, on a phone use the scissors'],
   m_del:['Удалить: правый клик или «Удалить» у выбранного','Delete: right-click, or “Delete” next to the selection'],m_pan:['Двигать поле: тянуть по пустому месту, масштаб — колесо или два пальца','Pan: drag empty space; zoom: wheel or two fingers'],
   m_gate:['Вставить в провод: бросьте элемент на провод','Splice: drop a gate onto a wire'],sCalm2:['Меньше анимации','Reduce motion'],
@@ -1628,7 +1630,7 @@ let undoS=[],redoS=[];
 let liveIn=[], sim={v:{},ff:{}};
 let rowMark=null, demoRow=-1, demoOn=false, demoSkip=false;
 let view={x:0,y:0,z:1};
-let sel=null;
+let sel=null;const multi=new Set();
 
 function ioIns(){const a=level.ins.slice();if(level.clk)a.push('C');return a}
 function ioY(n,i){return (i-(n-1)/2)*80}
@@ -1649,7 +1651,7 @@ function loadLevel(l){
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
-  undoS=[];redoS=[];sel=null;rowMark=null;
+  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;
   liveIn=ioIns().map(()=>0);
   resetSim();
   if(!l.sandbox)store.set('ll_last',l.id,true);
@@ -1942,7 +1944,7 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)||multi.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     s+=`</g>`;K('g'+g.id);
@@ -1954,6 +1956,9 @@ function render(){
     P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
     P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});K('p'+g.id);
   }
+  {const b=multiBox();if(b)s+=`<rect class="msel" x="${b.x0-8}" y="${b.y0-8}" width="${b.x1-b.x0+16}" height="${b.y1-b.y0+16}" rx="12"/>`;
+   if(act&&act.kind==='box'){const x=Math.min(act.x0,act.x1),y=Math.min(act.y0,act.y1);s+=`<rect class="mbox" x="${x}" y="${y}" width="${Math.abs(act.x1-act.x0)}" height="${Math.abs(act.y1-act.y0)}"/>`}
+   K('msel')}
   // level inputs (flags)
   const ins=ioIns();
   ins.forEach((k,i)=>{
@@ -2052,11 +2057,19 @@ $('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
   const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;changed()}wcolPop(false);sfx('place')});
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
+function multiGates(){for(const id of [...multi])if(!C.gates.some(g=>g.id===id))multi.delete(id);return C.gates.filter(g=>multi.has(g.id))}
+function multiBox(){const G=multiGates();if(G.length<2)return null;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const g of G){x0=Math.min(x0,g.x);y0=Math.min(y0,g.y);x1=Math.max(x1,g.x+GW);y1=Math.max(y1,g.y+GATES[g.type].h)}return{x0,y0,x1,y1}}
+function delMulti(){const G=multiGates();if(!G.length)return;snapshot();const ids=new Set(G.map(g=>g.id));
+  C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));multi.clear();sel=null;sfx('remove');changed()}
+function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;render()}
 function placeSelPop(){
   wcolSync();
   const b=$('#selPop');if(!b)return;
   let w=null;
-  if(sel&&!demoOn&&!(act&&act.moved)){
+  const mb=!demoOn&&!(act&&act.moved)&&multiBox();
+  if(mb)w={x:(mb.x0+mb.x1)/2,y:mb.y0-16};
+  else if(sel&&!demoOn&&!(act&&act.moved)){
     if(sel.g){const g=C.gates.find(x=>x.id===sel.g);if(g)w={x:g.x+30,y:g.y-8}}
     else if(sel.w&&C.wires.some(x=>x.id===sel.w))w=sel.at?{x:sel.at.x,y:sel.at.y-12}:null;
   }
@@ -2064,7 +2077,7 @@ function placeSelPop(){
   b.style.transform=`translate(${view.x+w.x*view.z}px,${view.y+w.y*view.z}px) translate(-50%,-100%)`;b.classList.add('on');
 }
 $('#selPop').addEventListener('pointerdown',e=>e.stopPropagation());
-$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
+$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(multiBox())return delMulti();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
 function knifeSet(on){knife=!!on;const b=$('#knifeBtn');if(b){b.classList.toggle('on',knife);b.setAttribute('aria-pressed',knife)}document.body.classList.toggle('knife',knife)}
 $('#knifeBtn').onclick=()=>{knifeSet(!knife);sfx('ui');if(knife)toast(ui('knifeOn'))};
 function update(){
@@ -2330,6 +2343,7 @@ board.addEventListener('pointerdown',e=>{
     return;
   }
   if(h.type==='wire'){
+    multi.clear();
     const w=C.wires.find(x=>x.id===h.id);
     if(sel&&sel.w===w.id){const g=segGrab(w,p);if(g){act=Object.assign({kind:'seg',sx:e.clientX,sy:e.clientY,w,moved:false},g);return}}
     const n=nearestOnWire(w,p);
@@ -2337,11 +2351,16 @@ board.addEventListener('pointerdown',e=>{
   }
   if(h.type==='gate'){
     const g=C.gates.find(x=>x.id===h.id);
+    if(e.shiftKey){if(sel&&sel.g)multi.add(sel.g);sel=null;if(multi.has(g.id))multi.delete(g.id);else multi.add(g.id);sfx('ui');render();return}
+    if(multi.has(g.id)&&multiGates().length>1){const G=multiGates(),ids=new Set(G.map(x=>x.id));
+      act={kind:'group',gid:g.id,p0:p,sx:e.clientX,sy:e.clientY,moved:false,G:G.map(x=>({g:x,x:x.x,y:x.y})),W:C.wires.filter(w=>ids.has(w.from.g)&&ids.has(w.to.g)&&w.pts&&w.pts.length).map(w=>({w,pts:w.pts.map(q=>({x:q.x,y:q.y}))}))};return}
+    multi.clear();
     act={kind:'gate',g,ox:p.x-g.x,oy:p.y-g.y,sx:e.clientX,sy:e.clientY,moved:false};return;
   }
   if(h.type==='in'){act={kind:'toggle',i:h.i};return}
+  if(e.shiftKey&&!touch){act={kind:'box',x0:p.x,y0:p.y,x1:p.x,y1:p.y,sx:e.clientX,sy:e.clientY};return}
   act={kind:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};board.classList.add('panning');
-  if(sel){sel=null;render()}
+  if(sel||multi.size){sel=null;multi.clear();render()}
 });
 window.addEventListener('pointermove',e=>{
   if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -2366,6 +2385,12 @@ window.addEventListener('pointermove',e=>{
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
       act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
+  }else if(act.kind==='group'){
+    if(!act.moved&&dist>4){act.moved=true;snapshot()}
+    if(act.moved){const dx=snap(p.x-act.p0.x),dy=snap(p.y-act.p0.y);
+      for(const o of act.G){o.g.x=o.x+dx;o.g.y=o.y+dy}
+      for(const o of act.W)o.w.pts=o.pts.map(q=>({x:q.x+dx,y:q.y+dy}));renderSoon()}
+  }else if(act.kind==='box'){act.x1=p.x;act.y1=p.y;renderSoon()
   }else if(act.kind==='seg'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){const P=act.P.map(q=>({x:q.x,y:q.y})),j=act.j;
@@ -2399,6 +2424,10 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='branch'){sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render();return}
   if(a.kind==='seg'){if(a.moved){sfx('place');changed()}else{sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render()}return}
+  if(a.kind==='group'){if(a.moved){sfx('place');changed()}else{multi.clear();sel={g:a.gid};render()}return}
+  if(a.kind==='box'){const x0=Math.min(a.x0,a.x1),x1=Math.max(a.x0,a.x1),y0=Math.min(a.y0,a.y1),y1=Math.max(a.y0,a.y1);
+    if(sel&&sel.g)multi.add(sel.g);sel=null;
+    for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
@@ -2409,7 +2438,7 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='cut'){applyCut();return}
 });
-window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
+window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);if(act&&act.kind==='box')render();act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
 
 $('#palette').addEventListener('pointerdown',e=>{
   const it=e.target.closest('.pi');if(!it||demoOn)return;ensureAudio();
@@ -2426,8 +2455,8 @@ $('#palette').addEventListener('pointerup',e=>{
 });
 
 const KEYDEF={undo:['Ctrl+Z'],redo:['Ctrl+Y','Ctrl+Shift+Z'],del:['Delete','Backspace'],verify:['Enter'],menu:['Escape'],fit:['F'],zin:['='],zout:['-'],
-  hint:['H'],knife:['K'],sheet:['T'],bit:['B']};
-const KEYORDER=['verify','undo','redo','del','knife','hint','fit','zin','zout','sheet','bit','menu'];
+  hint:['H'],knife:['K'],sheet:['T'],bit:['B'],selall:['Ctrl+A']};
+const KEYORDER=['verify','undo','redo','del','selall','knife','hint','fit','zin','zout','sheet','bit','menu'];
 function keysFor(a){const k=settings.keys&&settings.keys[a];return k?[k]:KEYDEF[a]}
 function keyName(e){
   const c=e.code||'';
@@ -2442,7 +2471,8 @@ function combo(e){const k=keyName(e);if(['Control','Shift','Alt','Meta'].include
 function keyLabel(k){return LANG==='en'?k:k.replace('Space','Пробел').replace('Delete','Del').replace('Backspace','Backspace').replace('Escape','Esc').replace('Enter','Enter')}
 const KEYACT={
   undo:()=>undo(),redo:()=>redo(),
-  del:()=>{if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
+  selall:()=>selectAll(),
+  del:()=>{if(multiBox())return delMulti();if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
   verify:()=>{if(!$('#result').classList.contains('on'))$('#verify').click()},
   fit:()=>fit(),zin:()=>$('#zIn').click(),zout:()=>$('#zOut').click(),
   hint:()=>{if(level&&level.hint&&!level.sandbox)$('#hintBtn').click()},
@@ -2455,7 +2485,7 @@ window.addEventListener('keydown',e=>{
   const c=combo(e);if(!c)return;
   const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
-  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
+  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(multi.size){multi.clear();render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
   if(inMenu||demoOn&&act_!=='verify')return;
   e.preventDefault();KEYACT[act_]();
 });

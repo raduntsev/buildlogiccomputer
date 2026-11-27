@@ -72,7 +72,7 @@ const UIS={
   gKeys:['Управление','Controls'],kPress:['нажмите клавишу…','press a key…'],kReset:['Сбросить клавиши','Reset keys'],kTaken:['Клавиша {k} уже занята: «{a}»','{k} is already used by “{a}”'],
   kMouse:['Мышь и касания','Mouse and touch'],
   k_undo:['Отменить','Undo'],k_redo:['Вернуть','Redo'],k_del:['Удалить выбранное','Delete selection'],k_verify:['Проверить схему','Test the circuit'],k_menu:['Меню / отмена','Menu / cancel'],
-  k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
+  k_selall:['Выделить всё','Select all'],k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
   m_wire:['Провод: протяните от выхода к входу','Wire: drag from an output to an input'],m_cut:['Резать: правая кнопка с протяжкой, на телефоне — ножницы','Cut: drag with the right button, on a phone use the scissors'],
   m_del:['Удалить: правый клик или «Удалить» у выбранного','Delete: right-click, or “Delete” next to the selection'],m_pan:['Двигать поле: тянуть по пустому месту, масштаб — колесо или два пальца','Pan: drag empty space; zoom: wheel or two fingers'],
   m_gate:['Вставить в провод: бросьте элемент на провод','Splice: drop a gate onto a wire'],sCalm2:['Меньше анимации','Reduce motion'],
