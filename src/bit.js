@@ -163,7 +163,7 @@ const hits=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 function bitObstacles(){
   if($('#ov').classList.contains('on')||!level)return [];
   const z=UI(),o=[];
-  for(const el of $$('#top .tb>*,#palette,#taskCard')){const r=rectOf(el);if(r)o.push(r)}
+  for(const el of $$('#top .tb>*,#palette,#taskCard,#toolDock')){const r=rectOf(el);if(r)o.push(r)}
   // the sheet and the zoom buttons animate, so use where they are going rather than where they are
   const sh=(14+sheetH)*z;o.push({x:16*z,y:innerHeight-sh,w:innerWidth-32*z,h:sh});
   if(!BIT.home){const zm=$('#zoom');if(zm.offsetWidth){const w=zm.offsetWidth*z,h=zm.offsetHeight*z;o.push({x:innerWidth-16*z-w,y:innerHeight-(sheetH+26)*z-h,w,h})}}
@@ -197,10 +197,13 @@ function bitPlace(){
   if(mob){ // phone: the tab moves on its own, the comm link drops down from the top
     BIT.home=false;zoomPlace();
     M.style.translate='';T.style.translate=`${BP.dx}px ${BP.dy}px`;
-    const r=T.getBoundingClientRect();
-    if(r.width){let fx=0,fy=0;
+    // the tab's box from the dock + offset: its drawn rectangle grows while it swings
+    const m=M.getBoundingClientRect(),e=8*z,r={left:m.left+BP.dx*z,right:m.right+BP.dx*z,top:m.top+BP.dy*z,bottom:m.bottom+BP.dy*z,width:m.width};
+    if(r.width){let fx=0,fy=0;const pad=e;
       if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
       if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
+      // never sit on the element strip: lift the tab above it
+      const pr=rectOf($('#palette'));if(pr&&!$('#ov').classList.contains('on')&&hits({x:r.left+fx*z,y:r.top+fy*z,w:r.width,h:r.bottom-r.top},pr)){const up=(pr.y-pad-(r.bottom+fy*z))/z;if(r.top+(fy+up)*z>=pad)fy+=up}
       if(fx||fy){BP.dx+=fx;BP.dy+=fy;T.style.translate=`${BP.dx}px ${BP.dy}px`}}
     const ch=$('#chat').offsetHeight;BP.my=clamp(BP.my||0,0,Math.max(0,innerHeight/z-ch-120));
     $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;
@@ -213,8 +216,8 @@ function bitPlace(){
   const H={x:innerWidth-parseFloat(cs.right)*z-mw,y:innerHeight-parseFloat(cs.bottom)*z-mh,w:mw,h:mh};
   // magnet: near the dock Bit is pulled in and the dock lights up
   const d=Math.hypot(BP.dx,BP.dy)*z;
-  BIT.near=d<SNAP_R;BIT.home=d<1||(BIT.dragging&&BIT.near);
-  const pull=BIT.dragging&&BIT.near?.22:1;   // how much of the offset survives inside the magnet
+  BIT.near=d<(BIT.near?SNAP_R+10:SNAP_R);BIT.home=d<1||(BIT.dragging&&BIT.near);
+  const pull=BIT.dragging&&BIT.near?Math.min(1,(d/SNAP_R)**2):1;   // how much of the offset survives inside the magnet: grows smoothly to 1 at the edge, so there is no jump
   let dx=BP.dx*pull,dy=BP.dy*pull;
   const obs=bitObstacles();
   // the tab stays on the free part of the screen
@@ -267,7 +270,7 @@ function bitDrag(handle,isTab){
       if(!settings.calm){const r=PH.el.getBoundingClientRect(),z=UI();PH.el.style.transformOrigin=`${(e.clientX-r.left)/z}px ${(e.clientY-r.top)/z}px`}}
     const z=UI();
     if(vert){BP.my=st.my+ddy/z}else{BP.dx=st.dx+ddx/z;BP.dy=st.dy+ddy/z}
-    if(!mob){const n=Math.hypot(BP.dx,BP.dy)*z<SNAP_R;if(n&&!BIT.near)sfx('pick')}
+    if(!mob){const n=Math.hypot(BP.dx,BP.dy)*z<(BIT.near?SNAP_R+10:SNAP_R);if(n&&!BIT.near)sfx('pick')}
     bitPlaceSoon();
     const now=performance.now(),dt=Math.max(8,now-st.lt),vx=(e.clientX-st.lx)/dt*16;st.lx=e.clientX;st.lt=now;
     PH.t=vert?0:clamp(vx*1.1,-9,9);physKick();
@@ -276,9 +279,17 @@ function bitDrag(handle,isTab){
   const end=e=>{if(!st||e.pointerId!==st.id)return;const mv=st.moved;st=null;document.body.classList.remove('bitDragging');
     PH.t=0;physKick();
     if(mv){
-      const snap=BIT.dragging&&Math.hypot(BP.dx,BP.dy)*UI()<SNAP_R;BIT.dragging=false;
+      const snap=BIT.dragging&&BIT.near;BIT.dragging=false;
       if(snap){BP.dx=0;BP.dy=0;sfx('place')}
+      // phone: the tab is pulled to the nearest side of the screen
+      const T=$('#bitTab'),side=isMob()&&isTab;let was='';
+      if(side){bitPlace();was=T.style.translate;
+        // computed, not measured: the tab may still be swinging
+        // dx=0 is the dock at the right edge (8px), the left edge mirrors it
+        const z=UI(),w=T.offsetWidth*z,cx=innerWidth-8*z-w/2+BP.dx*z;
+        BP.dx=cx<innerWidth/2?(16*z+w-innerWidth)/z:0}
       bitPlace();
+      if(side&&was!==T.style.translate&&!settings.calm)try{T.animate([{translate:was||'0px 0px'},{translate:T.style.translate}],{duration:320,easing:'cubic-bezier(.2,1,.3,1)'})}catch(_){}
       store.set('ll_bitpos',{dx:BP.dx,dy:BP.dy,my:BP.my},true);handle.dataset.dragged='1';setTimeout(()=>{delete handle.dataset.dragged},0)}};
   window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
   handle.addEventListener('click',e=>{if(handle.dataset.dragged){e.stopImmediatePropagation();e.preventDefault()}},true);

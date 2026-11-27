@@ -764,3 +764,11 @@ body.calm #gtip{transform:none}
 #toolDock.hide #toolsTog svg{transform:rotate(180deg)}
 #toolDock.hide #tools{display:none}
 @media (max-width:760px){#toolDock{right:8px;top:calc((56px + 100vh - var(--dock,180px))/2)}}
+/* one spacing grid: 16px from the screen edges on desktop, 8px on phones; equal palette cells */
+.pi{min-height:64px;justify-content:center}
+@media (max-width:760px){
+  #mascot{right:8px}
+  #palette{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
+  #palette::-webkit-scrollbar{display:none}
+  .pi{min-height:0}
+}
