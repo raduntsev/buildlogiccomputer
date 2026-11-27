@@ -188,6 +188,9 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .gl.s{font-size:11px;font-weight:500}
 .gate{cursor:move}
 .gate.sel .gb{fill:var(--acc-soft)}
+.gate.src .gb{fill:rgba(220,235,58,.28)}
+.msel{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:6 5;pointer-events:none;opacity:.55}
+.mbox{fill:rgba(220,235,58,.18);stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}
 .pin-in{fill:var(--ink)}
 .pin-out{fill:var(--ink)}
 .pin-hit{fill:transparent;cursor:crosshair}
@@ -809,3 +812,12 @@ body.calm #gtip{transform:none}
 .gt-n .alt{opacity:0;transform:translateY(3px)}
 .gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
 .gt-h:hover .gt-n .alt{opacity:1;transform:none}
+
+.odhit{fill:transparent}
+#odTip{position:fixed;z-index:7;pointer-events:none;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:7px 14px;font-size:13px;color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .12s}
+#odTip.on{opacity:1}
+#odTip b{font-weight:700}
+
+/* indices sit below the baseline like in a textbook */
+sub{vertical-align:baseline;position:relative;top:.34em;line-height:0}
+sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}

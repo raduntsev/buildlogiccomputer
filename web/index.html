@@ -290,6 +290,9 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .gl.s{font-size:11px;font-weight:500}
 .gate{cursor:move}
 .gate.sel .gb{fill:var(--acc-soft)}
+.gate.src .gb{fill:rgba(220,235,58,.28)}
+.msel{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:6 5;pointer-events:none;opacity:.55}
+.mbox{fill:rgba(220,235,58,.18);stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}
 .pin-in{fill:var(--ink)}
 .pin-out{fill:var(--ink)}
 .pin-hit{fill:transparent;cursor:crosshair}
@@ -911,6 +914,15 @@ body.calm #gtip{transform:none}
 .gt-n .alt{opacity:0;transform:translateY(3px)}
 .gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
 .gt-h:hover .gt-n .alt{opacity:1;transform:none}
+
+.odhit{fill:transparent}
+#odTip{position:fixed;z-index:7;pointer-events:none;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:7px 14px;font-size:13px;color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .12s}
+#odTip.on{opacity:1}
+#odTip b{font-weight:700}
+
+/* indices sit below the baseline like in a textbook */
+sub{vertical-align:baseline;position:relative;top:.34em;line-height:0}
+sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}
 </style>
 </head>
 <body>
@@ -939,7 +951,8 @@ body.calm #gtip{transform:none}
     <button class="ib" id="wcolBtn" data-tl="wcol" aria-haspopup="true" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle class="wcdot" cx="12" cy="12" r="4"/></svg></button>
     <button class="ib" id="wnoteBtn" data-tl="wnote" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>
     <button class="ib" id="netBtn" data-tl="netInsp" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M7.2 12H12M12 6v12M12 6h4.8M12 18h4.8"/></svg></button>
-  </div><button id="toolsTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M4.5 2.5L8 6L4.5 9.5"/></svg></button></div><div id="wcolPop" role="menu"></div><div id="netInsp" role="dialog"></div><div id="wnotePop"><input id="wnoteIn" maxlength="40" autocomplete="off" spellcheck="false"></div>
+  </div><button id="toolsTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M4.5 2.5L8 6L4.5 9.5"/></svg></button></div><div id="wcolPop" role="menu"></div><div id="netInsp" role="dialog"></div>
+<div id="odTip" role="tooltip"></div><div id="wnotePop"><input id="wnoteIn" maxlength="40" autocomplete="off" spellcheck="false"></div>
 
 <div id="taskCard" class="zz"><button id="ttTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M2.5 7.5L6 4L9.5 7.5"/></svg></button><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
@@ -1103,7 +1116,7 @@ const UIS={
   gKeys:['Управление','Controls'],kPress:['нажмите клавишу…','press a key…'],kReset:['Сбросить клавиши','Reset keys'],kTaken:['Клавиша {k} уже занята: «{a}»','{k} is already used by “{a}”'],
   kMouse:['Мышь и касания','Mouse and touch'],
   k_undo:['Отменить','Undo'],k_redo:['Вернуть','Redo'],k_del:['Удалить выбранное','Delete selection'],k_verify:['Проверить схему','Test the circuit'],k_menu:['Меню / отмена','Menu / cancel'],
-  k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
+  k_selall:['Выделить всё','Select all'],k_fit:['Вписать схему','Fit to screen'],k_zin:['Приблизить','Zoom in'],k_zout:['Отдалить','Zoom out'],k_hint:['Подсказка','Hint'],k_knife:['Ножницы','Scissors'],k_sheet:['Скрыть или показать задание','Hide or show the task'],k_bit:['Позвать Бита','Call Bit'],
   m_wire:['Провод: протяните от выхода к входу','Wire: drag from an output to an input'],m_cut:['Резать: правая кнопка с протяжкой, на телефоне — ножницы','Cut: drag with the right button, on a phone use the scissors'],
   m_del:['Удалить: правый клик или «Удалить» у выбранного','Delete: right-click, or “Delete” next to the selection'],m_pan:['Двигать поле: тянуть по пустому месту, масштаб — колесо или два пальца','Pan: drag empty space; zoom: wheel or two fingers'],
   m_gate:['Вставить в провод: бросьте элемент на провод','Splice: drop a gate onto a wire'],sCalm2:['Меньше анимации','Reduce motion'],
@@ -1138,6 +1151,14 @@ function comb(ins,fn){const n=ins.length,v=[];for(let m=0;m<1<<n;m++){const i={}
 function seq(rows,init,step){let s=init;return rows.map(r=>{const [o,n]=step(s,r);s=n;return{in:r,out:o}})}
 const B=x=>x?1:0;
 const SEP='<span class="sep"></span>';
+// what each output lamp means (hover); level.od overrides by name
+const OUTD={Y:['результат схемы','circuit result'],S:['сумма','sum'],P:['перенос в старший разряд','carry out'],Co:['перенос в старший разряд','carry out'],
+  D:['разность','difference'],E:['1, если числа равны','1 when the numbers are equal'],G:['1, если A больше B','1 when A is greater than B'],
+  '>':['A больше B','A is greater than B'],'=':['A равно B','A equals B'],'<':['A меньше B','A is less than B'],
+  Q:['состояние триггера','stored bit'],V:['1, если хоть один вход активен','1 when any input is active']};
+function outDesc(lv,k){if(lv&&lv.od&&k in lv.od)return lv.od[k];if(OUTD[k])return OUTD[k];
+  const m=/^([QYSA])(\d)$/.exec(k);if(m)return {Q:['разряд %',"bit %"],Y:['выход %','output %'],S:['разряд суммы %','sum bit %'],A:['разряд кода %','code bit %']}[m[1]].map(t=>t.replace('%',m[2]));
+  if(/^[a-g]$/.test(k))return['сегмент '+k,'segment '+k];return null}
 const sb=s=>s.replace(/([A-Za-zА-Яа-я])(\d)/g,'$1<sub>$2</sub>');
 function lv(o){o.id=LV.length+1;o.outs=o.outs||['Y'];o.gates=o.gates||[];LV.push(o)}
 const T=n=>Array(n).fill(0).map(()=>({}));
@@ -1231,15 +1252,15 @@ lv({ch:4,pos:[3,6],req:[25],par:3,t:['Счётчик','Counter'],f:'Q<sub>1</sub
 lv({ch:4,pos:[2,7],req:[24],par:2,t:['Сдвиговый регистр','Shift register'],f:'Q<sub>1</sub> ← D'+SEP+'Q<sub>2</sub> ← Q<sub>1</sub>',ins:['D'],outs:['Q1','Q2'],gates:['DFF'],clk:1,
   vec:seq([1,0,1,1,0,0,1,0].map(D=>({D})),[0,0],(s,i)=>[{Q1:s[0],Q2:s[1]},[i.D,s[0]]]),task:['Бит продвигается по цепочке на одну ячейку за такт.','A bit moves one cell along the chain per tick.'],
   hint:['Два триггера цепочкой с общим тактом.','Two flip-flops in a chain sharing the clock.']});
-lv({ch:4,pos:[3,7],req:[27],par:3,t:['Детектор фронта','Edge detector'],f:'Y = A<sub>n</sub> ∧ '+ov('A<sub>n−1</sub>'),ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+lv({ch:4,pos:[3,7],req:[27],par:3,od:{Y:['импульс на фронте сигнала','pulse on the rising edge']},t:['Детектор фронта','Edge detector'],f:'Y = A<sub>n</sub> ∧ '+ov('A<sub>n−1</sub>'),ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
   vec:seq([0,1,1,0,1,0,0,1].map(A=>({A})),0,(p,i)=>[{Y:i.A&(1-p)},i.A]),task:['Лампа вспыхивает на один такт, когда A меняется с 0 на 1.','The lamp flashes for one tick when A goes from 0 to 1.'],
   hint:['Триггер помнит прошлое значение A.','A flip-flop remembers the previous value of A.']});
 
 /* ---------- 5. Вычитание и кодирование / Subtraction and codes ---------- */
-lv({ch:5,pos:[0,8],req:['q4'],par:3,t:['Полувычитатель','Half subtractor'],f:['D = A ⊕ B'+SEP+'Z = '+ov('A')+'B','D = A ⊕ B'+SEP+'Bo = '+ov('A')+'B'],ins:['A','B'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR'],
+lv({ch:5,pos:[0,8],req:['q4'],par:3,od:{Z:['заём из старшего разряда','borrow out']},t:['Полувычитатель','Half subtractor'],f:['D = A ⊕ B'+SEP+'Z = '+ov('A')+'B','D = A ⊕ B'+SEP+'Bo = '+ov('A')+'B'],ins:['A','B'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR'],
   vec:comb(['A','B'],i=>({D:i.A^i.B,Z:(1-i.A)&i.B})),task:['Вычтите B из A: D — разность, Z — заём из старшего разряда.','Subtract B from A: D is the difference, Bo is the borrow.'],
   hint:['Почти полусумматор, только A перед И инвертируется.','Almost a half adder, but A is inverted before the AND.']});
-lv({ch:5,pos:[1,8],req:[29],par:7,t:['Полный вычитатель','Full subtractor'],f:['D = A ⊕ B ⊕ C'+SEP+'Z = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C','D = A ⊕ B ⊕ C'+SEP+'Bo = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C'],ins:['A','B','C'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR','XNOR'],
+lv({ch:5,pos:[1,8],req:[29],par:7,od:{Z:['заём из старшего разряда','borrow out']},t:['Полный вычитатель','Full subtractor'],f:['D = A ⊕ B ⊕ C'+SEP+'Z = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C','D = A ⊕ B ⊕ C'+SEP+'Bo = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C'],ins:['A','B','C'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR','XNOR'],
   vec:comb(['A','B','C'],i=>{const r=i.A-i.B-i.C;return{D:r&1,Z:B(r<0)}}),task:['Вычтите B и заём C из A.','Subtract B and borrow C from A.'],
   hint:['Два полувычитателя и ИЛИ для заёмов.','Two half subtractors and an OR for the borrows.']});
 lv({ch:5,pos:[2,8],req:[30],par:3,t:['Равенство чисел','Equal numbers'],f:['E = 1 при A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>','E = 1 when A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>'],ins:['A1','A0','B1','B0'],outs:['E'],gates:['AND','OR','XOR','XNOR','NOR','NOT'],
@@ -1300,7 +1321,7 @@ lv({ch:8,pos:[2,14],req:[45],par:6,t:['Сумматор-вычитатель','A
 lv({ch:8,pos:[0,15],req:['q7'],par:3,t:['Инкремент','Incrementer'],f:'PS<sub>1</sub>S<sub>0</sub> = A<sub>1</sub>A<sub>0</sub> + 1',ins:['A1','A0'],outs:['P','S1','S0'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
   vec:comb(['A1','A0'],i=>{const s=i.A1*2+i.A0+1;return{P:s>>2,S1:(s>>1)&1,S0:s&1}}),task:['Прибавьте единицу к двухбитному числу.','Add one to a 2-bit number.'],
   hint:['S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, P = A<sub>1</sub>A<sub>0</sub>.','S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, Co = A<sub>1</sub>A<sub>0</sub>.']});
-lv({ch:8,pos:[1,15],req:[47],par:2,t:['Флаг нуля','Zero flag'],f:'Z = '+ov('A<sub>2</sub> ∨ A<sub>1</sub> ∨ A<sub>0</sub>'),ins:['A2','A1','A0'],outs:['Z'],gates:['OR','NOR','NOT','AND'],
+lv({ch:8,pos:[1,15],req:[47],par:2,od:{Z:['1, если все разряды — нули','1 when every bit is 0']},t:['Флаг нуля','Zero flag'],f:'Z = '+ov('A<sub>2</sub> ∨ A<sub>1</sub> ∨ A<sub>0</sub>'),ins:['A2','A1','A0'],outs:['Z'],gates:['OR','NOR','NOT','AND'],
   vec:comb(['A2','A1','A0'],i=>({Z:B(!i.A2&&!i.A1&&!i.A0)})),task:['Флаг Z поднимается, когда результат равен нулю.','Flag Z goes up when the result is zero.'],
   hint:['ИЛИ двух разрядов, затем ИЛИ-НЕ с третьим.','OR two bits, then NOR with the third.']});
 lv({ch:8,pos:[2,15],req:[48],par:7,t:['Больше','Greater than'],f:'G = A<sub>1</sub>'+ov('B<sub>1</sub>')+' ∨ (A<sub>1</sub> ⊙ B<sub>1</sub>)A<sub>0</sub>'+ov('B<sub>0</sub>'),ins:['A1','A0','B1','B0'],outs:['G'],gates:['AND','OR','NOT','XNOR','XOR'],
@@ -1332,10 +1353,10 @@ lv({ch:10,pos:[0,18],req:['q9'],par:5,t:['Семисегментный инди�
   vec:comb(['A1','A0'],i=>{const S=['abcdef','bc','abdeg','abcdg'][i.A1*2+i.A0],o={};'abcdefg'.split('').forEach(c=>o[c]=B(S.includes(c)));return o}),
   task:['Зажгите сегменты так, чтобы получилась цифра A<sub>1</sub>A<sub>0</sub>. Сегмент b горит всегда.','Light the segments to draw digit A<sub>1</sub>A<sub>0</sub>. Segment b is always on.'],
   hint:['a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. Постоянную 1 даст A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.','a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. A constant 1 is A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.']});
-lv({ch:10,pos:[1,18],req:[56],par:4,t:['Светофор','Traffic light'],f:['К → К+Ж → З → Ж','R → R+Y → G → Y'],ins:[],outs:['R','Y','G'],gates:['DFF','NOT','AND','XOR','NOR'],clk:1,
+lv({ch:10,pos:[1,18],req:[56],par:4,od:{R:['красный','red'],Y:['жёлтый','yellow'],G:['зелёный','green']},t:['Светофор','Traffic light'],f:['К → К+Ж → З → Ж','R → R+Y → G → Y'],ins:[],outs:['R','Y','G'],gates:['DFF','NOT','AND','XOR','NOR'],clk:1,
   vec:seq(T(8),0,s=>[{R:B(s<2),Y:B(s===1||s===3),G:B(s===2)},(s+1)&3]),task:['Четыре фазы светофора по кругу.','Four traffic-light phases in a loop.'],
   hint:['Внутри — двухбитный счётчик. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.','Inside is a 2-bit counter. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.']});
-lv({ch:10,pos:[2,18],req:[57],par:4,t:['Кодовый замок','Code lock'],f:['Y = 1 после 1 → 0 → 1','Y = 1 after 1 → 0 → 1'],ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+lv({ch:10,pos:[2,18],req:[57],par:4,od:{Y:['1 — замок открыт','1 = lock open']},t:['Кодовый замок','Code lock'],f:['Y = 1 после 1 → 0 → 1','Y = 1 after 1 → 0 → 1'],ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
   vec:seq([1,0,1,1,0,1,0,0,1,0,1].map(A=>({A})),[0,0],(s,i)=>[{Y:i.A&(1-s[0])&s[1]},[i.A,s[0]]]),task:['Замок открывается, когда последние три значения A были 1, 0, 1.','The lock opens when the last three values of A were 1, 0, 1.'],
   hint:['Сдвиговый регистр помнит два прошлых значения. Дальше — одно И с инверсией посередине.','A shift register remembers the two previous values. Then one AND with the middle one inverted.']});
 lv({ch:10,pos:[0,19],req:['q9'],par:4,t:['Реверсивный счётчик','Up/down counter'],f:'Q ← U ? Q + 1 : Q − 1',ins:['U'],outs:['Q1','Q0'],gates:['DFF','XOR','XNOR','NOT'],clk:1,
@@ -1346,7 +1367,7 @@ lv({ch:10,pos:[3,18],req:[58,59],par:12,t:['Счётчик команд','Progra
   task:['Сердце процессора: считает по порядку, а при L = 1 прыгает по адресу D.','The heart of a CPU: counts in order, and jumps to address D when L = 1.'],
   hint:['Инкремент и регистр с загрузкой вы уже собирали. Соедините их.','You have built an incrementer and a load register. Join them.']});
 
-const SANDBOX={id:0,t:['Песочница','Sandbox'],f:'',ins:['A','B','C'],outs:['X','Y','Z'],gates:null,clk:1,sandbox:1,vec:[],
+const SANDBOX={id:0,od:{Y:null},t:['Песочница','Sandbox'],f:'',ins:['A','B','C'],outs:['X','Y','Z'],gates:null,clk:1,sandbox:1,vec:[],
   task:['Свободная сборка. Все элементы доступны.','Free build. Every element is available.'],hint:['Тактовый вход C можно переключать вручную.','You can toggle clock input C by hand.']};
 const CHAPTERS=[['Основы','Basics'],['Универсальный элемент','The universal gate'],['Арифметика и выбор','Arithmetic and selection'],['Память и такт','Memory and clock'],
   ['Вычитание и кодирование','Subtraction and codes'],['Автоматы','State machines'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Пробуждение','Awakening']];
@@ -1628,7 +1649,7 @@ let undoS=[],redoS=[];
 let liveIn=[], sim={v:{},ff:{}};
 let rowMark=null, demoRow=-1, demoOn=false, demoSkip=false;
 let view={x:0,y:0,z:1};
-let sel=null;
+let sel=null;const multi=new Set();
 
 function ioIns(){const a=level.ins.slice();if(level.clk)a.push('C');return a}
 function ioY(n,i){return (i-(n-1)/2)*80}
@@ -1649,7 +1670,7 @@ function loadLevel(l){
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
-  undoS=[];redoS=[];sel=null;rowMark=null;
+  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;
   liveIn=ioIns().map(()=>0);
   resetSim();
   if(!l.sandbox)store.set('ll_last',l.id,true);
@@ -1942,7 +1963,7 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     s+=`</g>`;K('g'+g.id);
@@ -1954,6 +1975,9 @@ function render(){
     P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
     P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});K('p'+g.id);
   }
+  {const b=multiBox();if(b)s+=`<rect class="msel" x="${b.x0-8}" y="${b.y0-8}" width="${b.x1-b.x0+16}" height="${b.y1-b.y0+16}" rx="12"/>`;
+   if(act&&act.kind==='box'){const x=Math.min(act.x0,act.x1),y=Math.min(act.y0,act.y1);s+=`<rect class="mbox" x="${x}" y="${y}" width="${Math.abs(act.x1-act.x0)}" height="${Math.abs(act.y1-act.y0)}"/>`}
+   K('msel')}
   // level inputs (flags)
   const ins=ioIns();
   ins.forEach((k,i)=>{
@@ -1976,6 +2000,7 @@ function render(){
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
+    {const d=outDesc(level,k);if(d)s+=`<circle class="odhit" data-od="${i}" cx="${n.x+28}" cy="${n.y}" r="21" aria-label="${esc(disp(k)+' — '+tx(d))}"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
     s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
@@ -2018,7 +2043,9 @@ function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();
 function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');$('#netBtn').disabled=!w||demoOn;if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw()}
 let netOn=false;
 function netOf(w){return C.wires.filter(x=>x.from.g===w.from.g&&x.from.p===w.from.p)}
-function netHL(){const w=netOn&&selWire();if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
+function netHL(){const w=netOn&&selWire();
+  if(!w&&sel&&sel.g&&!demoOn){const id=sel.g,I=C.wires.filter(x=>x.to.g===id);return{w:new Set(C.wires.filter(x=>x.to.g===id||x.from.g===id).map(x=>x.id)),n:new Set(I.map(x=>x.from.g).filter(g=>g!==id)),src:true}}
+  if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
 function nodeName(id,p,k){if(id[0]==='I')return ioIns()[+id.slice(1)];if(id[0]==='O')return disp(level.outs[+id.slice(1)]);
   const g=nodePos(id);if(!g)return id;const P=gPins(g.type)[k],n=tx(GATES[g.type].n)+' №'+id.slice(1);return P&&P.length>1?n+' · '+ui(k==='o'?'pinO':'pinI')+' '+(p+1):n}
 function netDraw(){const box=$('#netInsp'),w=selWire();if(!netOn||!w)return;const N=netOf(w),val=sim.v[w.from.g+':'+w.from.p]|0,c=N.every(x=>x.c===w.c)?w.c||'':null,notes=N.filter(x=>x.n).map(x=>x.n);
@@ -2053,11 +2080,20 @@ $('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
   const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;persist();render()}wcolPop(false);sfx('place')});
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
+function multiGates(){for(const id of [...multi])if(!C.gates.some(g=>g.id===id))multi.delete(id);return C.gates.filter(g=>multi.has(g.id))}
+function multiBox(){const G=multiGates();if(G.length<2)return null;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const g of G){x0=Math.min(x0,g.x);y0=Math.min(y0,g.y);x1=Math.max(x1,g.x+GW);y1=Math.max(y1,g.y+GATES[g.type].h)}return{x0,y0,x1,y1}}
+function delMulti(){const G=multiGates();if(!G.length)return;snapshot();const ids=new Set(G.map(g=>g.id));
+  C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));if(tmp&&tmp.from&&ids.has(tmp.from.g))tmp=null;if(hover&&ids.has(hover.g))hover=null;multi.clear();sel=null;sfx('remove');changed()}
+function multiNorm(){const G=multiGates();if(G.length===1){multi.clear();sel={g:G[0].id}}}
+function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;multiNorm();render()}
 function placeSelPop(){
   wcolSync();
   const b=$('#selPop');if(!b)return;
   let w=null;
-  if(sel&&!demoOn&&!(act&&act.moved)){
+  const mb=!demoOn&&!(act&&act.moved)&&multiBox();
+  if(mb)w={x:(mb.x0+mb.x1)/2,y:mb.y0-16};
+  else if(sel&&!demoOn&&!(act&&act.moved)){
     if(sel.g){const g=C.gates.find(x=>x.id===sel.g);if(g)w={x:g.x+30,y:g.y-8}}
     else if(sel.w&&C.wires.some(x=>x.id===sel.w))w=sel.at?{x:sel.at.x,y:sel.at.y-12}:null;
   }
@@ -2065,7 +2101,7 @@ function placeSelPop(){
   b.style.transform=`translate(${view.x+w.x*view.z}px,${view.y+w.y*view.z}px) translate(-50%,-100%)`;b.classList.add('on');
 }
 $('#selPop').addEventListener('pointerdown',e=>e.stopPropagation());
-$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
+$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(multiBox())return delMulti();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
 function knifeSet(on){knife=!!on;const b=$('#knifeBtn');if(b){b.classList.toggle('on',knife);b.setAttribute('aria-pressed',knife)}document.body.classList.toggle('knife',knife)}
 $('#knifeBtn').onclick=()=>{knifeSet(!knife);sfx('ui');if(knife)toast(ui('knifeOn'))};
 function update(){
@@ -2186,6 +2222,13 @@ function loupe(x,y){
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
 function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
+function odTip(el){const t=$('#odTip');if(!el){t.classList.remove('on');return}
+  const k=level.outs[+el.dataset.od],d=k!=null&&outDesc(level,k);if(!d){t.classList.remove('on');return}
+  t.innerHTML=`<b>${esc(disp(k)).replace(/(\D)(\d+)$/,"$1<sub>$2</sub>")}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
+  t.classList.add('on');const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';t.style.top=Math.max(8,r.top-t.offsetHeight-8)+'px'}
+board.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-od]');if(el&&!act&&e.pointerType!=='touch')odTip(el)});
+board.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('[data-od]'))odTip(null)});
+board.addEventListener('pointerdown',()=>odTip(null),true);
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
@@ -2244,7 +2287,7 @@ function updCount(){const el=$('#pcount');if(el){el.textContent=C.gates.length+'
   m.innerHTML=`<div class="met${level.max&&C.gates.length>level.max?' over':''}"><b>${C.gates.length}${level.max?`<small>/ ${level.max}</small>`:''}</b><span>${ui('mGates')}</span></div><div class="met"><b>${level.par}${best!=null&&best<999?`<small>${ui('mYours',{n:best})}</small>`:''}</b><span>${ui('mPar')}</span></div>`;
 }
 function disp(k){return (LANG==='en'&&level.dl&&level.dl[k])||k}
-function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);sel=null;sfx('remove');changed()}
+function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);if(hover&&hover.g===id)hover=null;sel=null;multiNorm();sfx('remove');changed()}
 function segX(a,b,c,d){
   const o=(p,q,r)=>Math.sign((q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x));
   return o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b);
@@ -2331,6 +2374,7 @@ board.addEventListener('pointerdown',e=>{
     return;
   }
   if(h.type==='wire'){
+    multi.clear();
     const w=C.wires.find(x=>x.id===h.id);
     if(sel&&sel.w===w.id){const g=segGrab(w,p);if(g){act=Object.assign({kind:'seg',sx:e.clientX,sy:e.clientY,w,moved:false},g);return}}
     const n=nearestOnWire(w,p);
@@ -2338,11 +2382,16 @@ board.addEventListener('pointerdown',e=>{
   }
   if(h.type==='gate'){
     const g=C.gates.find(x=>x.id===h.id);
+    if(e.shiftKey){if(sel&&sel.g)multi.add(sel.g);sel=null;if(multi.has(g.id))multi.delete(g.id);else multi.add(g.id);multiNorm();sfx('ui');render();return}
+    if(multi.has(g.id)&&multiGates().length>1){const G=multiGates(),ids=new Set(G.map(x=>x.id));
+      act={kind:'group',gid:g.id,p0:p,sx:e.clientX,sy:e.clientY,moved:false,G:G.map(x=>({g:x,x:x.x,y:x.y})),W:C.wires.filter(w=>ids.has(w.from.g)&&ids.has(w.to.g)&&w.pts&&w.pts.length).map(w=>({w,pts:w.pts.map(q=>({x:q.x,y:q.y}))}))};return}
+    multi.clear();
     act={kind:'gate',g,ox:p.x-g.x,oy:p.y-g.y,sx:e.clientX,sy:e.clientY,moved:false};return;
   }
   if(h.type==='in'){act={kind:'toggle',i:h.i};return}
+  if(e.shiftKey&&!touch){act={kind:'box',x0:p.x,y0:p.y,x1:p.x,y1:p.y,sx:e.clientX,sy:e.clientY};return}
   act={kind:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};board.classList.add('panning');
-  if(sel){sel=null;render()}
+  if(sel||multi.size){sel=null;multi.clear();render()}
 });
 window.addEventListener('pointermove',e=>{
   if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -2367,6 +2416,12 @@ window.addEventListener('pointermove',e=>{
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
       act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
+  }else if(act.kind==='group'){
+    if(!act.moved&&dist>4){act.moved=true;snapshot()}
+    if(act.moved){const dx=snap(p.x-act.p0.x),dy=snap(p.y-act.p0.y);
+      for(const o of act.G){o.g.x=o.x+dx;o.g.y=o.y+dy}
+      for(const o of act.W)o.w.pts=o.pts.map(q=>({x:q.x+dx,y:q.y+dy}));renderSoon()}
+  }else if(act.kind==='box'){act.x1=p.x;act.y1=p.y;renderSoon()
   }else if(act.kind==='seg'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){const P=act.P.map(q=>({x:q.x,y:q.y})),j=act.j;
@@ -2400,6 +2455,10 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='branch'){sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render();return}
   if(a.kind==='seg'){if(a.moved){sfx('place');changed()}else{sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render()}return}
+  if(a.kind==='group'){if(a.moved){sfx('place');changed()}else{multi.clear();sel={g:a.gid};render()}return}
+  if(a.kind==='box'){const x0=Math.min(a.x0,a.x1),x1=Math.max(a.x0,a.x1),y0=Math.min(a.y0,a.y1),y1=Math.max(a.y0,a.y1);
+    if(sel&&sel.g)multi.add(sel.g);sel=null;
+    for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
@@ -2410,7 +2469,7 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='cut'){applyCut();return}
 });
-window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
+window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);if(act&&act.kind==='box')render();act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
 
 $('#palette').addEventListener('pointerdown',e=>{
   const it=e.target.closest('.pi');if(!it||demoOn)return;ensureAudio();
@@ -2427,8 +2486,8 @@ $('#palette').addEventListener('pointerup',e=>{
 });
 
 const KEYDEF={undo:['Ctrl+Z'],redo:['Ctrl+Y','Ctrl+Shift+Z'],del:['Delete','Backspace'],verify:['Enter'],menu:['Escape'],fit:['F'],zin:['='],zout:['-'],
-  hint:['H'],knife:['K'],sheet:['T'],bit:['B']};
-const KEYORDER=['verify','undo','redo','del','knife','hint','fit','zin','zout','sheet','bit','menu'];
+  hint:['H'],knife:['K'],sheet:['T'],bit:['B'],selall:['Ctrl+A']};
+const KEYORDER=['verify','undo','redo','del','selall','knife','hint','fit','zin','zout','sheet','bit','menu'];
 function keysFor(a){const k=settings.keys&&settings.keys[a];return k?[k]:KEYDEF[a]}
 function keyName(e){
   const c=e.code||'';
@@ -2443,7 +2502,8 @@ function combo(e){const k=keyName(e);if(['Control','Shift','Alt','Meta'].include
 function keyLabel(k){return LANG==='en'?k:k.replace('Space','Пробел').replace('Delete','Del').replace('Backspace','Backspace').replace('Escape','Esc').replace('Enter','Enter')}
 const KEYACT={
   undo:()=>undo(),redo:()=>redo(),
-  del:()=>{if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
+  selall:()=>selectAll(),
+  del:()=>{if(multiBox())return delMulti();if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
   verify:()=>{if(!$('#result').classList.contains('on'))$('#verify').click()},
   fit:()=>fit(),zin:()=>$('#zIn').click(),zout:()=>$('#zOut').click(),
   hint:()=>{if(level&&level.hint&&!level.sandbox)$('#hintBtn').click()},
@@ -2458,9 +2518,9 @@ window.addEventListener('keydown',e=>{
   if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   const c=combo(e);if(!c)return;
   if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&kbNav&&(!$('#result').classList.contains('on')||e.target.closest('#result')))return;
-  const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
+  const act_=KEYORDER.find(a=>settings.keys&&settings.keys[a]===c)||KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
-  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
+  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(multi.size){multi.clear();render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
   if(inMenu||demoOn&&act_!=='verify')return;
   e.preventDefault();KEYACT[act_]();
 });

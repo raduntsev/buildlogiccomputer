@@ -34,7 +34,7 @@ let undoS=[],redoS=[];
 let liveIn=[], sim={v:{},ff:{}};
 let rowMark=null, demoRow=-1, demoOn=false, demoSkip=false;
 let view={x:0,y:0,z:1};
-let sel=null;
+let sel=null;const multi=new Set();
 
 function ioIns(){const a=level.ins.slice();if(level.clk)a.push('C');return a}
 function ioY(n,i){return (i-(n-1)/2)*80}
@@ -55,7 +55,7 @@ function loadLevel(l){
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
-  undoS=[];redoS=[];sel=null;rowMark=null;
+  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;
   liveIn=ioIns().map(()=>0);
   resetSim();
   if(!l.sandbox)store.set('ll_last',l.id,true);
@@ -348,7 +348,7 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     s+=`</g>`;K('g'+g.id);
@@ -360,6 +360,9 @@ function render(){
     P.i.forEach((y,p)=>{s+=pinIn(g.x,g.y+y);if(sh.has(g.id+':'+p))s+=`<circle class="short" cx="${g.x}" cy="${g.y+y}" r="10"/>`;s+=`<circle class="pin-hit" data-pin="${g.id}|i|${p}" cx="${g.x}" cy="${g.y+y}" r="9"/>`});
     P.o.forEach((y,p)=>{s+=pinOut(g.x+GW,g.y+y)+`<circle class="pin-hit" data-pin="${g.id}|o|${p}" cx="${g.x+GW}" cy="${g.y+y}" r="10"/>`});K('p'+g.id);
   }
+  {const b=multiBox();if(b)s+=`<rect class="msel" x="${b.x0-8}" y="${b.y0-8}" width="${b.x1-b.x0+16}" height="${b.y1-b.y0+16}" rx="12"/>`;
+   if(act&&act.kind==='box'){const x=Math.min(act.x0,act.x1),y=Math.min(act.y0,act.y1);s+=`<rect class="mbox" x="${x}" y="${y}" width="${Math.abs(act.x1-act.x0)}" height="${Math.abs(act.y1-act.y0)}"/>`}
+   K('msel')}
   // level inputs (flags)
   const ins=ioIns();
   ins.forEach((k,i)=>{
@@ -382,6 +385,7 @@ function render(){
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
+    {const d=outDesc(level,k);if(d)s+=`<circle class="odhit" data-od="${i}" cx="${n.x+28}" cy="${n.y}" r="21" aria-label="${esc(disp(k)+' — '+tx(d))}"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
     s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
@@ -424,7 +428,9 @@ function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();
 function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');$('#netBtn').disabled=!w||demoOn;if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw()}
 let netOn=false;
 function netOf(w){return C.wires.filter(x=>x.from.g===w.from.g&&x.from.p===w.from.p)}
-function netHL(){const w=netOn&&selWire();if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
+function netHL(){const w=netOn&&selWire();
+  if(!w&&sel&&sel.g&&!demoOn){const id=sel.g,I=C.wires.filter(x=>x.to.g===id);return{w:new Set(C.wires.filter(x=>x.to.g===id||x.from.g===id).map(x=>x.id)),n:new Set(I.map(x=>x.from.g).filter(g=>g!==id)),src:true}}
+  if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
 function nodeName(id,p,k){if(id[0]==='I')return ioIns()[+id.slice(1)];if(id[0]==='O')return disp(level.outs[+id.slice(1)]);
   const g=nodePos(id);if(!g)return id;const P=gPins(g.type)[k],n=tx(GATES[g.type].n)+' №'+id.slice(1);return P&&P.length>1?n+' · '+ui(k==='o'?'pinO':'pinI')+' '+(p+1):n}
 function netDraw(){const box=$('#netInsp'),w=selWire();if(!netOn||!w)return;const N=netOf(w),val=sim.v[w.from.g+':'+w.from.p]|0,c=N.every(x=>x.c===w.c)?w.c||'':null,notes=N.filter(x=>x.n).map(x=>x.n);
@@ -459,11 +465,20 @@ $('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
   const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;persist();render()}wcolPop(false);sfx('place')});
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
+function multiGates(){for(const id of [...multi])if(!C.gates.some(g=>g.id===id))multi.delete(id);return C.gates.filter(g=>multi.has(g.id))}
+function multiBox(){const G=multiGates();if(G.length<2)return null;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const g of G){x0=Math.min(x0,g.x);y0=Math.min(y0,g.y);x1=Math.max(x1,g.x+GW);y1=Math.max(y1,g.y+GATES[g.type].h)}return{x0,y0,x1,y1}}
+function delMulti(){const G=multiGates();if(!G.length)return;snapshot();const ids=new Set(G.map(g=>g.id));
+  C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));if(tmp&&tmp.from&&ids.has(tmp.from.g))tmp=null;if(hover&&ids.has(hover.g))hover=null;multi.clear();sel=null;sfx('remove');changed()}
+function multiNorm(){const G=multiGates();if(G.length===1){multi.clear();sel={g:G[0].id}}}
+function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;multiNorm();render()}
 function placeSelPop(){
   wcolSync();
   const b=$('#selPop');if(!b)return;
   let w=null;
-  if(sel&&!demoOn&&!(act&&act.moved)){
+  const mb=!demoOn&&!(act&&act.moved)&&multiBox();
+  if(mb)w={x:(mb.x0+mb.x1)/2,y:mb.y0-16};
+  else if(sel&&!demoOn&&!(act&&act.moved)){
     if(sel.g){const g=C.gates.find(x=>x.id===sel.g);if(g)w={x:g.x+30,y:g.y-8}}
     else if(sel.w&&C.wires.some(x=>x.id===sel.w))w=sel.at?{x:sel.at.x,y:sel.at.y-12}:null;
   }
@@ -471,7 +486,7 @@ function placeSelPop(){
   b.style.transform=`translate(${view.x+w.x*view.z}px,${view.y+w.y*view.z}px) translate(-50%,-100%)`;b.classList.add('on');
 }
 $('#selPop').addEventListener('pointerdown',e=>e.stopPropagation());
-$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
+$('#selPop').addEventListener('click',e=>{e.stopPropagation();if(multiBox())return delMulti();if(!sel)return;if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()});
 function knifeSet(on){knife=!!on;const b=$('#knifeBtn');if(b){b.classList.toggle('on',knife);b.setAttribute('aria-pressed',knife)}document.body.classList.toggle('knife',knife)}
 $('#knifeBtn').onclick=()=>{knifeSet(!knife);sfx('ui');if(knife)toast(ui('knifeOn'))};
 function update(){
@@ -592,6 +607,13 @@ function loupe(x,y){
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
 function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
+function odTip(el){const t=$('#odTip');if(!el){t.classList.remove('on');return}
+  const k=level.outs[+el.dataset.od],d=k!=null&&outDesc(level,k);if(!d){t.classList.remove('on');return}
+  t.innerHTML=`<b>${esc(disp(k)).replace(/(\D)(\d+)$/,"$1<sub>$2</sub>")}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
+  t.classList.add('on');const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';t.style.top=Math.max(8,r.top-t.offsetHeight-8)+'px'}
+board.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-od]');if(el&&!act&&e.pointerType!=='touch')odTip(el)});
+board.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('[data-od]'))odTip(null)});
+board.addEventListener('pointerdown',()=>odTip(null),true);
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
@@ -650,7 +672,7 @@ function updCount(){const el=$('#pcount');if(el){el.textContent=C.gates.length+'
   m.innerHTML=`<div class="met${level.max&&C.gates.length>level.max?' over':''}"><b>${C.gates.length}${level.max?`<small>/ ${level.max}</small>`:''}</b><span>${ui('mGates')}</span></div><div class="met"><b>${level.par}${best!=null&&best<999?`<small>${ui('mYours',{n:best})}</small>`:''}</b><span>${ui('mPar')}</span></div>`;
 }
 function disp(k){return (LANG==='en'&&level.dl&&level.dl[k])||k}
-function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);sel=null;sfx('remove');changed()}
+function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);if(hover&&hover.g===id)hover=null;sel=null;multiNorm();sfx('remove');changed()}
 function segX(a,b,c,d){
   const o=(p,q,r)=>Math.sign((q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x));
   return o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b);
@@ -737,6 +759,7 @@ board.addEventListener('pointerdown',e=>{
     return;
   }
   if(h.type==='wire'){
+    multi.clear();
     const w=C.wires.find(x=>x.id===h.id);
     if(sel&&sel.w===w.id){const g=segGrab(w,p);if(g){act=Object.assign({kind:'seg',sx:e.clientX,sy:e.clientY,w,moved:false},g);return}}
     const n=nearestOnWire(w,p);
@@ -744,11 +767,16 @@ board.addEventListener('pointerdown',e=>{
   }
   if(h.type==='gate'){
     const g=C.gates.find(x=>x.id===h.id);
+    if(e.shiftKey){if(sel&&sel.g)multi.add(sel.g);sel=null;if(multi.has(g.id))multi.delete(g.id);else multi.add(g.id);multiNorm();sfx('ui');render();return}
+    if(multi.has(g.id)&&multiGates().length>1){const G=multiGates(),ids=new Set(G.map(x=>x.id));
+      act={kind:'group',gid:g.id,p0:p,sx:e.clientX,sy:e.clientY,moved:false,G:G.map(x=>({g:x,x:x.x,y:x.y})),W:C.wires.filter(w=>ids.has(w.from.g)&&ids.has(w.to.g)&&w.pts&&w.pts.length).map(w=>({w,pts:w.pts.map(q=>({x:q.x,y:q.y}))}))};return}
+    multi.clear();
     act={kind:'gate',g,ox:p.x-g.x,oy:p.y-g.y,sx:e.clientX,sy:e.clientY,moved:false};return;
   }
   if(h.type==='in'){act={kind:'toggle',i:h.i};return}
+  if(e.shiftKey&&!touch){act={kind:'box',x0:p.x,y0:p.y,x1:p.x,y1:p.y,sx:e.clientX,sy:e.clientY};return}
   act={kind:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};board.classList.add('panning');
-  if(sel){sel=null;render()}
+  if(sel||multi.size){sel=null;multi.clear();render()}
 });
 window.addEventListener('pointermove',e=>{
   if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -773,6 +801,12 @@ window.addEventListener('pointermove',e=>{
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
       const free=!C.wires.some(w=>w.from.g===act.g.id||w.to.g===act.g.id);
       act.ins=free?wireUnder(act.g.x,act.g.y,act.g.type,act.g.id):null;if(act.ins)act.g.y=act.ins.y;renderSoon()}
+  }else if(act.kind==='group'){
+    if(!act.moved&&dist>4){act.moved=true;snapshot()}
+    if(act.moved){const dx=snap(p.x-act.p0.x),dy=snap(p.y-act.p0.y);
+      for(const o of act.G){o.g.x=o.x+dx;o.g.y=o.y+dy}
+      for(const o of act.W)o.w.pts=o.pts.map(q=>({x:q.x+dx,y:q.y+dy}));renderSoon()}
+  }else if(act.kind==='box'){act.x1=p.x;act.y1=p.y;renderSoon()
   }else if(act.kind==='seg'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){const P=act.P.map(q=>({x:q.x,y:q.y})),j=act.j;
@@ -806,6 +840,10 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='branch'){sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render();return}
   if(a.kind==='seg'){if(a.moved){sfx('place');changed()}else{sel={w:a.w.id,at:toW(e.clientX,e.clientY)};render()}return}
+  if(a.kind==='group'){if(a.moved){sfx('place');changed()}else{multi.clear();sel={g:a.gid};render()}return}
+  if(a.kind==='box'){const x0=Math.min(a.x0,a.x1),x1=Math.max(a.x0,a.x1),y0=Math.min(a.y0,a.y1),y1=Math.max(a.y0,a.y1);
+    if(sel&&sel.g)multi.add(sel.g);sel=null;
+    for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
@@ -816,7 +854,7 @@ window.addEventListener('pointerup',e=>{
   }
   if(a.kind==='cut'){applyCut();return}
 });
-window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
+window.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);if(act&&act.kind==='box')render();act=null;pinch=null;cut=null;loupeOff();if(tmp&&tmp.mode==='drag')tmp=null;board.classList.remove('panning')});
 
 $('#palette').addEventListener('pointerdown',e=>{
   const it=e.target.closest('.pi');if(!it||demoOn)return;ensureAudio();
@@ -833,8 +871,8 @@ $('#palette').addEventListener('pointerup',e=>{
 });
 
 const KEYDEF={undo:['Ctrl+Z'],redo:['Ctrl+Y','Ctrl+Shift+Z'],del:['Delete','Backspace'],verify:['Enter'],menu:['Escape'],fit:['F'],zin:['='],zout:['-'],
-  hint:['H'],knife:['K'],sheet:['T'],bit:['B']};
-const KEYORDER=['verify','undo','redo','del','knife','hint','fit','zin','zout','sheet','bit','menu'];
+  hint:['H'],knife:['K'],sheet:['T'],bit:['B'],selall:['Ctrl+A']};
+const KEYORDER=['verify','undo','redo','del','selall','knife','hint','fit','zin','zout','sheet','bit','menu'];
 function keysFor(a){const k=settings.keys&&settings.keys[a];return k?[k]:KEYDEF[a]}
 function keyName(e){
   const c=e.code||'';
@@ -849,7 +887,8 @@ function combo(e){const k=keyName(e);if(['Control','Shift','Alt','Meta'].include
 function keyLabel(k){return LANG==='en'?k:k.replace('Space','Пробел').replace('Delete','Del').replace('Backspace','Backspace').replace('Escape','Esc').replace('Enter','Enter')}
 const KEYACT={
   undo:()=>undo(),redo:()=>redo(),
-  del:()=>{if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
+  selall:()=>selectAll(),
+  del:()=>{if(multiBox())return delMulti();if(sel){if(sel.g)delGate(sel.g);else if(sel.w)delWire(sel.w);sel=null;render()}},
   verify:()=>{if(!$('#result').classList.contains('on'))$('#verify').click()},
   fit:()=>fit(),zin:()=>$('#zIn').click(),zout:()=>$('#zOut').click(),
   hint:()=>{if(level&&level.hint&&!level.sandbox)$('#hintBtn').click()},
@@ -864,9 +903,9 @@ window.addEventListener('keydown',e=>{
   if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   const c=combo(e);if(!c)return;
   if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&kbNav&&(!$('#result').classList.contains('on')||e.target.closest('#result')))return;
-  const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
+  const act_=KEYORDER.find(a=>settings.keys&&settings.keys[a]===c)||KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
-  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
+  if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(multi.size){multi.clear();render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
   if(inMenu||demoOn&&act_!=='verify')return;
   e.preventDefault();KEYACT[act_]();
 });
