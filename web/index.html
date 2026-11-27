@@ -2469,7 +2469,7 @@ window.addEventListener('pointerup',e=>{
     if(sel&&sel.g)multi.add(sel.g);sel=null;
     for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
-  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(!a.snap)return;if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30)ioDrop(a.id)}sfx('place');persist();render();return}
+  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(!a.snap)return;if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30&&!ioHits(a.id,h))ioDrop(a.id)}sfx('place');persist();render();return}
   if(a.kind==='io'){const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
     if(dbl&&C.io&&C.io[a.id]){snapshot();ioDrop(a.id);persist();render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
