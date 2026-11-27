@@ -1,6 +1,6 @@
 /* ========== progress: stars, points, clearance ========== */
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
-function starsHTML(s){if(!s)return '';return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
+function starsHTML(s){return [[1,'starSolved'],[2,'starNoHint'],[4,'starPar']].filter(([b])=>s&b).map(([,k])=>`<span class="st on" title="${ui(k,{p:level?level.par:''})}">★</span>`).join('')}
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
 const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
