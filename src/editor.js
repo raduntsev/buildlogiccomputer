@@ -45,7 +45,7 @@ function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store
 let persistT=0;
 function ioHome(id){const i=+id.slice(1);return id[0]==='I'?{x:0,y:ioY(ioIns().length,i)}:{x:OUTX(),y:ioY(level.outs.length,i)}}
 function ioDrop(id){delete C.io[id];if(!Object.keys(C.io).length)delete C.io}
-function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-20,n.y+20]:[n.x-8,n.x+50,n.y-22,n.y+22]}
+function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-19,n.y+19]:[n.x-8,n.x+50,n.y-19,n.y+19]}
 function ioHits(id,q){const a=ioBox(id,q),ids=[...ioIns().map((_,i)=>'I'+i),...level.outs.map((_,i)=>'O'+i)];
   return ids.some(o=>{if(o===id)return false;const b=ioBox(o,nodePos(o));return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3]})}
 function persist(){saves[level.id]={gates:C.gates,wires:C.wires};if(C.io)saves[level.id].io=C.io;clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
