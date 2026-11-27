@@ -177,6 +177,7 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 @keyframes flow2{to{stroke-dashoffset:-28}}
 @keyframes flow{to{stroke-dashoffset:-22}}
 .whit{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 12px);cursor:pointer}
+.whit.on{cursor:move}
 .whit:hover+.wsel,.wsel.on{stroke:rgba(220,235,58,.75)}
 .wsel{fill:none;stroke:transparent;stroke-width:calc(var(--ww) * 1px + 8px);pointer-events:none;stroke-linejoin:round;stroke-linecap:round}
 .gb{fill:var(--paper);stroke:var(--ink);stroke-width:1.8}
