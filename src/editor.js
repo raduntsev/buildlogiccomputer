@@ -467,7 +467,8 @@ function multiBox(){const G=multiGates();if(G.length<2)return null;let x0=1e9,y0
   for(const g of G){x0=Math.min(x0,g.x);y0=Math.min(y0,g.y);x1=Math.max(x1,g.x+GW);y1=Math.max(y1,g.y+GATES[g.type].h)}return{x0,y0,x1,y1}}
 function delMulti(){const G=multiGates();if(!G.length)return;snapshot();const ids=new Set(G.map(g=>g.id));
   C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));if(tmp&&tmp.from&&ids.has(tmp.from.g))tmp=null;multi.clear();sel=null;sfx('remove');changed()}
-function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;render()}
+function multiNorm(){const G=multiGates();if(G.length===1){multi.clear();sel={g:G[0].id}}}
+function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;multiNorm();render()}
 function placeSelPop(){
   wcolSync();
   const b=$('#selPop');if(!b)return;
@@ -756,7 +757,7 @@ board.addEventListener('pointerdown',e=>{
   }
   if(h.type==='gate'){
     const g=C.gates.find(x=>x.id===h.id);
-    if(e.shiftKey){if(sel&&sel.g)multi.add(sel.g);sel=null;if(multi.has(g.id))multi.delete(g.id);else multi.add(g.id);sfx('ui');render();return}
+    if(e.shiftKey){if(sel&&sel.g)multi.add(sel.g);sel=null;if(multi.has(g.id))multi.delete(g.id);else multi.add(g.id);multiNorm();sfx('ui');render();return}
     if(multi.has(g.id)&&multiGates().length>1){const G=multiGates(),ids=new Set(G.map(x=>x.id));
       act={kind:'group',gid:g.id,p0:p,sx:e.clientX,sy:e.clientY,moved:false,G:G.map(x=>({g:x,x:x.x,y:x.y})),W:C.wires.filter(w=>ids.has(w.from.g)&&ids.has(w.to.g)&&w.pts&&w.pts.length).map(w=>({w,pts:w.pts.map(q=>({x:q.x,y:q.y}))}))};return}
     multi.clear();
@@ -832,7 +833,7 @@ window.addEventListener('pointerup',e=>{
   if(a.kind==='group'){if(a.moved){sfx('place');changed()}else{multi.clear();sel={g:a.gid};render()}return}
   if(a.kind==='box'){const x0=Math.min(a.x0,a.x1),x1=Math.max(a.x0,a.x1),y0=Math.min(a.y0,a.y1),y1=Math.max(a.y0,a.y1);
     if(sel&&sel.g)multi.add(sel.g);sel=null;
-    for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);render();return}
+    for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
