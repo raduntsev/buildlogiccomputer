@@ -19,7 +19,7 @@ function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;r
 function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
 function hintBtnDraw(){
   const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
-  b.classList.toggle('owned',own);b.setAttribute('aria-label',ui('hintAsk')+(own?': '+ui('hintOpen'):''));
+  b.classList.toggle('owned',own);if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
   b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
 }
 function dailyCheck(){
