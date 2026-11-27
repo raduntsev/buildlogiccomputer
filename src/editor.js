@@ -43,7 +43,12 @@ const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
 /* the circuit is written out 0.3 s after the last edit, not on every click */
 let persistT=0;
-function persist(){saves[level.id]={gates:C.gates,wires:C.wires};clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
+function ioHome(id){const i=+id.slice(1);return id[0]==='I'?{x:0,y:ioY(ioIns().length,i)}:{x:OUTX(),y:ioY(level.outs.length,i)}}
+function ioDrop(id){delete C.io[id];if(!Object.keys(C.io).length)delete C.io}
+function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-19,n.y+19]:[n.x-8,n.x+50,n.y-19,n.y+19]}
+function ioHits(id,q){const a=ioBox(id,q),ids=[...ioIns().map((_,i)=>'I'+i),...level.outs.map((_,i)=>'O'+i)];
+  return ids.some(o=>{if(o===id)return false;const b=ioBox(o,nodePos(o));return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3]})}
+function persist(){saves[level.id]={gates:C.gates,wires:C.wires};if(C.io)saves[level.id].io=C.io;clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
 function persistNow(){if(persistT){clearTimeout(persistT);persistT=0;save()}}
 window.addEventListener('beforeunload',()=>{persistNow();store.flush(true)});
 window.addEventListener('pagehide',()=>{persistNow();store.flush(true)});
@@ -76,8 +81,8 @@ function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCou
 
 /* ========== geometry ========== */
 function nodePos(id){
-  if(id[0]==='I'){const n=ioIns().length;return{x:0,y:ioY(n,+id.slice(1))}}
-  if(id[0]==='O'){return{x:OUTX(),y:ioY(level.outs.length,+id.slice(1))}}
+  if(C.io&&C.io[id])return C.io[id];
+  if(id[0]==='I'||id[0]==='O')return ioHome(id);
   return C.gates.find(g=>g.id===id);
 }
 function pinPos(id,k,p){
@@ -109,7 +114,7 @@ function routeObstacles(){
 }
 // all auto-routed wires are laid out together, in order, so a wire avoids running along another net's wire
 function smartRoute(s,t){
-  const sig=C.gates.map(g=>g.id+g.x+','+g.y).join(';')+'|'+C.wires.map(w=>w.from.g+w.from.p+w.to.g+w.to.p+(w.pts&&w.pts.length?'m':'')).join(';')+'|'+OUTX()+'|'+ioIns().length+'|'+level.outs.length;
+  const sig=C.gates.map(g=>g.id+g.x+','+g.y).join(';')+'|'+C.wires.map(w=>w.from.g+w.from.p+w.to.g+w.to.p+(w.pts&&w.pts.length?'m':'')).join(';')+'|'+OUTX()+'|'+ioIns().length+'|'+level.outs.length+'|'+JSON.stringify(C.io||0);
   const key=s.x+','+s.y+'>'+t.x+','+t.y;
   if(sig!==routeSig){
     routeSig=sig;routeMemo=new Map();const nets=new Map(),G=routeGrid(C.wires.flatMap(w=>[pinPos(w.from.g,'o',w.from.p),pinPos(w.to.g,'i',w.to.p)]));
@@ -243,7 +248,7 @@ function vecInVals(row,c){const a=level.ins.map(k=>row.in[k]|0);if(level.clk)a.p
 
 /* ========== render ========== */
 const world=$('#world'), board=$('#board'), fxG=$('#fx');
-let tmp=null, cut=null, ghost=null, hover=null;
+let tmp=null, cut=null, ghost=null, hover=null, ioClick=null;
 
 function gateSVG(type,gost,extraCls){
   const h=GATES[type].h,P=gPins(type);
@@ -385,7 +390,7 @@ function render(){
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
-    {const d=outDesc(level,k);if(d)s+=`<circle class="odhit" data-od="${i}" cx="${n.x+28}" cy="${n.y}" r="21" aria-label="${esc(disp(k)+' — '+tx(d))}"/>`}
+    {const d=outDesc(level,k);s+=`<circle class="odhit" data-out="${i}"${d?` data-od="${i}" aria-label="${esc(disp(k)+' — '+tx(d))}"`:''} cx="${n.x+28}" cy="${n.y}" r="21"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
     s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
@@ -620,6 +625,7 @@ function hitInfo(target){
   const w=target.closest&&target.closest('[data-wire]');if(w)return{type:'wire',id:w.dataset.wire};
   const gt=target.closest&&target.closest('[data-gate]');if(gt)return{type:'gate',id:gt.dataset.gate};
   const f=target.closest&&target.closest('[data-in]');if(f)return{type:'in',i:+f.dataset.in};
+  const o=target.closest&&target.closest('[data-out]');if(o)return{type:'out',i:+o.dataset.out};
   return{type:'empty'};
 }
 function nearestOnWire(w,p){
@@ -644,7 +650,8 @@ function segGrab(w,p){
   return best&&best.d<24/view.z?{P,j:best.j,h:best.h}:null;
 }
 board.addEventListener('dblclick',e=>{
-  const h=hitInfo(e.target);if(h.type!=='wire')return;
+  const h=hitInfo(e.target);
+  if(h.type!=='wire')return;
   const w=C.wires.find(x=>x.id===h.id);if(!w||!w.pts||!w.pts.length)return;
   snapshot();w.pts=[];changed();
 });
@@ -773,7 +780,7 @@ board.addEventListener('pointerdown',e=>{
     multi.clear();
     act={kind:'gate',g,ox:p.x-g.x,oy:p.y-g.y,sx:e.clientX,sy:e.clientY,moved:false};return;
   }
-  if(h.type==='in'){act={kind:'toggle',i:h.i};return}
+  if(h.type==='in'||h.type==='out'){const id=(h.type==='in'?'I':'O')+h.i,n=nodePos(id);act={kind:h.type==='in'?'toggle':'io',i:h.i,id,p0:p,n0:{x:n.x,y:n.y},sx:e.clientX,sy:e.clientY,moved:false};return}
   if(e.shiftKey&&!touch){act={kind:'box',x0:p.x,y0:p.y,x1:p.x,y1:p.y,sx:e.clientX,sy:e.clientY};return}
   act={kind:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};board.classList.add('panning');
   if(sel||multi.size){sel=null;multi.clear();render()}
@@ -796,6 +803,8 @@ window.addEventListener('pointermove',e=>{
   if(!act)return;
   const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
   if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;viewXf()}
+  else if(act.kind==='toggle'||act.kind==='io'){if(!act.moved&&dist>6)act.moved=true;
+    if(act.moved){const q={x:snap(act.n0.x+p.x-act.p0.x),y:snap(act.n0.y+p.y-act.p0.y)};const o=nodePos(act.id);if((q.x!==o.x||q.y!==o.y)&&!ioHits(act.id,q)){if(!act.snap){act.snap=1;act.redo=redoS;snapshot()}C.io=C.io||{};C.io[act.id]=q;renderSoon()}}}
   else if(act.kind==='gate'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
@@ -845,6 +854,10 @@ window.addEventListener('pointerup',e=>{
     if(sel&&sel.g)multi.add(sel.g);sel=null;
     for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
+  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(!a.snap)return;if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30&&!ioHits(a.id,h))ioDrop(a.id)}
+    {const f=nodePos(a.id);if(f.x===a.n0.x&&f.y===a.n0.y){undoS.pop();redoS=a.redo;render();return}}sfx('place');persist();render();return}
+  if(a.kind==='io'){const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
+    if(dbl&&C.io&&C.io[a.id]){snapshot();ioDrop(a.id);persist();render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
     cut=null;
