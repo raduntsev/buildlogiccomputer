@@ -46,6 +46,7 @@ function onFailed(f,n){
   updHud();
   say([{t:extra||pick(STORY.fail),m:'sad',ch:[{t:hintLabel(),f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
 }
+function lastLevel(){const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);return l&&available(l)?l:(LV.find(x=>available(x)&&!done.has(x.id))||LV[0])}
 function nextLevel(){return LV.find(l=>l.id>level.id&&available(l)&&!done.has(l.id))||LV.find(l=>available(l)&&!done.has(l.id))}
 function showCard(ok,title,html,btns){
   const st=$('#resTitle');st.className=ok?'':'bad';st.style.animation='none';void st.offsetWidth;st.style.animation='';
@@ -224,7 +225,7 @@ function drawMachine(){
   sv.innerHTML=s;
   const n=on.filter(Boolean).length;
   $('#machineCap').textContent=ui('machineCap',{n,N:10});
-  const lv=LV.some(l=>l.id===store.get('ll_last',1))?store.get('ll_last',1):((LV.find(l=>available(l)&&!done.has(l.id))||LV[0]).id),solved=LV.filter(l=>done.has(l.id)).length;
+  const lv=lastLevel().id,solved=LV.filter(l=>done.has(l.id)).length;
   if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
@@ -250,7 +251,7 @@ $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   ensureAudio();sfx('ui');
   const g=b.dataset.go;
-  if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
+  if(g==='continue'){if(!level||level.sandbox)loadLevel(lastLevel());closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
   if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
   openMenu(g);
@@ -388,8 +389,7 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
   applySettings(true);
   applyWindow();
   bitMood('idle');dailyCheck();
-  const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);
-  loadLevel(l&&available(l)?l:LV[0]);
+  loadLevel(lastLevel());
   prog.badges.forEach(steamAch);
   if($('#ov').classList.contains('on')&&curScr==='main'){document.body.classList.add('mainScr');setTimeout(menuBitStart,400)}
   bitPlace();
