@@ -882,11 +882,11 @@ const gtip=(()=>{
     const t=it.dataset.type;if(!GATES[t])return;
     if(cur!==t){el.innerHTML=gateTipHTML(t);cur=t}
     clearTimeout(hideT);
-    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z,g=12,m=8;
+    const z=UI(),pr=$('#palette').getBoundingClientRect(),ir=it.getBoundingClientRect(),w=el.offsetWidth*z,h=el.offsetHeight*z,g=12,m=8,tp=$('#top').getBoundingClientRect().bottom+m;
     // try every side of the palette in turn; the first one that fits on screen without covering the palette (and so the gate) wins
-    const cx=clamp(ir.left+ir.width/2-w/2,m,innerWidth-w-m),cy=clamp(ir.top+ir.height/2-h/2,m,innerHeight-h-m);
+    const cx=clamp(ir.left+ir.width/2-w/2,m,innerWidth-w-m),cy=clamp(ir.top+ir.height/2-h/2,tp,innerHeight-h-m);
     const C=[[pr.right+g,cy],[cx,pr.top-g-h],[cx,pr.bottom+g],[pr.left-g-w,cy]];
-    const fits=([x,y])=>x>=m&&y>=m&&x+w<=innerWidth-m&&y+h<=innerHeight-m;
+    const fits=([x,y])=>x>=m&&y>=tp&&x+w<=innerWidth-m&&y+h<=innerHeight-m;
     const [x,y]=C.find(fits)||[clamp(pr.right+g,m,innerWidth-w-m),cy];
     el.style.left=(x/z)+'px';el.style.top=(y/z)+'px';el.classList.add('on');
   }
