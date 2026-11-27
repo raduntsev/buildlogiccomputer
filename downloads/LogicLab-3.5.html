@@ -1657,8 +1657,93 @@ function autoRoute(s,t,srcId){
   const ax=s.x+20+off,bx=t.x-20,ym=Math.max(s.y,t.y)+60;
   return[s,{x:ax,y:s.y},{x:ax,y:ym},{x:bx,y:ym},{x:bx,y:t.y},t];
 }
+/* A* on a 10 px grid: shortest orthogonal path around gates, flags and lamps, with a cost per bend.
+   Leaves the source pin to the right and enters the target pin from the left. Cached per layout. */
+const STEP=10,BEND=6;
+let routeSig='',routeMemo=new Map();
+function routeObstacles(){
+  const R=[],m=6;
+  for(const g of C.gates)R.push([g.x-m,g.y-m,g.x+GW+m,g.y+GATES[g.type].h+m]);
+  ioIns().forEach((_,i)=>{const n=nodePos('I'+i);R.push([n.x-62-m,n.y-19-m,n.x+12+m,n.y+19+m])});
+  level.outs.forEach((_,i)=>{const n=nodePos('O'+i);R.push([n.x+4,n.y-22-m,n.x+56+m,n.y+22+m])});
+  return R;
+}
+// all auto-routed wires are laid out together, in order, so a wire avoids running along another net's wire
+function smartRoute(s,t){
+  const sig=C.gates.map(g=>g.id+g.x+','+g.y).join(';')+'|'+C.wires.map(w=>w.from.g+w.from.p+w.to.g+w.to.p+(w.pts&&w.pts.length?'m':'')).join(';')+'|'+OUTX()+'|'+ioIns().length+'|'+level.outs.length;
+  const key=s.x+','+s.y+'>'+t.x+','+t.y;
+  if(sig!==routeSig){
+    routeSig=sig;routeMemo=new Map();const nets=new Map(),G=routeGrid(C.wires.flatMap(w=>[pinPos(w.from.g,'o',w.from.p),pinPos(w.to.g,'i',w.to.p)]));
+    for(const w of C.wires){if(w.pts&&w.pts.length)continue;
+      const a=pinPos(w.from.g,'o',w.from.p),b=pinPos(w.to.g,'i',w.to.p),k=a.x+','+a.y+'>'+b.x+','+b.y,net=w.from.g+':'+w.from.p;
+      if(routeMemo.has(k))continue;
+      if(!nets.has(net))nets.set(net,nets.size+1);
+      const id=nets.get(net),r=astar(a,b,id,G)||autoRoute(a,b);routeMemo.set(k,r);
+      if(G)for(let i=0;i<r.length-1;i++){const p=r[i],q=r[i+1],O=p.y===q.y?G.occH:G.occV,n=Math.max(Math.abs(q.x-p.x),Math.abs(q.y-p.y))/STEP;
+        for(let j=0;j<=n;j++){const x=(p.x+Math.sign(q.x-p.x)*j*STEP)/STEP-G.x0,y=(p.y+Math.sign(q.y-p.y)*j*STEP)/STEP-G.y0;
+          if(x>=0&&y>=0&&x<G.W&&y<G.H&&x%1===0&&y%1===0)O[y*G.W+x]=id}}
+    }
+  }
+  let r=routeMemo.get(key);
+  if(!r){r=astar(s,t)||autoRoute(s,t);routeMemo.set(key,r)}
+  return r;
+}
+// blocked cells for the current layout, shared by every wire routed in one pass
+function routeGrid(pins){
+  const R=routeObstacles();
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(const p of pins){x0=Math.min(x0,p.x/STEP|0);x1=Math.max(x1,Math.ceil(p.x/STEP));y0=Math.min(y0,p.y/STEP|0);y1=Math.max(y1,Math.ceil(p.y/STEP))}
+  for(const r of R){x0=Math.min(x0,Math.floor(r[0]/STEP));x1=Math.max(x1,Math.ceil(r[2]/STEP));y0=Math.min(y0,Math.floor(r[1]/STEP));y1=Math.max(y1,Math.ceil(r[3]/STEP))}
+  x0-=4;x1+=4;y0-=4;y1+=4;
+  const W=x1-x0+1,H=y1-y0+1,N=W*H;
+  if(!(N>0)||N>400000)return null;
+  const block=new Uint8Array(N);
+  for(const r of R)for(let y=Math.max(y0,Math.ceil(r[1]/STEP));y<=Math.min(y1,Math.floor(r[3]/STEP));y++)
+    for(let x=Math.max(x0,Math.ceil(r[0]/STEP));x<=Math.min(x1,Math.floor(r[2]/STEP));x++){
+      const px=x*STEP,py=y*STEP;if(px>r[0]&&px<r[2]&&py>r[1]&&py<r[3])block[(y-y0)*W+x-x0]=1}
+  return{x0,x1,y0,y1,W,H,N,block,g:new Float32Array(N*4),from:new Int32Array(N*4),occH:new Int32Array(N),occV:new Int32Array(N)};
+}
+function astar(s,t,net,G){
+  if(s.x%STEP||s.y%STEP||t.x%STEP||t.y%STEP)return null;
+  G=G||routeGrid([s,t]);if(!G)return null;
+  const {x0,x1,y0,y1,W,H,N,block,g,from,occH,occV}=G;
+  const sx=s.x/STEP+1,sy=s.y/STEP,tx=t.x/STEP-1,ty=t.y/STEP;
+  if(sx<x0||sx>x1||tx<x0||tx>x1||sy<y0||sy>y1||ty<y0||ty>y1)return null;
+  const si=(sy-y0)*W+sx-x0,ti=(ty-y0)*W+tx-x0;
+  const bs=block[si],bt=block[ti];block[si]=0;block[ti]=0;
+  const DX=[1,0,-1,0],DY=[0,1,0,-1];
+  g.fill(Infinity);from.fill(-1);
+  // binary heap in two parallel arrays (priority, state)
+  const HF=[],HI=[];
+  const push=(f,i)=>{let k=HF.length;HF.push(f);HI.push(i);while(k){const q=(k-1)>>1;if(HF[q]<=f)break;HF[k]=HF[q];HI[k]=HI[q];k=q}HF[k]=f;HI[k]=i};
+  let popF=0;
+  const pop=()=>{const top=HI[0];popF=HF[0];const f=HF.pop(),i=HI.pop(),n=HF.length;if(n){let k=0;for(;;){const l=2*k+1,r=l+1;let m=l;if(l>=n)break;if(r<n&&HF[r]<HF[l])m=r;if(HF[m]>=f)break;HF[k]=HF[m];HI[k]=HI[m];k=m}HF[k]=f;HI[k]=i}return top};
+  const h=i=>{const x=i%W,y=(i/W)|0;return Math.abs(x+x0-tx)+Math.abs(y+y0-ty)+(y+y0!==ty?BEND:0)};
+  g[si*4]=0;push(h(si),si*4);
+  let end=-1,budget=N*3;
+  while(HF.length&&budget--){
+    const st=pop(),f=popF,i=st>>2,d=st&3,gc=g[st];
+    if(f>gc+h(i)+1e-9)continue;
+    if(i===ti){if(d===0){end=st;break}}
+    const x=i%W,y=(i/W)|0;
+    for(let nd=0;nd<4;nd++){
+      if(nd===(d+2)%4)continue;
+      const nx=x+DX[nd],ny=y+DY[nd];if(nx<0||ny<0||nx>=W||ny>=H)continue;
+      const ni=ny*W+nx;if(block[ni])continue;
+      let c=gc+1+(nd!==d?BEND:0)+(ni===ti&&nd!==0?BEND:0);const ns=ni*4+nd;
+      const o=(nd&1?occV:occH)[ni];if(o&&o!==net)c+=8;
+      if(c<g[ns]){g[ns]=c;from[ns]=st;push(c+h(ni),ns)}
+    }
+  }
+  block[si]=bs;block[ti]=bt;
+  if(end<0)return null;
+  const o=[t];
+  for(let st=end;st>=0;st=from[st]){const i=st>>2;o.push({x:(i%W+x0)*STEP,y:(((i/W)|0)+y0)*STEP})}
+  o.push(s);
+  return dedupe(o.reverse());
+}
 function route(s,pts,t){
-  if(!pts||!pts.length)return autoRoute(s,t);
+  if(!pts||!pts.length)return smartRoute(s,t);
   const o=[s];let a=s;
   for(const b of pts){if(a.x!==b.x&&a.y!==b.y)o.push({x:b.x,y:a.y});o.push(b);a=b}
   if(a.x!==t.x&&a.y!==t.y)o.push({x:a.x,y:t.y});
