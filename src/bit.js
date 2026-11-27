@@ -203,7 +203,7 @@ function bitPlace(){
       if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
       if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
       // never sit on the element strip: lift the tab above it
-      const pr=rectOf($('#palette'));if(pr&&!$('#ov').classList.contains('on')&&hits({x:r.left+fx*z,y:r.top+fy*z,w:r.width,h:r.bottom-r.top},pr))fy+=(pr.y-pad-(r.bottom+fy*z))/z;
+      const pr=rectOf($('#palette'));if(pr&&!$('#ov').classList.contains('on')&&hits({x:r.left+fx*z,y:r.top+fy*z,w:r.width,h:r.bottom-r.top},pr)){const up=(pr.y-pad-(r.bottom+fy*z))/z;if(r.top+(fy+up)*z>=pad)fy+=up}
       if(fx||fy){BP.dx+=fx;BP.dy+=fy;T.style.translate=`${BP.dx}px ${BP.dy}px`}}
     const ch=$('#chat').offsetHeight;BP.my=clamp(BP.my||0,0,Math.max(0,innerHeight/z-ch-120));
     $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;
