@@ -1658,6 +1658,8 @@ const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
 /* the circuit is written out 0.3 s after the last edit, not on every click */
 let persistT=0;
+function ioHome(id){const i=+id.slice(1);return id[0]==='I'?{x:0,y:ioY(ioIns().length,i)}:{x:OUTX(),y:ioY(level.outs.length,i)}}
+function ioDrop(id){delete C.io[id];if(!Object.keys(C.io).length)delete C.io}
 function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-20,n.y+20]:[n.x-8,n.x+50,n.y-22,n.y+22]}
 function ioHits(id,q){const a=ioBox(id,q),ids=[...ioIns().map((_,i)=>'I'+i),...level.outs.map((_,i)=>'O'+i)];
   return ids.some(o=>{if(o===id)return false;const b=ioBox(o,nodePos(o));return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3]})}
@@ -1695,8 +1697,7 @@ function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCou
 /* ========== geometry ========== */
 function nodePos(id){
   if(C.io&&C.io[id])return C.io[id];
-  if(id[0]==='I'){const n=ioIns().length;return{x:0,y:ioY(n,+id.slice(1))}}
-  if(id[0]==='O'){return{x:OUTX(),y:ioY(level.outs.length,+id.slice(1))}}
+  if(id[0]==='I'||id[0]==='O')return ioHome(id);
   return C.gates.find(g=>g.id===id);
 }
 function pinPos(id,k,p){
@@ -2468,10 +2469,9 @@ window.addEventListener('pointerup',e=>{
     if(sel&&sel.g)multi.add(sel.g);sel=null;
     for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
-  if((a.kind==='toggle'||a.kind==='io')&&a.moved){sfx('place');persist();render();return}
-  {const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
-    if(dbl&&C.io&&C.io[a.id]){snapshot();delete C.io[a.id];if(!Object.keys(C.io).length)delete C.io;persist();render();return}}
-  if(a.kind==='io')return;
+  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30)ioDrop(a.id)}sfx('place');persist();render();return}
+  if(a.kind==='io'){const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
+    if(dbl&&C.io&&C.io[a.id]){snapshot();ioDrop(a.id);persist();render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
   if(a.kind==='rclick'){
     cut=null;
