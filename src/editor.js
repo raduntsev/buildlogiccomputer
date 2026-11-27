@@ -362,12 +362,24 @@ function buildChrome(){
 /* the task card sits level with the top buttons when it fits between them, otherwise below them */
 function placeCard(){
   const card=$('#taskCard');if(card.style.display==='none')return;
+  if(cardPos){card.classList.add('moved');card.classList.remove('low');const r=card.getBoundingClientRect(),x=clamp(cardPos.x,8,innerWidth-r.width-8),y=clamp(cardPos.y,8,innerHeight-r.height-8);card.style.left=x+'px';card.style.top=y+'px';return}
+  card.classList.remove('moved');card.style.left='';
   const vis=q=>$$(q).map(x=>x.getBoundingClientRect()).filter(r=>r.width),L={right:Math.max(0,...vis('#top .tb:not(.r)>*').map(r=>r.right))},R={left:Math.min(innerWidth,...vis('#top .tb.r>*').map(r=>r.left))};
   card.style.top='';card.classList.remove('low');
   const r=card.getBoundingClientRect();
   if(innerWidth<=760||r.left<L.right+12||r.right>R.left-12)card.classList.add('low');
 }
 window.addEventListener('resize',()=>{if(level)placeCard()});
+let cardPos=store.get('ll_cardPos',null);
+function ttHidden(on){const c=$('#taskCard'),b=$('#ttTog');c.classList.toggle('tthide',on);b.setAttribute('aria-expanded',!on);b.title=b.ariaLabel=ui(on?'ttShow':'ttHide');store.set('ll_ttHide',on,true);placeCard()}
+$('#ttTog').onclick=e=>{e.stopPropagation();ttHidden(!$('#taskCard').classList.contains('tthide'));sfx('ui')};
+(()=>{const c=$('#taskCard');let st=null;
+  c.addEventListener('pointerdown',e=>{if(e.button||e.target.closest('td,button'))return;const r=c.getBoundingClientRect();st={x:e.clientX,y:e.clientY,l:r.left,t:r.top,m:false,id:e.pointerId}});
+  c.addEventListener('pointermove',e=>{if(!st)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.m&&Math.hypot(dx,dy)<4)return;if(!st.m){st.m=true;c.setPointerCapture(st.id);c.classList.add('drag')}cardPos={x:st.l+dx,y:st.t+dy};placeCard()});
+  const end=()=>{if(st&&st.m){c.classList.remove('drag');store.set('ll_cardPos',cardPos,true)}st=null};
+  c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+  c.addEventListener('dblclick',e=>{if(e.target.closest('td,button'))return;cardPos=null;store.set('ll_cardPos',null,true);placeCard()});
+})();
 function renderTable(){
   const w=$('#ttWrap'),card=$('#taskCard');
   if(level.sandbox||!level.vec.length){w.innerHTML='';w._h='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
