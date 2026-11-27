@@ -856,8 +856,16 @@ body.calm #gtip{transform:none}
 /* the Back button of every menu screen stays in the top-left corner */
 .scr>.mi.small[data-go]{position:fixed;top:14px;left:16px;margin:0;z-index:6}
 #navGrp .ib svg{width:18px;height:18px}
-/* on phones Menu already leads to the map and settings in one tap; the extra icons do not fit */
-@media (max-width:520px){#navGrp{display:none}}
+/* floating editor tools on the right edge, centred between the top bar and the sheet */
+#toolDock{position:fixed;right:16px;top:calc((76px + 100vh - var(--dock,180px))/2);transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px}
+#toolDock .tgrp{flex-direction:column;height:auto;width:44px;padding:4px 0;gap:2px}
+#toolDock .tsep{width:20px;height:1px;margin:4px 0}
+#toolsTog{width:28px;height:28px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--mute)}
+#toolsTog:hover{color:var(--ink)}
+#toolsTog svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#toolDock.hide #toolsTog svg{transform:rotate(180deg)}
+#toolDock.hide #tools{display:none}
+@media (max-width:760px){#toolDock{right:8px;top:calc((56px + 100vh - var(--dock,180px))/2)}}
 </style>
 </head>
 <body>
@@ -875,14 +883,15 @@ body.calm #gtip{transform:none}
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div><div class="tgrp" id="tools" role="toolbar">
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div></div>
+  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
+</header>
+<div id="toolDock" class="zz"><div class="tgrp" id="tools" role="toolbar">
     <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
     <button class="ib" id="redo" data-tl="redo"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     <i class="tsep"></i>
     <button class="ib" id="knifeBtn" data-tl="knife" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88"/><path d="M14.47 14.48L20 20"/><path d="M8.12 8.12L12 12"/></svg></button>
-  </div></div>
-  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
-</header>
+  </div><button id="toolsTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M4.5 2.5L8 6L4.5 9.5"/></svg></button></div>
 
 <div id="taskCard" class="zz"><button id="ttTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M2.5 7.5L6 4L9.5 7.5"/></svg></button><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
@@ -1014,7 +1023,7 @@ const UIS={
   menu:['Меню','Menu'],undo:['Отменить','Undo'],redo:['Вернуть','Redo'],clear:['Очистить','Clear'],verify:['Проверить','Test'],skip:['Пропустить','Skip'],
   fit:['Вписать','Fit'],hint:['Подсказка','Hint'],hintCost:['Подсказка −★','Hint −★'],saved:['сохранено','saved'],
   cont:['Продолжить','Continue'],levels:['Уровни','Levels'],sandbox:['Песочница','Sandbox'],settings:['Настройки','Settings'],about:['Об игре','About'],
-  profile:['Личное дело','Personnel file'],back:['Назад','Back'],ttHide:['Скрыть таблицу','Hide table'],ttShow:['Показать таблицу','Show table'],ttMove:['Перетащите, чтобы переместить. Двойной щелчок вернёт на место','Drag to move. Double-click to put it back'],quit:['Выйти','Quit'],brandSub:['логические элементы и цифровые схемы','logic gates and digital circuits'],
+  profile:['Личное дело','Personnel file'],back:['Назад','Back'],ttHide:['Скрыть таблицу','Hide table'],toolsHide:['Свернуть инструменты','Collapse tools'],toolsShow:['Показать инструменты','Show tools'],ttShow:['Показать таблицу','Show table'],ttMove:['Перетащите, чтобы переместить. Двойной щелчок вернёт на место','Drag to move. Double-click to put it back'],quit:['Выйти','Quit'],brandSub:['логические элементы и цифровые схемы','logic gates and digital circuits'],
   aboutT1:['Этой ночью Машина в лаборатории погасла. Её управляющий бит по имени Бит назначил вас испытуемым и требует собрать Машину заново: от одного провода до счётчика команд.','Last night the lab’s Machine went dark. Its control bit, named Bit, has appointed you test subject and demands that you rebuild it, from a single wire to a program counter.'],
   aboutT2:['Тяните от точки — получится провод. Клик по пустому месту во время прокладки — изгиб. Тяните от провода — ответвление. Правый клик или свайп поперёк провода — удалить. Ctrl+Z — отменить.','Drag from a dot to lay a wire. Click empty space while routing to add a bend. Drag from a wire to branch it. Right-click or swipe across a wire to delete it. Ctrl+Z undoes.'],
   reset:['Сбросить прогресс','Reset progress'],resetSure:['нажмите ещё раз','click again'],progReset:['Прогресс сброшен','Progress reset'],
@@ -1909,6 +1918,8 @@ function placeCard(){
 window.addEventListener('resize',()=>{if(level)placeCard()});
 let cardPos=store.get('ll_cardPos',null);
 function ttHidden(on){const c=$('#taskCard'),b=$('#ttTog');c.classList.toggle('tthide',on);b.setAttribute('aria-expanded',!on);b.title=b.ariaLabel=ui(on?'ttShow':'ttHide');store.set('ll_ttHide',on,true);placeCard()}
+function toolsHidden(on){const b=$('#toolsTog');$('#toolDock').classList.toggle('hide',on);b.setAttribute('aria-expanded',!on);b.title=b.ariaLabel=ui(on?'toolsShow':'toolsHide');store.set('ll_toolsHide',on,true)}
+$('#toolsTog').onclick=()=>{toolsHidden(!$('#toolDock').classList.contains('hide'));sfx('ui')};
 $('#ttTog').onclick=e=>{e.stopPropagation();ttHidden(!$('#taskCard').classList.contains('tthide'));sfx('ui')};
 (()=>{const c=$('#taskCard');let st=null;
   c.addEventListener('pointerdown',e=>{if(e.button||e.target.closest('td,button'))return;const r=c.getBoundingClientRect();st={x:e.clientX,y:e.clientY,l:r.left,t:r.top,m:false,id:e.pointerId}});
@@ -1950,7 +1961,7 @@ setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
   g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
-  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
+  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved);else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
 })();
 
 /* ========== view ========== */
@@ -1960,7 +1971,7 @@ function fit(){
   C.gates.forEach(g=>pts.push({x:g.x,y:g.y},{x:g.x+GW,y:g.y+GATES[g.type].h}));
   const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
   const mob=innerWidth<=760,pr=$('#palette').getBoundingClientRect();
-  const L=level.gates.length&&!mob?pr.right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=0,W=innerWidth-L-24-MW;
+  const L=level.gates.length&&!mob?pr.right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=$('#toolDock').getBoundingClientRect().width+8,W=innerWidth-L-24-MW;
   const B=mob&&level.gates.length&&pr.height?pr.top-12:innerHeight-(sheetH+14)*UI()-24,H=B-T;
   const z=clamp(Math.min(W/(x1-x0+40),H/(y1-y0+40)),.3,1.6);
   view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
@@ -3440,7 +3451,7 @@ $('#setReset').onclick=()=>{const b=$('#setReset');
 /* ========== language ========== */
 function applyLang(){
   document.documentElement.lang=LANG;
-  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));$('#taskCard').title=ui('ttMove');
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
   $('#verify').textContent=demoOn?ui('skip'):ui('verify');
   updHud();drawMachine();

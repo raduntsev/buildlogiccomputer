@@ -374,7 +374,7 @@ $('#setReset').onclick=()=>{const b=$('#setReset');
 /* ========== language ========== */
 function applyLang(){
   document.documentElement.lang=LANG;
-  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));$('#taskCard').title=ui('ttMove');
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
   $('#verify').textContent=demoOn?ui('skip'):ui('verify');
   updHud();drawMachine();
