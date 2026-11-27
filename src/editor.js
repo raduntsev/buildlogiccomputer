@@ -334,7 +334,7 @@ function render(){
     const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0,doom=dm.wires.has(w.id);
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
     s+=`<path class="wgap" d="${d}"/>`;
-    s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
+    s+=`<path class="w w${val}${doom?' doom':''}${WCOL[w.c]?' wc" style="--wc:'+WCOL[w.c]:''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
     s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
@@ -411,7 +411,20 @@ function patchWorld(parts){
   }
   for(const [k,c] of worldParts)if(!seen.has(k)){c.el.remove();worldParts.delete(k)}
 }
+const WCOL={r:'#D9483B',o:'#E08A1E',g:'#3E9B4F',b:'#2F6FD0',v:'#8A4FC8'};
+function selWire(){return sel&&sel.w?C.wires.find(x=>x.id===sel.w):null}
+function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();p.classList.toggle('on',on);b.setAttribute('aria-expanded',on);
+  if(!on)return;const w=selWire();
+  p.innerHTML=['',...Object.keys(WCOL)].map(k=>`<button role="menuitemradio" aria-checked="${(w.c||'')===k}" data-wc="${k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('');
+  const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px'}
+function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn)wcolPop(false)}
+$('#wcolBtn').onclick=e=>{e.stopPropagation();wcolPop(!$('#wcolPop').classList.contains('on'));sfx('ui')};
+$('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
+  const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;persist();render()}wcolPop(false);sfx('place')});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
 function placeSelPop(){
+  wcolSync();
   const b=$('#selPop');if(!b)return;
   let w=null;
   if(sel&&!demoOn&&!(act&&act.moved)){
@@ -583,7 +596,7 @@ function finishWire(to){
   const f=tmp.from;
   if(!C.wires.some(w=>w.from.g===f.g&&w.from.p===f.p&&w.to.g===to.g&&w.to.p===to.p)){
     snapshot();
-    C.wires.push({id:'w'+(nextId++),from:{g:f.g,p:f.p},to:{g:to.g,p:to.p},pts:tmp.pts});
+    const nw={id:'w'+(nextId++),from:{g:f.g,p:f.p},to:{g:to.g,p:to.p},pts:tmp.pts};if(tmp.c)nw.c=tmp.c;C.wires.push(nw);
     sfx('relay');badge('FIRST_WIRE');
     tmp=null;changed();
     {const q=pinPos(to.g,'i',to.p);fxRing(q.x,q.y)}
@@ -651,8 +664,8 @@ function spliceIn(g,ins){
   const w=ins.w;
   C.wires=C.wires.filter(x=>x!==w);
   const pre=(w.pts||[]).filter(p=>p.x<g.x),post=(w.pts||[]).filter(p=>p.x>g.x+GW);
-  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre});
-  C.wires.push({id:'w'+(nextId++),from:{g:g.id,p:0},to:{g:w.to.g,p:w.to.p},pts:post});
+  C.wires.push({id:'w'+(nextId++),from:{g:w.from.g,p:w.from.p},to:{g:g.id,p:ins.p},pts:pre,...(w.c?{c:w.c}:{})});
+  C.wires.push({id:'w'+(nextId++),from:{g:g.id,p:0},to:{g:w.to.g,p:w.to.p},pts:post,...(w.c?{c:w.c}:{})});
   sfx('relay');
 }
 
@@ -684,7 +697,7 @@ board.addEventListener('pointerdown',e=>{
   if(h.type==='pin'&&h.k==='o'){startWire({g:h.g,p:h.p},[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY};render();return}
   if(h.type==='pin'&&h.k==='i'){ // pull existing wire off an input
     const w=C.wires.filter(w=>w.to.g===h.g&&w.to.p===h.p).pop();
-    if(w){snapshot();C.wires=C.wires.filter(x=>x!==w);startWire(w.from,w.pts||[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY,detached:true};changed();return}
+    if(w){snapshot();C.wires=C.wires.filter(x=>x!==w);startWire(w.from,w.pts||[],p);tmp.c=w.c;act={kind:'wire',sx:e.clientX,sy:e.clientY,detached:true};changed();return}
     return;
   }
   if(h.type==='wire'){
@@ -807,10 +820,14 @@ const KEYACT={
   knife:()=>$('#knifeBtn').click(),sheet:()=>sheetToggle(),
   bit:()=>{if($('#chat').classList.contains('on'))hideBubble();else $('#bitTab').click()}
 };
+let kbNav=false;
+window.addEventListener('pointerdown',()=>{kbNav=false},true);
+window.addEventListener('keydown',e=>{if(e.key==='Tab')kbNav=true},true);
 window.addEventListener('keydown',e=>{
   if(window.keyCapture){window.keyCapture(e);return}
   if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   const c=combo(e);if(!c)return;
+  if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&kbNav&&(!$('#result').classList.contains('on')||e.target.closest('#result')))return;
   const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
   if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
