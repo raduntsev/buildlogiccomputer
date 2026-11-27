@@ -898,7 +898,7 @@ window.addEventListener('keydown',e=>{
   if(window.keyCapture){window.keyCapture(e);return}
   if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   const c=combo(e);if(!c)return;
-  if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&e.target.matches(':focus-visible'))return;
+  if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&e.target.matches(':focus-visible')&&(!$('#result').classList.contains('on')||e.target.closest('#result')))return;
   const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
   if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(multi.size){multi.clear();render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
