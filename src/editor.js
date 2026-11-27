@@ -804,7 +804,7 @@ window.addEventListener('pointermove',e=>{
   const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
   if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;viewXf()}
   else if(act.kind==='toggle'||act.kind==='io'){if(!act.moved&&dist>6)act.moved=true;
-    if(act.moved){const q={x:snap(act.n0.x+p.x-act.p0.x),y:snap(act.n0.y+p.y-act.p0.y)};const o=nodePos(act.id);if((q.x!==o.x||q.y!==o.y)&&!ioHits(act.id,q)){if(!act.snap){act.snap=1;snapshot()}C.io=C.io||{};C.io[act.id]=q;renderSoon()}}}
+    if(act.moved){const q={x:snap(act.n0.x+p.x-act.p0.x),y:snap(act.n0.y+p.y-act.p0.y)};const o=nodePos(act.id);if((q.x!==o.x||q.y!==o.y)&&!ioHits(act.id,q)){if(!act.snap){act.snap=1;act.redo=redoS;snapshot()}C.io=C.io||{};C.io[act.id]=q;renderSoon()}}}
   else if(act.kind==='gate'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
@@ -854,7 +854,8 @@ window.addEventListener('pointerup',e=>{
     if(sel&&sel.g)multi.add(sel.g);sel=null;
     for(const g of C.gates)if(g.x<x1&&g.x+GW>x0&&g.y<y1&&g.y+GATES[g.type].h>y0)multi.add(g.id);multiNorm();render();return}
   if(a.kind==='gate'){if(a.moved){if(a.ins)spliceIn(a.g,a.ins);changed()}else{sel={g:a.g.id};render()}return}
-  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(!a.snap)return;if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30&&!ioHits(a.id,h))ioDrop(a.id)}sfx('place');persist();render();return}
+  if((a.kind==='toggle'||a.kind==='io')&&a.moved){if(!a.snap)return;if(C.io&&C.io[a.id]){const h=ioHome(a.id),q=C.io[a.id];if(Math.abs(q.x-h.x)<30&&Math.abs(q.y-h.y)<30&&!ioHits(a.id,h))ioDrop(a.id)}
+    {const f=nodePos(a.id);if(f.x===a.n0.x&&f.y===a.n0.y){undoS.pop();redoS=a.redo;render();return}}sfx('place');persist();render();return}
   if(a.kind==='io'){const t=Date.now(),dbl=ioClick&&ioClick.id===a.id&&t-ioClick.t<400;ioClick=dbl?null:{id:a.id,t};
     if(dbl&&C.io&&C.io[a.id]){snapshot();ioDrop(a.id);persist();render()}return}
   if(a.kind==='toggle'){liveIn[a.i]^=1;rowMark=null;sfx('toggle',liveIn[a.i]);update();return}
