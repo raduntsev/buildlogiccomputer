@@ -438,7 +438,7 @@ function netOpen(on){on=!!on&&!!selWire();if(on===netOn)return;netOn=on;$('#netI
 $('#netBtn').onclick=e=>{e.stopPropagation();netOpen(!netOn);sfx('ui')};
 $('#netInsp').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#netInsp').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-nc]'),w=selWire();if(!k||!w)return;const c=k.dataset.nc,N=netOf(w);
-  if(N.every(x=>(x.c||'')===c))return;snapshot();for(const x of N){if(c)x.c=c;else delete x.c}changed();sfx('place')});
+  if(N.every(x=>(x.c||'')===c))return;snapshot();for(const x of N){if(c)x.c=c;else delete x.c}persist();render();sfx('place')});
 function noteAt(w){const P=wirePts(w);let b=null;for(let i=0;i<P.length-1;i++){const a=P[i],c=P[i+1],l=Math.abs(a.x-c.x)+Math.abs(a.y-c.y);if(!b||l>b.l)b={l,a,c}}
   if(!b){const q=P[0]||{x:0,y:0};return{x:q.x,y:q.y-9,h:true}}
   const h=b.a.y===b.c.y,m={x:(b.a.x+b.c.x)/2,y:(b.a.y+b.c.y)/2};return h?{x:m.x,y:m.y-9,h}:{x:m.x+8,y:m.y,h}}
