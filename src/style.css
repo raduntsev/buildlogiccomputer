@@ -754,5 +754,13 @@ body.calm #gtip{transform:none}
 /* the Back button of every menu screen stays in the top-left corner */
 .scr>.mi.small[data-go]{position:fixed;top:14px;left:16px;margin:0;z-index:6}
 #navGrp .ib svg{width:18px;height:18px}
-/* on phones Menu already leads to the map and settings in one tap; the extra icons do not fit */
-@media (max-width:520px){#navGrp{display:none}}
+/* floating editor tools on the right edge, centred between the top bar and the sheet */
+#toolDock{position:fixed;right:16px;top:calc((76px + 100vh - var(--dock,180px))/2);transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px}
+#toolDock .tgrp{flex-direction:column;height:auto;width:44px;padding:4px 0;gap:2px}
+#toolDock .tsep{width:20px;height:1px;margin:4px 0}
+#toolsTog{width:28px;height:28px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--mute)}
+#toolsTog:hover{color:var(--ink)}
+#toolsTog svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#toolDock.hide #toolsTog svg{transform:rotate(180deg)}
+#toolDock.hide #tools{display:none}
+@media (max-width:760px){#toolDock{right:8px;top:calc((56px + 100vh - var(--dock,180px))/2)}}

@@ -372,6 +372,8 @@ function placeCard(){
 window.addEventListener('resize',()=>{if(level)placeCard()});
 let cardPos=store.get('ll_cardPos',null);
 function ttHidden(on){const c=$('#taskCard'),b=$('#ttTog');c.classList.toggle('tthide',on);b.setAttribute('aria-expanded',!on);b.title=b.ariaLabel=ui(on?'ttShow':'ttHide');store.set('ll_ttHide',on,true);placeCard()}
+function toolsHidden(on){const b=$('#toolsTog');$('#toolDock').classList.toggle('hide',on);b.setAttribute('aria-expanded',!on);b.title=b.ariaLabel=ui(on?'toolsShow':'toolsHide');store.set('ll_toolsHide',on,true)}
+$('#toolsTog').onclick=()=>{toolsHidden(!$('#toolDock').classList.contains('hide'));sfx('ui')};
 $('#ttTog').onclick=e=>{e.stopPropagation();ttHidden(!$('#taskCard').classList.contains('tthide'));sfx('ui')};
 (()=>{const c=$('#taskCard');let st=null;
   c.addEventListener('pointerdown',e=>{if(e.button||e.target.closest('td,button'))return;const r=c.getBoundingClientRect();st={x:e.clientX,y:e.clientY,l:r.left,t:r.top,m:false,id:e.pointerId}});
@@ -413,7 +415,7 @@ setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
   g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
-  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
+  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved);else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
 })();
 
 /* ========== view ========== */
@@ -423,7 +425,7 @@ function fit(){
   C.gates.forEach(g=>pts.push({x:g.x,y:g.y},{x:g.x+GW,y:g.y+GATES[g.type].h}));
   const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
   const mob=innerWidth<=760,pr=$('#palette').getBoundingClientRect();
-  const L=level.gates.length&&!mob?pr.right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=0,W=innerWidth-L-24-MW;
+  const L=level.gates.length&&!mob?pr.right+14:16,T=Math.max($('#top').getBoundingClientRect().bottom,$('#taskCard').style.display==='none'?0:$('#taskCard').getBoundingClientRect().bottom)+14,MW=$('#toolDock').getBoundingClientRect().width+8,W=innerWidth-L-24-MW;
   const B=mob&&level.gates.length&&pr.height?pr.top-12:innerHeight-(sheetH+14)*UI()-24,H=B-T;
   const z=clamp(Math.min(W/(x1-x0+40),H/(y1-y0+40)),.3,1.6);
   view.z=z;view.x=L+(W-(x1-x0)*z)/2-x0*z;view.y=T+(H-(y1-y0)*z)/2-y0*z;
