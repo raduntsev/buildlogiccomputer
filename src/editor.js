@@ -469,7 +469,7 @@ function multiGates(){for(const id of [...multi])if(!C.gates.some(g=>g.id===id))
 function multiBox(){const G=multiGates();if(G.length<2)return null;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(const g of G){x0=Math.min(x0,g.x);y0=Math.min(y0,g.y);x1=Math.max(x1,g.x+GW);y1=Math.max(y1,g.y+GATES[g.type].h)}return{x0,y0,x1,y1}}
 function delMulti(){const G=multiGates();if(!G.length)return;snapshot();const ids=new Set(G.map(g=>g.id));
-  C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));if(tmp&&tmp.from&&ids.has(tmp.from.g))tmp=null;multi.clear();sel=null;sfx('remove');changed()}
+  C.gates=C.gates.filter(g=>!ids.has(g.id));C.wires=C.wires.filter(w=>!ids.has(w.from.g)&&!ids.has(w.to.g));if(tmp&&tmp.from&&ids.has(tmp.from.g))tmp=null;if(hover&&ids.has(hover.g))hover=null;multi.clear();sel=null;sfx('remove');changed()}
 function multiNorm(){const G=multiGates();if(G.length===1){multi.clear();sel={g:G[0].id}}}
 function selectAll(){multi.clear();for(const g of C.gates)multi.add(g.id);sel=null;multiNorm();render()}
 function placeSelPop(){
