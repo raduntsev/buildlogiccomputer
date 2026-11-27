@@ -914,6 +914,11 @@ body.calm #gtip{transform:none}
 .gt-n .alt{opacity:0;transform:translateY(3px)}
 .gt-h:hover .gt-n>span:first-child{opacity:0;transform:translateY(-3px)}
 .gt-h:hover .gt-n .alt{opacity:1;transform:none}
+
+.odhit{fill:transparent}
+#odTip{position:fixed;z-index:7;pointer-events:none;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:7px 14px;font-size:13px;color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .12s}
+#odTip.on{opacity:1}
+#odTip b{font-weight:700}
 </style>
 </head>
 <body>
@@ -942,7 +947,8 @@ body.calm #gtip{transform:none}
     <button class="ib" id="wcolBtn" data-tl="wcol" aria-haspopup="true" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle class="wcdot" cx="12" cy="12" r="4"/></svg></button>
     <button class="ib" id="wnoteBtn" data-tl="wnote" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>
     <button class="ib" id="netBtn" data-tl="netInsp" aria-expanded="false" disabled><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M7.2 12H12M12 6v12M12 6h4.8M12 18h4.8"/></svg></button>
-  </div><button id="toolsTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M4.5 2.5L8 6L4.5 9.5"/></svg></button></div><div id="wcolPop" role="menu"></div><div id="netInsp" role="dialog"></div><div id="wnotePop"><input id="wnoteIn" maxlength="40" autocomplete="off" spellcheck="false"></div>
+  </div><button id="toolsTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M4.5 2.5L8 6L4.5 9.5"/></svg></button></div><div id="wcolPop" role="menu"></div><div id="netInsp" role="dialog"></div>
+<div id="odTip" role="tooltip"></div><div id="wnotePop"><input id="wnoteIn" maxlength="40" autocomplete="off" spellcheck="false"></div>
 
 <div id="taskCard" class="zz"><button id="ttTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M2.5 7.5L6 4L9.5 7.5"/></svg></button><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
@@ -1141,6 +1147,14 @@ function comb(ins,fn){const n=ins.length,v=[];for(let m=0;m<1<<n;m++){const i={}
 function seq(rows,init,step){let s=init;return rows.map(r=>{const [o,n]=step(s,r);s=n;return{in:r,out:o}})}
 const B=x=>x?1:0;
 const SEP='<span class="sep"></span>';
+// what each output lamp means (hover); level.od overrides by name
+const OUTD={Y:['результат схемы','circuit result'],S:['сумма','sum'],P:['перенос в старший разряд','carry out'],Co:['перенос в старший разряд','carry out'],
+  D:['разность','difference'],E:['1, если числа равны','1 when the numbers are equal'],G:['1, если A больше B','1 when A is greater than B'],
+  '>':['A больше B','A is greater than B'],'=':['A равно B','A equals B'],'<':['A меньше B','A is less than B'],
+  Q:['состояние триггера','stored bit'],V:['1, если хоть один вход активен','1 when any input is active']};
+function outDesc(lv,k){if(lv&&lv.od&&k in lv.od)return lv.od[k];if(OUTD[k])return OUTD[k];
+  const m=/^([QYSA])(\d)$/.exec(k);if(m)return {Q:['разряд %',"bit %"],Y:['выход %','output %'],S:['разряд суммы %','sum bit %'],A:['разряд кода %','code bit %']}[m[1]].map(t=>t.replace('%',m[2]));
+  if(/^[a-g]$/.test(k))return['сегмент '+k,'segment '+k];return null}
 const sb=s=>s.replace(/([A-Za-zА-Яа-я])(\d)/g,'$1<sub>$2</sub>');
 function lv(o){o.id=LV.length+1;o.outs=o.outs||['Y'];o.gates=o.gates||[];LV.push(o)}
 const T=n=>Array(n).fill(0).map(()=>({}));
@@ -1234,15 +1248,15 @@ lv({ch:4,pos:[3,6],req:[25],par:3,t:['Счётчик','Counter'],f:'Q<sub>1</sub
 lv({ch:4,pos:[2,7],req:[24],par:2,t:['Сдвиговый регистр','Shift register'],f:'Q<sub>1</sub> ← D'+SEP+'Q<sub>2</sub> ← Q<sub>1</sub>',ins:['D'],outs:['Q1','Q2'],gates:['DFF'],clk:1,
   vec:seq([1,0,1,1,0,0,1,0].map(D=>({D})),[0,0],(s,i)=>[{Q1:s[0],Q2:s[1]},[i.D,s[0]]]),task:['Бит продвигается по цепочке на одну ячейку за такт.','A bit moves one cell along the chain per tick.'],
   hint:['Два триггера цепочкой с общим тактом.','Two flip-flops in a chain sharing the clock.']});
-lv({ch:4,pos:[3,7],req:[27],par:3,t:['Детектор фронта','Edge detector'],f:'Y = A<sub>n</sub> ∧ '+ov('A<sub>n−1</sub>'),ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+lv({ch:4,pos:[3,7],req:[27],par:3,od:{Y:['импульс на фронте сигнала','pulse on the rising edge']},t:['Детектор фронта','Edge detector'],f:'Y = A<sub>n</sub> ∧ '+ov('A<sub>n−1</sub>'),ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
   vec:seq([0,1,1,0,1,0,0,1].map(A=>({A})),0,(p,i)=>[{Y:i.A&(1-p)},i.A]),task:['Лампа вспыхивает на один такт, когда A меняется с 0 на 1.','The lamp flashes for one tick when A goes from 0 to 1.'],
   hint:['Триггер помнит прошлое значение A.','A flip-flop remembers the previous value of A.']});
 
 /* ---------- 5. Вычитание и кодирование / Subtraction and codes ---------- */
-lv({ch:5,pos:[0,8],req:['q4'],par:3,t:['Полувычитатель','Half subtractor'],f:['D = A ⊕ B'+SEP+'Z = '+ov('A')+'B','D = A ⊕ B'+SEP+'Bo = '+ov('A')+'B'],ins:['A','B'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR'],
+lv({ch:5,pos:[0,8],req:['q4'],par:3,od:{Z:['заём из старшего разряда','borrow out']},t:['Полувычитатель','Half subtractor'],f:['D = A ⊕ B'+SEP+'Z = '+ov('A')+'B','D = A ⊕ B'+SEP+'Bo = '+ov('A')+'B'],ins:['A','B'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR'],
   vec:comb(['A','B'],i=>({D:i.A^i.B,Z:(1-i.A)&i.B})),task:['Вычтите B из A: D — разность, Z — заём из старшего разряда.','Subtract B from A: D is the difference, Bo is the borrow.'],
   hint:['Почти полусумматор, только A перед И инвертируется.','Almost a half adder, but A is inverted before the AND.']});
-lv({ch:5,pos:[1,8],req:[29],par:7,t:['Полный вычитатель','Full subtractor'],f:['D = A ⊕ B ⊕ C'+SEP+'Z = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C','D = A ⊕ B ⊕ C'+SEP+'Bo = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C'],ins:['A','B','C'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR','XNOR'],
+lv({ch:5,pos:[1,8],req:[29],par:7,od:{Z:['заём из старшего разряда','borrow out']},t:['Полный вычитатель','Full subtractor'],f:['D = A ⊕ B ⊕ C'+SEP+'Z = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C','D = A ⊕ B ⊕ C'+SEP+'Bo = '+ov('A')+'B ∨ '+ov('A ⊕ B')+'C'],ins:['A','B','C'],outs:['D','Z'],dl:{Z:'Bo'},gates:['AND','OR','NOT','XOR','XNOR'],
   vec:comb(['A','B','C'],i=>{const r=i.A-i.B-i.C;return{D:r&1,Z:B(r<0)}}),task:['Вычтите B и заём C из A.','Subtract B and borrow C from A.'],
   hint:['Два полувычитателя и ИЛИ для заёмов.','Two half subtractors and an OR for the borrows.']});
 lv({ch:5,pos:[2,8],req:[30],par:3,t:['Равенство чисел','Equal numbers'],f:['E = 1 при A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>','E = 1 when A<sub>1</sub>A<sub>0</sub> = B<sub>1</sub>B<sub>0</sub>'],ins:['A1','A0','B1','B0'],outs:['E'],gates:['AND','OR','XOR','XNOR','NOR','NOT'],
@@ -1303,7 +1317,7 @@ lv({ch:8,pos:[2,14],req:[45],par:6,t:['Сумматор-вычитатель','A
 lv({ch:8,pos:[0,15],req:['q7'],par:3,t:['Инкремент','Incrementer'],f:'PS<sub>1</sub>S<sub>0</sub> = A<sub>1</sub>A<sub>0</sub> + 1',ins:['A1','A0'],outs:['P','S1','S0'],dl:{P:'Co'},gates:['AND','OR','NOT','XOR'],
   vec:comb(['A1','A0'],i=>{const s=i.A1*2+i.A0+1;return{P:s>>2,S1:(s>>1)&1,S0:s&1}}),task:['Прибавьте единицу к двухбитному числу.','Add one to a 2-bit number.'],
   hint:['S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, P = A<sub>1</sub>A<sub>0</sub>.','S<sub>0</sub> = '+ov('A<sub>0</sub>')+', S<sub>1</sub> = A<sub>1</sub> ⊕ A<sub>0</sub>, Co = A<sub>1</sub>A<sub>0</sub>.']});
-lv({ch:8,pos:[1,15],req:[47],par:2,t:['Флаг нуля','Zero flag'],f:'Z = '+ov('A<sub>2</sub> ∨ A<sub>1</sub> ∨ A<sub>0</sub>'),ins:['A2','A1','A0'],outs:['Z'],gates:['OR','NOR','NOT','AND'],
+lv({ch:8,pos:[1,15],req:[47],par:2,od:{Z:['1, если все разряды — нули','1 when every bit is 0']},t:['Флаг нуля','Zero flag'],f:'Z = '+ov('A<sub>2</sub> ∨ A<sub>1</sub> ∨ A<sub>0</sub>'),ins:['A2','A1','A0'],outs:['Z'],gates:['OR','NOR','NOT','AND'],
   vec:comb(['A2','A1','A0'],i=>({Z:B(!i.A2&&!i.A1&&!i.A0)})),task:['Флаг Z поднимается, когда результат равен нулю.','Flag Z goes up when the result is zero.'],
   hint:['ИЛИ двух разрядов, затем ИЛИ-НЕ с третьим.','OR two bits, then NOR with the third.']});
 lv({ch:8,pos:[2,15],req:[48],par:7,t:['Больше','Greater than'],f:'G = A<sub>1</sub>'+ov('B<sub>1</sub>')+' ∨ (A<sub>1</sub> ⊙ B<sub>1</sub>)A<sub>0</sub>'+ov('B<sub>0</sub>'),ins:['A1','A0','B1','B0'],outs:['G'],gates:['AND','OR','NOT','XNOR','XOR'],
@@ -1335,10 +1349,10 @@ lv({ch:10,pos:[0,18],req:['q9'],par:5,t:['Семисегментный инди�
   vec:comb(['A1','A0'],i=>{const S=['abcdef','bc','abdeg','abcdg'][i.A1*2+i.A0],o={};'abcdefg'.split('').forEach(c=>o[c]=B(S.includes(c)));return o}),
   task:['Зажгите сегменты так, чтобы получилась цифра A<sub>1</sub>A<sub>0</sub>. Сегмент b горит всегда.','Light the segments to draw digit A<sub>1</sub>A<sub>0</sub>. Segment b is always on.'],
   hint:['a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. Постоянную 1 даст A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.','a = d = A<sub>1</sub> ∨ '+ov('A<sub>0</sub>')+', e = '+ov('A<sub>0</sub>')+', g = A<sub>1</sub>. A constant 1 is A<sub>0</sub> ∨ '+ov('A<sub>0</sub>')+'.']});
-lv({ch:10,pos:[1,18],req:[56],par:4,t:['Светофор','Traffic light'],f:['К → К+Ж → З → Ж','R → R+Y → G → Y'],ins:[],outs:['R','Y','G'],gates:['DFF','NOT','AND','XOR','NOR'],clk:1,
+lv({ch:10,pos:[1,18],req:[56],par:4,od:{R:['красный','red'],Y:['жёлтый','yellow'],G:['зелёный','green']},t:['Светофор','Traffic light'],f:['К → К+Ж → З → Ж','R → R+Y → G → Y'],ins:[],outs:['R','Y','G'],gates:['DFF','NOT','AND','XOR','NOR'],clk:1,
   vec:seq(T(8),0,s=>[{R:B(s<2),Y:B(s===1||s===3),G:B(s===2)},(s+1)&3]),task:['Четыре фазы светофора по кругу.','Four traffic-light phases in a loop.'],
   hint:['Внутри — двухбитный счётчик. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.','Inside is a 2-bit counter. R = '+ov('Q<sub>1</sub>')+', Y = Q<sub>0</sub>, G = Q<sub>1</sub>'+ov('Q<sub>0</sub>')+'.']});
-lv({ch:10,pos:[2,18],req:[57],par:4,t:['Кодовый замок','Code lock'],f:['Y = 1 после 1 → 0 → 1','Y = 1 after 1 → 0 → 1'],ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
+lv({ch:10,pos:[2,18],req:[57],par:4,od:{Y:['1 — замок открыт','1 = lock open']},t:['Кодовый замок','Code lock'],f:['Y = 1 после 1 → 0 → 1','Y = 1 after 1 → 0 → 1'],ins:['A'],outs:['Y'],gates:['DFF','AND','NOT','NOR'],clk:1,
   vec:seq([1,0,1,1,0,1,0,0,1,0,1].map(A=>({A})),[0,0],(s,i)=>[{Y:i.A&(1-s[0])&s[1]},[i.A,s[0]]]),task:['Замок открывается, когда последние три значения A были 1, 0, 1.','The lock opens when the last three values of A were 1, 0, 1.'],
   hint:['Сдвиговый регистр помнит два прошлых значения. Дальше — одно И с инверсией посередине.','A shift register remembers the two previous values. Then one AND with the middle one inverted.']});
 lv({ch:10,pos:[0,19],req:['q9'],par:4,t:['Реверсивный счётчик','Up/down counter'],f:'Q ← U ? Q + 1 : Q − 1',ins:['U'],outs:['Q1','Q0'],gates:['DFF','XOR','XNOR','NOT'],clk:1,
@@ -1349,7 +1363,7 @@ lv({ch:10,pos:[3,18],req:[58,59],par:12,t:['Счётчик команд','Progra
   task:['Сердце процессора: считает по порядку, а при L = 1 прыгает по адресу D.','The heart of a CPU: counts in order, and jumps to address D when L = 1.'],
   hint:['Инкремент и регистр с загрузкой вы уже собирали. Соедините их.','You have built an incrementer and a load register. Join them.']});
 
-const SANDBOX={id:0,t:['Песочница','Sandbox'],f:'',ins:['A','B','C'],outs:['X','Y','Z'],gates:null,clk:1,sandbox:1,vec:[],
+const SANDBOX={id:0,od:{Y:null},t:['Песочница','Sandbox'],f:'',ins:['A','B','C'],outs:['X','Y','Z'],gates:null,clk:1,sandbox:1,vec:[],
   task:['Свободная сборка. Все элементы доступны.','Free build. Every element is available.'],hint:['Тактовый вход C можно переключать вручную.','You can toggle clock input C by hand.']};
 const CHAPTERS=[['Основы','Basics'],['Универсальный элемент','The universal gate'],['Арифметика и выбор','Arithmetic and selection'],['Память и такт','Memory and clock'],
   ['Вычитание и кодирование','Subtraction and codes'],['Автоматы','State machines'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Пробуждение','Awakening']];
@@ -1982,6 +1996,7 @@ function render(){
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
+    {const d=outDesc(level,k);if(d)s+=`<circle class="odhit" data-od="${i}" cx="${n.x+28}" cy="${n.y}" r="21" aria-label="${esc(disp(k)+' — '+tx(d))}"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
     s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
@@ -2202,6 +2217,13 @@ function loupe(x,y){
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
 function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
+function odTip(el){const t=$('#odTip');if(!el){t.classList.remove('on');return}
+  const k=level.outs[+el.dataset.od],d=k!=null&&outDesc(level,k);if(!d){t.classList.remove('on');return}
+  t.innerHTML=`<b>${subS(disp(k))}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
+  t.classList.add('on');const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';t.style.top=Math.max(8,r.top-t.offsetHeight-8)+'px'}
+board.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-od]');if(el&&!act&&e.pointerType!=='touch')odTip(el)});
+board.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('[data-od]'))odTip(null)});
+board.addEventListener('pointerdown',()=>odTip(null),true);
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}

@@ -385,6 +385,7 @@ function render(){
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
+    {const d=outDesc(level,k);if(d)s+=`<circle class="odhit" data-od="${i}" cx="${n.x+28}" cy="${n.y}" r="21" aria-label="${esc(disp(k)+' — '+tx(d))}"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
     s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
@@ -605,6 +606,13 @@ function loupe(x,y){
   $('#loupeG').setAttribute('transform',`translate(${R},${R}) scale(${Z}) translate(${-x},${-y})`);
 }
 function loupeOff(){const L=$('#loupe');if(!L.classList.contains('on'))return;L.classList.remove('on');for(const u of $$('#loupeG use'))u.removeAttribute('href')}
+function odTip(el){const t=$('#odTip');if(!el){t.classList.remove('on');return}
+  const k=level.outs[+el.dataset.od],d=k!=null&&outDesc(level,k);if(!d){t.classList.remove('on');return}
+  t.innerHTML=`<b>${subS(disp(k))}</b> — ${esc(tx(d))}`;const r=el.getBoundingClientRect();
+  t.classList.add('on');const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';t.style.top=Math.max(8,r.top-t.offsetHeight-8)+'px'}
+board.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-od]');if(el&&!act&&e.pointerType!=='touch')odTip(el)});
+board.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('[data-od]'))odTip(null)});
+board.addEventListener('pointerdown',()=>odTip(null),true);
 function hitInfo(target){
   const pin=target.closest&&target.closest('[data-pin]');
   if(pin){const [g,k,p]=pin.dataset.pin.split('|');return{type:'pin',g,k,p:+p}}
