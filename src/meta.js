@@ -247,6 +247,7 @@ function openMenu(s){
 }
 function closeMenu(){$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
 $('#btnMenu').onclick=()=>openMenu('main');
+$('#btnLevels').onclick=()=>openMenu('levels');$('#btnSettings').onclick=()=>openMenu('settings');
 $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   ensureAudio();sfx('ui');
@@ -373,7 +374,7 @@ $('#setReset').onclick=()=>{const b=$('#setReset');
 /* ========== language ========== */
 function applyLang(){
   document.documentElement.lang=LANG;
-  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();
+  $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
   $('#verify').textContent=demoOn?ui('skip'):ui('verify');
   updHud();drawMachine();

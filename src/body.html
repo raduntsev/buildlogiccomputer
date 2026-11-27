@@ -12,7 +12,7 @@
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="tools" role="toolbar">
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div><div class="tgrp" id="tools" role="toolbar">
     <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
     <button class="ib" id="redo" data-tl="redo"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     <i class="tsep"></i>
@@ -21,7 +21,7 @@
   <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 
-<div id="taskCard" class="zz"><div id="formula" class="math"></div><div id="ttWrap"></div></div>
+<div id="taskCard" class="zz"><button id="ttTog" aria-expanded="true"><svg viewBox="0 0 12 12"><path d="M2.5 7.5L6 4L9.5 7.5"/></svg></button><div id="formula" class="math"></div><div id="ttWrap"></div></div>
 
 <aside id="palette" class="zz"></aside>
 <div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>

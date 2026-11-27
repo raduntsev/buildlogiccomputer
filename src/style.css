@@ -738,3 +738,21 @@ table.gtt{border-collapse:separate;border-spacing:3px 3px;margin:-3px;font-varia
 body.calm #gtip{transform:none}
 /* the palette stops above the bottom sheet and scrolls instead of sliding under it */
 @media (min-width:761px){#palette{max-height:calc((100vh - var(--dock,180px)) / var(--ui) - 96px)}}
+
+/* truth table card: drag to move, collapse to the formula */
+#taskCard{cursor:grab;touch-action:none}
+#taskCard.drag{cursor:grabbing;transition:none;user-select:none}
+#taskCard.moved{transform:none}
+#ttTog{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--mute);opacity:.55;transition:opacity .15s,background .15s}
+#taskCard:hover #ttTog,#ttTog:focus-visible{opacity:1}
+#ttTog:hover{background:var(--card2);color:var(--ink)}
+#ttTog svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#taskCard.tthide #ttTog svg{transform:rotate(180deg)}
+#taskCard.tthide #ttWrap{display:none}
+#taskCard:has(#ttWrap:not(:empty)){padding-right:40px;padding-left:40px}
+#taskCard:has(#ttWrap:empty) #ttTog{display:none}
+/* the Back button of every menu screen stays in the top-left corner */
+.scr>.mi.small[data-go]{position:fixed;top:14px;left:16px;margin:0;z-index:6}
+#navGrp .ib svg{width:18px;height:18px}
+/* on phones Menu already leads to the map and settings in one tap; the extra icons do not fit */
+@media (max-width:520px){#navGrp{display:none}}
