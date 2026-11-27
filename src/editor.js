@@ -410,7 +410,7 @@ $('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 const SHEET_MIN=52;
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
 function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(SHEET_MIN)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
-function setSheet(h){sheetH=clamp(h,SHEET_MIN,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+function setSheet(h){sheetH=clamp(h,SHEET_MIN,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+28)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';const mob=innerWidth<=760;if(mob)$('#zoom').style.bottom=(sheetH+84)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+(mob?16:28))+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
