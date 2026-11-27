@@ -167,14 +167,18 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 /* ---------- zoom ---------- */
 #zoom{position:fixed;right:16px;z-index:4;display:flex;gap:4px;transition:bottom .15s}
-#zoom .tbtn{height:36px;padding:0 14px;font-size:14px}
+#zoom{gap:0;padding:3px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
+#zoom .tbtn{height:34px;padding:0 14px;font-size:14px;box-shadow:none;background:transparent}
+#zoom .tbtn:hover{background:var(--card2)}
+#zoom #zOut,#zoom #zIn{width:34px;padding:0;justify-content:center}
 
 /* ---------- bottom dock ---------- */
 #sheet{position:fixed;left:16px;right:16px;bottom:14px;background:var(--paper);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:3;overflow:hidden}
 #grip{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 10px 0 18px;cursor:ns-resize;touch-action:none;position:relative}
 #grip::before{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:4px;background:var(--line)}
-#lvNum{font-size:30px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
-#lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em}
+#lvNum{font-size:30px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1}
+#lvHead{display:inline-flex;align-items:baseline;gap:12px;min-width:0}
+#lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #lvStars{font-size:15px;letter-spacing:2px}
 .st{color:var(--line)}.st.on{color:var(--ink)}
 #saved{font-size:12px;color:var(--mute);opacity:0;transition:opacity .3s;display:inline-flex;align-items:center;gap:6px}
@@ -620,6 +624,10 @@ body.bitOn #menuBit{opacity:0;pointer-events:none}
 
 /* ---------- hint price ---------- */
 #hintBtn{display:inline-flex;align-items:center}
+#hintBtn.owned{padding:0 11px;background:var(--acc-soft);transition:background .2s}
+#hintBtn .hk{font-weight:600;width:14px;text-align:center}
+#hintBtn .hko{display:inline-block;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .25s ease,opacity .2s ease,margin .25s ease}
+#hintBtn.owned:hover .hko,#hintBtn.owned:focus-visible .hko{max-width:240px;opacity:1;margin-left:6px}
 .cost{font-size:12.5px;font-weight:500;opacity:.62;margin-left:9px;white-space:nowrap}
 
 /* ---------- knife and splice ---------- */
@@ -864,7 +872,7 @@ body.calm #gtip{transform:none}
 <div id="zoom" class="zz"><button class="tbtn" id="zOut">−</button><button class="tbtn" id="zFit" data-t="fit"></button><button class="tbtn" id="zIn">+</button></div>
 
 <section id="sheet" class="zz">
-  <div id="grip"><span id="lvNum"></span><span id="lvTitle"></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button><button id="sheetTog" aria-label="−"><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button></div>
+  <div id="grip"><span id="lvHead"><span id="lvNum"></span><span id="lvTitle"></span></span><span id="lvStars"></span><span id="saved" data-t="saved"></span><button id="hintBtn"></button><button id="sheetTog" aria-label="−"><svg viewBox="0 0 12 12"><path d="M2.5 4.5L6 8L9.5 4.5"/></svg></button></div>
   <div id="sheetBody">
     <div id="task"><div id="taskText"></div><div id="hint"></div></div>
     <div id="stampTbl"></div>
@@ -1569,11 +1577,11 @@ function loadLevel(l){
   undoS=[];redoS=[];sel=null;rowMark=null;
   liveIn=ioIns().map(()=>0);
   resetSim();
-  store.set('ll_last',l.id,true);
+  if(!l.sandbox)store.set('ll_last',l.id,true);
   buildChrome();
   fit();
   update();
-  hintUsed=false;failCount=0;bitMuted=false;levelStart=Date.now();idleShown=false;resetIdle();
+  hintUsed=false;failCount=0;bitMuted=false;levelStart=Date.now();idleShown=false;resetIdle();hintBtnDraw();
   levelIntro();
   musicChapter(l.sandbox?topChapter():l.ch);
   if(TOUCH&&l.gates.length&&!store.get('ll_tip',false)){store.set('ll_tip',true,true);setTimeout(()=>toast(ui('touchTip'),7000),1800)}
@@ -1862,8 +1870,8 @@ function buildChrome(){
   $('#lvTitle').textContent=tx(level.t);
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
-  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.remove('on');
-  $('#hintBtn').style.display=level.hint?'':'none';$('#hintBtn').innerHTML=hintLabel();
+  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
+  $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
   $('#verify').style.display=level.sandbox?'none':'';
   const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
@@ -1904,14 +1912,15 @@ $('#hintBtn').onclick=e=>{e.stopPropagation();if(sheetH<160)setSheet(220);giveHi
 $('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 
 /* sheet resize */
+const SHEET_MIN=52;
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
-function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(44)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
-function setSheet(h){sheetH=clamp(h,44,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
+function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(SHEET_MIN)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
+function setSheet(h){sheetH=clamp(h,SHEET_MIN,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+26)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';if(innerWidth<=760)$('#zoom').style.bottom=(sheetH+100)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+28)+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
   g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
   g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
-  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(44);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
+  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
 })();
 
 /* ========== view ========== */
@@ -2723,6 +2732,11 @@ let failCount=0;
 function hintBought(){return !!(level&&(prog.hb||[]).includes(level.id))}
 function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;return failCount>=6?0:failCount>=3?HINT_COST/2:HINT_COST}
 function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
+function hintBtnDraw(){
+  const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
+  b.classList.toggle('owned',own);if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
+  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
+}
 function dailyCheck(){
   const d=today();if(prog.st.day===d)return;
   prog.st.day=d;prog.st.daily=(prog.st.daily||0)+DAILY_PTS;save();updHud();drawShopHead();if($('#mmShop'))$('#mmShop').textContent=ptsN(balance());
@@ -2839,7 +2853,7 @@ $('#shopBox').addEventListener('click',e=>{
 });
 
 Object.assign(UIS,{
-  shop:['Мастерская','Workshop'],hintAsk:['Подскажи','Hint'],hintOpen:['уже открыта','already open'],free:['бесплатно','free'],
+  shop:['Мастерская','Workshop'],hintAsk:['Подсказка','Hint'],hintOpen:['уже куплено','already bought'],free:['бесплатно','free'],
   dailyToast:['Смена началась: +{p}','Shift started: +{p}'],onAcc:['на счету','in your account'],earnedT:['Заработано {e}, потрачено {s}','Earned {e}, spent {s}'],
   drill:['Разминка','Warm-up'],drillAbout:['Короткие вопросы по логике. За каждый верный ответ +{p}.','Short logic questions. +{p} for every correct answer.'],
   drillLeft:['Сегодня можно заработать ещё {p}','You can still earn {p} today'],drillCap:['Лимит разминки на сегодня исчерпан. Отвечать всё равно можно.','Today’s warm-up limit is reached. You can keep answering anyway.'],
@@ -3022,7 +3036,7 @@ Object.assign(STORY,{
 
 /* ========== progress: stars, points, clearance ========== */
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
-function starsHTML(s){return [1,2,4].map(b=>`<span class="st${s&b?' on':''}">${s&b?'★':'☆'}</span>`).join('')}
+function starsHTML(s){return [[1,'starSolved'],[2,'starNoHint'],[4,'starPar']].filter(([b])=>s&b).map(([,k])=>`<span class="st on" title="${ui(k,{p:level?level.par:''})}">★</span>`).join('')}
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
 const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
@@ -3030,12 +3044,12 @@ function rankIdx(p=earned()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});retu
 const quizPassed=ch=>!!(prog.quiz[ch]&&prog.quiz[ch].pass);
 const available=l=>l.req.every(r=>typeof r==='string'?quizPassed(+r.slice(1)):done.has(r));
 const chapterDone=ch=>LV.filter(l=>l.ch===ch).every(l=>done.has(l.id));
-function updHud(){const p=earned(),b=balance();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(b)}</span>`;$('#hud').title=ui('balanceH')+': '+ptsN(b);if($('#hintBtn'))$('#hintBtn').innerHTML=hintLabel()}
+function updHud(){const p=earned(),b=balance();$('#hud').innerHTML=`<span class="hr">${tx(RANKS[rankIdx(p)][1])}</span><span class="hp">${num(b)}</span>`;$('#hud').title=ui('balanceH')+': '+ptsN(b);hintBtnDraw()}
 function savedPing(){const el=$('#saved');if(!el)return;el.classList.add('on');clearTimeout(savedPing.t);savedPing.t=setTimeout(()=>el.classList.remove('on'),1400)}
 
 function onSolved(){
   const id=level.id,first=!done.has(id),prevRank=rankIdx(),old=prog.lv[id]||{s:0,g:999};
-  const bits=1|(hintUsed?0:2)|(C.gates.length<=level.par?4:0);
+  const bits=1|(hintUsed||hintBought()?0:2)|(C.gates.length<=level.par?4:0);
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
   done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
@@ -3068,6 +3082,7 @@ function onFailed(f,n){
   updHud();
   say([{t:extra||pick(STORY.fail),m:'sad',ch:[{t:hintLabel(),f:giveHint},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}]);
 }
+function lastLevel(){const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);return l&&available(l)?l:(LV.find(x=>available(x)&&!done.has(x.id))||LV[0])}
 function nextLevel(){return LV.find(l=>l.id>level.id&&available(l)&&!done.has(l.id))||LV.find(l=>available(l)&&!done.has(l.id))}
 function showCard(ok,title,html,btns){
   const st=$('#resTitle');st.className=ok?'':'bad';st.style.animation='none';void st.offsetWidth;st.style.animation='';
@@ -3246,7 +3261,7 @@ function drawMachine(){
   sv.innerHTML=s;
   const n=on.filter(Boolean).length;
   $('#machineCap').textContent=ui('machineCap',{n,N:10});
-  const lv=store.get('ll_last',1),solved=LV.filter(l=>done.has(l.id)).length;
+  const lv=lastLevel().id,solved=LV.filter(l=>done.has(l.id)).length;
   if($('#mmCont'))$('#mmCont').textContent=ui('mmLevel',{n:lv});
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
@@ -3272,7 +3287,7 @@ $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   ensureAudio();sfx('ui');
   const g=b.dataset.go;
-  if(g==='continue'){if(!level||level.sandbox){const id=store.get('ll_last',1);const l=LV.find(x=>x.id===id);loadLevel(l&&available(l)?l:(nextLevel()||LV[0]))}closeMenu();return}
+  if(g==='continue'){if(!level||level.sandbox)loadLevel(lastLevel());closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
   if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
   openMenu(g);
@@ -3410,8 +3425,7 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
   applySettings(true);
   applyWindow();
   bitMood('idle');dailyCheck();
-  const id=store.get('ll_last',1),l=LV.find(x=>x.id===id);
-  loadLevel(l&&available(l)?l:LV[0]);
+  loadLevel(lastLevel());
   prog.badges.forEach(steamAch);
   if($('#ov').classList.contains('on')&&curScr==='main'){document.body.classList.add('mainScr');setTimeout(menuBitStart,400)}
   bitPlace();
