@@ -1995,7 +1995,7 @@ function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disab
 $('#wcolBtn').onclick=e=>{e.stopPropagation();wcolPop(!$('#wcolPop').classList.contains('on'));sfx('ui')};
 $('#wcolPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#wcolPop').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-wc]');const w=selWire();if(!k||!w)return;
-  const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;changed()}wcolPop(false);sfx('place')});
+  const c=k.dataset.wc;if((w.c||'')!==c){snapshot();if(c)w.c=c;else delete w.c;persist();render()}wcolPop(false);sfx('place')});
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#wcolPop,#wcolBtn'))wcolPop(false)},true);
 function placeSelPop(){
   wcolSync();
@@ -2170,7 +2170,7 @@ function finishWire(to){
   const f=tmp.from;
   if(!C.wires.some(w=>w.from.g===f.g&&w.from.p===f.p&&w.to.g===to.g&&w.to.p===to.p)){
     snapshot();
-    C.wires.push({id:'w'+(nextId++),from:{g:f.g,p:f.p},to:{g:to.g,p:to.p},pts:tmp.pts});
+    const nw={id:'w'+(nextId++),from:{g:f.g,p:f.p},to:{g:to.g,p:to.p},pts:tmp.pts};if(tmp.c)nw.c=tmp.c;C.wires.push(nw);
     sfx('relay');badge('FIRST_WIRE');
     tmp=null;changed();
     {const q=pinPos(to.g,'i',to.p);fxRing(q.x,q.y)}
@@ -2271,7 +2271,7 @@ board.addEventListener('pointerdown',e=>{
   if(h.type==='pin'&&h.k==='o'){startWire({g:h.g,p:h.p},[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY};render();return}
   if(h.type==='pin'&&h.k==='i'){ // pull existing wire off an input
     const w=C.wires.filter(w=>w.to.g===h.g&&w.to.p===h.p).pop();
-    if(w){snapshot();C.wires=C.wires.filter(x=>x!==w);startWire(w.from,w.pts||[],p);act={kind:'wire',sx:e.clientX,sy:e.clientY,detached:true};changed();return}
+    if(w){snapshot();C.wires=C.wires.filter(x=>x!==w);startWire(w.from,w.pts||[],p);tmp.c=w.c;act={kind:'wire',sx:e.clientX,sy:e.clientY,detached:true};changed();return}
     return;
   }
   if(h.type==='wire'){
@@ -2398,6 +2398,7 @@ window.addEventListener('keydown',e=>{
   if(window.keyCapture){window.keyCapture(e);return}
   if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   const c=combo(e);if(!c)return;
+  if((c==='Enter'||c==='Space')&&e.target&&e.target.closest&&e.target.closest('button')&&e.target.matches(':focus-visible'))return;
   const act_=KEYORDER.find(a=>keysFor(a).includes(c));if(!act_)return;
   const inMenu=$('#ov').classList.contains('on');
   if(act_==='menu'){e.preventDefault();if(tmp){tmp=null;render();return}if(knife){knifeSet(false);return}if($('#result').classList.contains('on')){$('#result').classList.remove('on');return}if(!inMenu)openMenu('main');else if(level)closeMenu();return}
