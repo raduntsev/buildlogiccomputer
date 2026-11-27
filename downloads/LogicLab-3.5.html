@@ -1658,6 +1658,9 @@ const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
 /* the circuit is written out 0.3 s after the last edit, not on every click */
 let persistT=0;
+function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-20,n.y+20]:[n.x-8,n.x+50,n.y-22,n.y+22]}
+function ioHits(id,q){const a=ioBox(id,q),ids=[...ioIns().map((_,i)=>'I'+i),...level.outs.map((_,i)=>'O'+i)];
+  return ids.some(o=>{if(o===id)return false;const b=ioBox(o,nodePos(o));return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3]})}
 function persist(){saves[level.id]={gates:C.gates,wires:C.wires};if(C.io)saves[level.id].io=C.io;clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
 function persistNow(){if(persistT){clearTimeout(persistT);persistT=0;save()}}
 window.addEventListener('beforeunload',()=>{persistNow();store.flush(true)});
@@ -2415,7 +2418,7 @@ window.addEventListener('pointermove',e=>{
   const dist=act.sx!=null?Math.hypot(e.clientX-act.sx,e.clientY-act.sy):99;
   if(act.kind==='pan'){view.x=act.vx+e.clientX-act.sx;view.y=act.vy+e.clientY-act.sy;viewXf()}
   else if(act.kind==='toggle'||act.kind==='io'){if(!act.moved&&dist>6){act.moved=true;snapshot()}
-    if(act.moved){C.io=C.io||{};C.io[act.id]={x:snap(act.n0.x+p.x-act.p0.x),y:snap(act.n0.y+p.y-act.p0.y)};renderSoon()}}
+    if(act.moved){const q={x:snap(act.n0.x+p.x-act.p0.x),y:snap(act.n0.y+p.y-act.p0.y)};if(!ioHits(act.id,q)){C.io=C.io||{};C.io[act.id]=q;renderSoon()}}}
   else if(act.kind==='gate'){
     if(!act.moved&&dist>4){act.moved=true;snapshot()}
     if(act.moved){act.g.x=snap(p.x-act.ox);act.g.y=snap(p.y-act.oy);
