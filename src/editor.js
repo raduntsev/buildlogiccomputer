@@ -328,7 +328,7 @@ function render(){
   viewXf();
   const gost=settings.gost, v=sim.v;
   let s='';const parts=[],K=k=>{if(s){parts.push(k,s);s=''}};
-  const dm=cut&&cut.pts.length>1?cutHits():{wires:new Set(),gates:new Set()},insW=(ghost&&ghost.ins&&ghost.ins.w.id)||(act&&act.kind==='gate'&&act.ins&&act.ins.w.id);
+  const NH=netHL(),dm=cut&&cut.pts.length>1?cutHits():{wires:new Set(),gates:new Set()},insW=(ghost&&ghost.ins&&ghost.ins.w.id)||(act&&act.kind==='gate'&&act.ins&&act.ins.w.id);
   // wires
   for(const w of C.wires){
     const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0,doom=dm.wires.has(w.id);
@@ -336,7 +336,7 @@ function render(){
     s+=`<path class="wgap" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}${WCOL[w.c]?' wc" style="--wc:'+WCOL[w.c]:''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
-    s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
+    s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id||NH&&NH.w.has(w.id)?' on':''}" d="${d}"/>`;K('w'+w.id);
   }
   for(const w of C.wires)if(w.n){const a=noteAt(w);s+=`<text class="wnote" x="${a.x}" y="${a.y}" text-anchor="${a.h?'middle':'start'}"${WCOL[w.c]?` style="fill:${WCOL[w.c]}"`:''}>${esc(w.n)}</text>`}
   K('wnotes');
@@ -348,7 +348,7 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&NH.n.has(g.id)?' sel':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     s+=`</g>`;K('g'+g.id);
@@ -365,6 +365,7 @@ function render(){
   ins.forEach((k,i)=>{
     const n=nodePos('I'+i),val=v['I'+i+':0']|0,isC=level.clk&&i===ins.length-1;
     const lit=val;
+    if(NH&&NH.n.has('I'+i))s+=`<rect class="nethl" x="${n.x-67}" y="${n.y-24}" width="84" height="48" rx="24"/>`;
     s+=`<g class="flag" data-in="${i}"><rect x="${n.x-62}" y="${n.y-19}" width="74" height="38" rx="19" fill="${lit?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<circle cx="${lit?n.x-7:n.x-43}" cy="${n.y}" r="13" fill="${lit?'var(--ink)':'var(--card2)'}" style="transition:cx .15s"/>`;
     if(isC)s+=`<path d="${lit?`M${n.x-49},${n.y+4}h4v-8h5v8h5v-8h4`:`M${n.x-13},${n.y+4}h4v-8h5v8h5v-8h4`}" fill="none" stroke="${lit?'var(--acc)':'var(--ink)'}" stroke-width="1.6"/>`;
@@ -376,6 +377,7 @@ function render(){
   const ov_=readOuts();
   level.outs.forEach((k,i)=>{
     const n=nodePos('O'+i),val=ov_[k];
+    if(NH&&NH.n.has('O'+i))s+=`<circle class="nethl" cx="${n.x+28}" cy="${n.y}" r="25"/>`;
     s+=`<path class="gst" d="M${n.x},${n.y}H${n.x+10}"/>`;
     if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
@@ -416,17 +418,34 @@ function patchWorld(parts){
 const WCOL={r:'#D9483B',o:'#E08A1E',g:'#3E9B4F',b:'#2F6FD0',v:'#8A4FC8'};
 function selWire(){return sel&&sel.w?C.wires.find(x=>x.id===sel.w):null}
 function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();p.classList.toggle('on',on);b.setAttribute('aria-expanded',on);
-  if(!on)return;const w=selWire();
+  if(!on)return;if(netOn)netOpen(false);const w=selWire();
   p.innerHTML=['',...Object.keys(WCOL)].map(k=>`<button role="menuitemradio" aria-checked="${(w.c||'')===k}" data-wc="${k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('');
   const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px'}
-function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit)}}
+function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');$('#netBtn').disabled=!w||demoOn;if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw()}
+let netOn=false;
+function netOf(w){return C.wires.filter(x=>x.from.g===w.from.g&&x.from.p===w.from.p)}
+function netHL(){const w=netOn&&selWire();if(!w)return null;const N=netOf(w);return{w:new Set(N.map(x=>x.id)),n:new Set([w.from.g,...N.map(x=>x.to.g)])}}
+function nodeName(id,p,k){if(id[0]==='I')return ioIns()[+id.slice(1)];if(id[0]==='O')return disp(level.outs[+id.slice(1)]);
+  const g=nodePos(id);if(!g)return id;const P=gPins(g.type)[k],n=tx(GATES[g.type].n)+' №'+id.slice(1);return P&&P.length>1?n+' · '+ui(k==='o'?'pinO':'pinI')+' '+(p+1):n}
+function netDraw(){const box=$('#netInsp'),w=selWire();if(!netOn||!w)return;const N=netOf(w),val=sim.v[w.from.g+':'+w.from.p]|0,c=N.every(x=>x.c===w.c)?w.c||'':null,notes=N.filter(x=>x.n).map(x=>x.n);
+  box.innerHTML=`<div class="ni-h"><b>${ui('netT')}</b><span class="ni-v${val?' on':''}">${val}</span></div>`
+   +`<div class="ni-r"><span>${ui('netFrom')}</span><div>${esc(nodeName(w.from.g,w.from.p,'o'))}</div></div>`
+   +`<div class="ni-r"><span>${ui('netTo')}</span><div>${N.map(x=>esc(nodeName(x.to.g,x.to.p,'i'))).join('<br>')}</div></div>`
+   +`<div class="ni-r"><span>${ui('netCol')}</span><div class="ni-c">${['',...Object.keys(WCOL)].map(k=>`<button data-nc="${k}" aria-checked="${c===k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('')}</div></div>`
+   +(notes.length?`<div class="ni-r"><span>${ui('netNotes')}</span><div>${notes.map(esc).join('<br>')}</div></div>`:'');
+  const r=$('#netBtn').getBoundingClientRect();box.style.top=Math.max(80,Math.min(r.top+r.height/2-box.offsetHeight/2,innerHeight-box.offsetHeight-12))+'px';box.style.right=(innerWidth-r.left+8)+'px'}
+function netOpen(on){on=!!on&&!!selWire();if(on===netOn)return;netOn=on;$('#netInsp').classList.toggle('on',on);$('#netBtn').setAttribute('aria-expanded',on);$('#netBtn').classList.toggle('on',on);if(on){wcolPop(false);wnoteOpen(false)}render()}
+$('#netBtn').onclick=e=>{e.stopPropagation();netOpen(!netOn);sfx('ui')};
+$('#netInsp').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#netInsp').addEventListener('click',e=>{e.stopPropagation();const k=e.target.closest('[data-nc]'),w=selWire();if(!k||!w)return;const c=k.dataset.nc,N=netOf(w);
+  if(N.every(x=>(x.c||'')===c))return;snapshot();for(const x of N){if(c)x.c=c;else delete x.c}persist();render();sfx('place')});
 function noteAt(w){const P=wirePts(w);let b=null;for(let i=0;i<P.length-1;i++){const a=P[i],c=P[i+1],l=Math.abs(a.x-c.x)+Math.abs(a.y-c.y);if(!b||l>b.l)b={l,a,c}}
   if(!b){const q=P[0]||{x:0,y:0};return{x:q.x,y:q.y-9,h:true}}
   const h=b.a.y===b.c.y,m={x:(b.a.x+b.c.x)/2,y:(b.a.y+b.c.y)/2};return h?{x:m.x,y:m.y-9,h}:{x:m.x+8,y:m.y,h}}
 let noteW=null;
 function wnoteOpen(on){const p=$('#wnotePop'),i=$('#wnoteIn'),b=$('#wnoteBtn');const w=on&&selWire();
   if(!w){if(noteW){noteW=null;p.classList.remove('on');b.setAttribute('aria-expanded',false)}return}
-  noteW=w.id;wcolPop(false);i.value=w.n||'';i.placeholder=ui('wnotePh');i.setAttribute('aria-label',ui('wnote'));
+  noteW=w.id;wcolPop(false);if(netOn)netOpen(false);i.value=w.n||'';i.placeholder=ui('wnotePh');i.setAttribute('aria-label',ui('wnote'));
   const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px';
   p.classList.add('on');b.setAttribute('aria-expanded',true);i.focus();i.select()}
 function wnoteCommit(){const w=noteW&&C.wires.find(x=>x.id===noteW);const v=$('#wnoteIn').value.trim().slice(0,40);wnoteOpen(false);
