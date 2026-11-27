@@ -273,6 +273,8 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 
 /* ---------- board svg ---------- */
 .w{fill:none;pointer-events:none;stroke-width:calc(var(--ww) * 1px);stroke-linejoin:round;stroke-linecap:round}
+/* canvas-coloured halo under every wire: where wires cross, the upper one visibly passes over the lower */
+.wgap{fill:none;pointer-events:none;stroke:var(--bg);stroke-width:calc(var(--ww) * 1px + 6px);stroke-linejoin:round}
 .w0{stroke:var(--w0)}
 .w1{stroke:var(--w1)}
 .wf{fill:none;pointer-events:none;stroke:var(--acc);stroke-width:max(1.5px,calc(var(--ww) * 1px - 2.5px));stroke-dasharray:5 23;stroke-linecap:round;animation:flow2 1.6s linear infinite}
@@ -1895,6 +1897,7 @@ function render(){
   for(const w of C.wires){
     const d=roundD(wirePts(w)),val=v[w.from.g+':'+w.from.p]|0,doom=dm.wires.has(w.id);
     if(insW===w.id)s+=`<path class="wins" d="${d}"/>`;
+    s+=`<path class="wgap" d="${d}"/>`;
     s+=`<path class="w w${val}${doom?' doom':''}" d="${d}"/>`;
     if(demoOn&&val&&!doom)s+=`<path class="wf" d="${d}"/>`;
     s+=`<path class="whit${sel&&sel.w===w.id?' on':''}" data-wire="${w.id}" d="${d}"/><path class="wsel${sel&&sel.w===w.id?' on':''}" d="${d}"/>`;K('w'+w.id);
