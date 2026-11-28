@@ -1314,10 +1314,11 @@ function synth(lv){
     if(est(tt.map(x=>1-x))+1<=est(tt))pref|=(1<<oi);
   });
   masks.sort((a,b)=>((a[1]===pref?-1:0)-(b[1]===pref?-1:0))||a[0]-b[0]);
+  let best=null;
   for(const [,m] of masks){
-    try{return attempt(m)}catch(e){}
+    try{const r=attempt(m);if(!best||r.gates.length<best.gates.length)best=r}catch(e){}
   }
-  return null;
+  return best;
 }
 function h1Text(lv){
   if(lv.h1)return tx(lv.h1);

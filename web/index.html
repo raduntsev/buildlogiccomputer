@@ -1240,18 +1240,18 @@ function lv(o){o.id=LV.length+1;o.outs=o.outs||['Y'];o.gates=o.gates||[];LV.push
 const T=n=>Array(n).fill(0).map(()=>({}));
 
 /* ---------- 1. Основы / Basics ---------- */
-lv({ch:1,pos:[0,0],req:[],par:0,t:['Провод','Wire'],f:'Y = A',ins:['A'],vec:comb(['A'],i=>({Y:i.A})),
-  task:['Сигнал должен дойти от входа до лампы.','The signal must travel from the input to the lamp.'],
-  hint:['Потяните от точки на флажке A к лампе Y.','Drag from the dot on flag A to lamp Y.']});
-lv({ch:1,pos:[1,0],req:[1],par:1,t:['Инверсия','Inversion'],f:'Y = '+ov('A'),ins:['A'],gates:['NOT'],vec:comb(['A'],i=>({Y:1-i.A})),
-  task:['Лампа горит, когда на входе ноль.','The lamp is lit when the input is zero.'],
-  hint:['Элемент НЕ переворачивает сигнал: 0 → 1, 1 → 0.','A NOT gate flips the signal: 0 → 1, 1 → 0.']});
-lv({ch:1,pos:[2,0],req:[2],par:1,t:['Конъюнкция','Conjunction'],f:'Y = A ∧ B',ins:['A','B'],gates:['AND'],vec:comb(['A','B'],i=>({Y:i.A&i.B})),
-  task:['Лампа горит, только когда включены оба входа.','The lamp is lit only when both inputs are on.'],
-  hint:['Элемент И даёт 1, только если на всех входах 1.','AND outputs 1 only when every input is 1.']});
-lv({ch:1,pos:[2,1],req:[2],par:1,t:['Дизъюнкция','Disjunction'],f:'Y = A ∨ B',ins:['A','B'],gates:['OR'],vec:comb(['A','B'],i=>({Y:i.A|i.B})),
-  task:['Лампа горит, если включён хотя бы один вход.','The lamp is lit if at least one input is on.'],
-  hint:['Элемент ИЛИ даёт 1, если хотя бы на одном входе 1.','OR outputs 1 if any input is 1.']});
+lv({ch:1,pos:[0,0],req:[],par:0,outs:['X','Y','Z'],t:['Перепутанные провода','Mixed-up wires'],f:'X = B'+SEP+'Y = C'+SEP+'Z = A',ins:['A','B','C'],vec:comb(['A','B','C'],i=>({X:i.B,Y:i.C,Z:i.A})),
+  task:['Монтажник перепутал все три провода. К каждой лампе должен идти свой сигнал: X ← B, Y ← C, Z ← A.','The wiring technician mixed up all three lines. Each lamp needs its own signal: X ← B, Y ← C, Z ← A.'],
+  hint:['Тяните от точки на флажке к нужной лампе. Провода могут пересекаться — это нормально.','Drag from the dot on a flag to the right lamp. Wires may cross — that is fine.']});
+lv({ch:1,pos:[1,0],req:[1],par:2,outs:['X','Y'],t:['Инверсия','Inversion'],f:'X = '+ov('A')+SEP+'Y = '+ov('B'),ins:['A','B'],gates:['NOT'],vec:comb(['A','B'],i=>({X:1-i.A,Y:1-i.B})),
+  task:['Обе лампы перепутаны с точностью до наоборот: каждая должна гореть, когда её вход погашен.','Both lamps are exactly backwards: each must light when its input is dark.'],
+  hint:['Элемент НЕ переворачивает сигнал: 0 → 1, 1 → 0. Одного типа элемента может быть несколько на схеме.','A NOT gate flips the signal: 0 → 1, 1 → 0. A circuit can hold several gates of the same type.']});
+lv({ch:1,pos:[2,0],req:[2],par:2,t:['Запрет','Inhibit'],f:'Y = A ∧ '+ov('B'),ins:['A','B'],gates:['AND','NOT'],vec:comb(['A','B'],i=>({Y:i.A&(1-i.B)})),
+  task:['Сигнал A должен проходить к лампе, но только когда блокировка B отпущена. Горячий вход B запрещает всё.','Signal A must reach the lamp, but only while the inhibit line B is released. A hot B forbids everything.'],
+  hint:['Элемент И даёт 1, только если на всех входах 1. Один из входов придётся перевернуть.','AND outputs 1 only when every input is 1. One of the inputs will have to be flipped.']});
+lv({ch:1,pos:[2,1],req:[2],par:2,t:['Импликация','Implication'],f:'Y = '+ov('A')+' ∨ B',ins:['A','B'],gates:['OR','NOT'],vec:comb(['A','B'],i=>({Y:(1-i.A)|i.B})),
+  task:['Лампа дублирует вход B, но когда A погашен, она горит всегда. Гаснуть она может только вместе с A — и лишь когда B темно.','The lamp follows input B, but while A is dark it is always lit. It may only go dark together with A — and only when B is dark.'],
+  hint:['Элемент ИЛИ даёт 1, если хоть на одном входе 1. Здесь один вход поступает напрямую, а второй — через инвертор.','OR outputs 1 if any input is 1. Here one input goes straight, the other through an inverter.']});
 lv({ch:1,pos:[3,0],req:[3],par:2,t:['Штрих Шеффера','Sheffer stroke'],f:'Y = '+ov('A ∧ B'),ins:['A','B'],gates:['AND','NOT'],vec:comb(['A','B'],i=>({Y:1-(i.A&i.B)})),
   task:['Соберите И-НЕ из двух элементов.','Build NAND out of two gates.'],
   hint:['Поставьте НЕ после И.','Put a NOT after the AND.']});
@@ -1450,10 +1450,10 @@ const CHAPTERS=[['Основы','Basics'],['Универсальный элем�
 
 
 /* tier-1 nudges for chapter 1 (authored; other chapters use the generated nudge) */
-LV[0].h1=['Соедините вход с лампой напрямую.','Connect the input straight to the lamp.'];
-LV[1].h1=['Лампа должна гореть, когда вход погашен. Нужен элемент, который переворачивает сигнал.','The lamp must light when the input is dark. You need a gate that flips the signal.'];
-LV[2].h1=['Лампа горит, только когда оба входа горят вместе.','The lamp lights only when both inputs are on together.'];
-LV[3].h1=['Лампа гаснет, только когда оба входа погашены.','The lamp goes dark only when both inputs are dark.'];
+LV[0].h1=['Проводов три, и каждый идёт не к своей лампе. Начните с любого флажка и найдите его лампу по таблице.','There are three wires, each going to the wrong lamp. Start with any flag and find its lamp in the table.'];
+LV[1].h1=['Понадобятся два одинаковых элемента — по одному на каждую лампу.','You will need two identical gates — one per lamp.'];
+LV[2].h1=['Сигнал B должен запрещать, значит, на элемент И он должен прийти перевёрнутым.','B must forbid, so it has to reach the AND gate flipped.'];
+LV[3].h1=['Лампа гаснет только в одной строке таблицы. Посмотрите, какой вход в этой строке единственный горит.','The lamp is dark in exactly one row. Look at which input is the only lit one in that row.'];
 LV[4].h1=['Сначала соберите A ∧ B, а потом переверните результат.','First build A ∧ B, then flip the result.'];
 LV[5].h1=['Сначала соберите A ∨ B, а потом переверните результат.','First build A ∨ B, then flip the result.'];
 LV[6].h1=['Входы должны различаться: один горит, другой нет. Два случая — два слагаемых.','The inputs must differ: one on, the other off. Two cases — two terms.'];
@@ -1463,8 +1463,8 @@ LV[7].h1=['Лампа горит, когда входы одинаковы. На
 /* historical notes, shown after the level is solved (item 19) */
 LV[0].hist=['В первых компьютерах — Z3 (1941) и ENIAC (1945) — программу задавали буквально проводами: переставил шнур на панели — получил другую машину.','In the first computers — the Z3 (1941) and ENIAC (1945) — programs were literally wired: move a cable on the panel and you get a different machine.'];
 LV[1].hist=['Инвертор — самый простой вентиль: на одном транзисторе. Релейные инверторы работали в машине Конрада Цузе Z3 ещё в 1941 году.','The inverter is the simplest gate: a single transistor. Relay inverters were already clicking inside Konrad Zuse’s Z3 in 1941.'];
-LV[2].hist=['Джордж Буль ввёл конъюнкцию в «Исследовании законов мышления» (1854) — задолго до первых компьютеров, просто как алгебру логики.','George Boole introduced conjunction in “The Laws of Thought” (1854) — long before computers, simply as an algebra of logic.'];
-LV[3].hist=['Дизъюнкция — тоже из алгебры Буля 1854 года. Ламповые вентили ИЛИ считали внутри ENIAC со скоростью 5000 сложений в секунду.','Disjunction is also from Boole’s 1854 algebra. Vacuum-tube OR gates inside ENIAC clocked 5000 additions per second.'];
+LV[2].hist=['Связку «A и не B» называют запретом (inhibit): в микросхемах она встречается так часто, что выпускали готовые элементы с инверсией одного входа.','The “A and not B” pattern is called inhibit: it is so common in hardware that chips with one pre-inverted input were sold as standard parts.'];
+LV[3].hist=['«Если A, то B» в схемах — это ¬A ∨ B. Материальную импликацию формализовали ещё в «Principia Mathematica» Уайтхеда и Рассела (1910).','“If A then B” in circuits is ¬A ∨ B. Material implication was formalized back in Whitehead and Russell’s Principia Mathematica (1910).'];
 LV[4].hist=['Генри Шеффер в 1913 году доказал, что одной этой операции достаточно для всей логики. Бортовой компьютер «Аполлона» был построен почти целиком на элементах И-НЕ.','In 1913 Henry Sheffer proved this single operation suffices for all of logic. The Apollo Guidance Computer was built almost entirely out of NAND gates.'];
 LV[5].hist=['Чарльз Пирс нашёл эту операцию ещё в 1880 году, но не опубликовал — она заново открылась только после Шеффера. ИЛИ-НЕ так же универсально, как И-НЕ.','Charles Peirce found this operation back in 1880 but never published it; it was rediscovered after Sheffer. NOR is every bit as universal as NAND.'];
 LV[6].hist=['Исключающее ИЛИ — сердце сложения и шифрования: одноразовый блокнот Вернама (1917), самый стойкий шифр в истории, это просто XOR сообщения с ключом.','XOR is the heart of addition and of encryption: Vernam’s one-time pad (1917), the strongest cipher in history, is just the message XORed with a key.'];
@@ -1550,10 +1550,10 @@ const STORY={
     9:['Глава девятая. Испытания с ограничениями. Элементов мало, амбиций много. Как у меня.','Chapter nine. Trials with limits. Few gates, many ambitions. Like me.'],
     10:['Глава десятая. Пробуждение. Ещё немного — и Машина откроет глаза. Надеюсь, она меня вспомнит.','Chapter ten. Awakening. A little more and the Machine opens its eyes. I hope it remembers me.']},
   lv:{
-    1:['Первый провод. Соедините флажок A с лампой Y. Это проще, чем кажется. Хотя вам, возможно, покажется сложнее.','First wire. Connect flag A to lamp Y. It is easier than it looks. Although to you it may look harder.'],
-    2:['Элемент НЕ. Говорит «нет» на всё. Мы с ним похожи.','The NOT gate. It says “no” to everything. We have a lot in common.'],
-    3:['Элемент И выдаёт единицу, только если оба входа согласны. Строгий. Уважаю.','AND outputs one only when both inputs agree. Strict. I respect that.'],
-    4:['Элементу ИЛИ хватает одной единицы. Низкие стандарты. Но кто я такой, чтобы судить? А, точно: я тот, кто судит.','OR is happy with a single one. Low standards. But who am I to judge? Oh, right: I am the one who judges.'],
+    1:['Монтажник перепутал три провода и уволился. Записываю в протокол: «уволен за провода». Разберите, что куда идёт.','The wiring technician mixed up three cables and quit. Logging: “fired over wires”. Figure out what goes where.'],
+    2:['Элемент НЕ. Говорит «нет» на всё. Мы с ним похожи. Здесь их понадобится два.','The NOT gate. It says “no” to everything. We have a lot in common. You will need two of them here.'],
+    3:['Вход B — блокировка: пока он горит, лампе ничего не светит. Элемент И строгий, а с инверсией — ещё строже. Уважаю.','Input B is an inhibit line: while it is lit, the lamp gets nothing. AND is strict, and with inversion even stricter. I respect that.'],
+    4:['Импликация: лампа повторяет B, а при погашенном A горит всегда. Звучит как мой трудовой контракт.','Implication: the lamp follows B, and while A is dark it is always lit. Sounds like my employment contract.'],
     5:['Соберите И-НЕ из И и НЕ. В протоколе это называется «штрих Шеффера». Звучит как приём в фехтовании.','Build NAND from AND and NOT. The log calls it the “Sheffer stroke”. Sounds like a fencing move.'],
     6:['Теперь ИЛИ-НЕ, стрелка Пирса. Настоящих стрел в лаборатории нет, я проверял.','Now NOR, the Peirce arrow. There are no real arrows in the lab. I checked.'],
     7:['Исключающее ИЛИ горит, когда входы спорят. Я бы назвал его элементом «семейный ужин».','XOR lights up when its inputs argue. I would call it the “family dinner” gate.'],
@@ -3079,10 +3079,11 @@ function synth(lv){
     if(est(tt.map(x=>1-x))+1<=est(tt))pref|=(1<<oi);
   });
   masks.sort((a,b)=>((a[1]===pref?-1:0)-(b[1]===pref?-1:0))||a[0]-b[0]);
+  let best=null;
   for(const [,m] of masks){
-    try{return attempt(m)}catch(e){}
+    try{const r=attempt(m);if(!best||r.gates.length<best.gates.length)best=r}catch(e){}
   }
-  return null;
+  return best;
 }
 function h1Text(lv){
   if(lv.h1)return tx(lv.h1);
