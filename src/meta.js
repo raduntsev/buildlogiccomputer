@@ -17,6 +17,8 @@ function onSolved(){
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
   done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
+  const becameBlk=!level.seq&&!level.clk&&C.gates.length&&(first||!GATES[blkType(level)]);
+  if(!level.seq&&!level.clk&&C.gates.length)try{blkRefresh(level)}catch(e){}
   const chDone=first&&chapterDone(level.ch);
   const nx=nextLevel();
   const btns=[{t:ui('stay')},{t:ui('levels'),f:()=>openMenu('levels')}];
@@ -28,6 +30,7 @@ function onSolved(){
      <div class="rmet"><div><b class="${C.gates.length<=level.par?'hl':''}">${C.gates.length}</b><span>${ui('mGates')}</span></div><div><b>${level.par}</b><span>${ui('mPar')}</span></div><div><b class="hl">+${gain}</b><span>${ui('points').toLowerCase()}</span></div></div>`,btns);
   musicMood('bright',30000);
   const lines=[{t:pick(bits===7?STORY.win3:STORY.win),m:bits===7?'smug':'happy'}];
+  if(becameBlk)lines.push({t:STORY.blkNew,m:'happy'});
   if(chDone){if(level.ch===10)lines.push(...STORY.final);else lines.push({t:STORY.chDone[level.ch],m:'happy'})}
   say(lines);
   badge('FIRST_LEVEL');
@@ -400,3 +403,5 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
   },700);
 })();
 window.LL={LV,get C(){return C},set C(v){C=v},loadLevel,settle,readOuts,resetSim,changed,get level(){return level},done,prog,points,openQuiz,openMenu,badge,get QZ(){return QZ}};
+
+STORY.blkNew=['Эта схема стала блоком: вы найдёте её на полке в следующих уровнях и в песочнице. Эту схему вы будете использовать дальше — Машина запоминает всё.','This circuit is now a block: you will find it on the shelf in later levels and in the sandbox. You will use it again — the Machine remembers everything.'];
