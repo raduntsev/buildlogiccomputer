@@ -852,3 +852,9 @@ text.ffq.on{fill:var(--acc)}
   #bench{bottom:calc(var(--dock,180px) + 64px);width:calc(100vw - 16px);padding:8px 8px 10px}
   table.bj{font-size:12px}.bj td{min-width:20px;height:22px}
 }
+
+/* hint tiers */
+.ht{margin:6px 0}
+.ht b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
+.htb{margin-top:3px;font-size:13px;line-height:1.45}
+.ht+.ht{border-top:1px solid var(--line);padding-top:6px}

@@ -954,6 +954,12 @@ text.ffq.on{fill:var(--acc)}
   #bench{bottom:calc(var(--dock,180px) + 64px);width:calc(100vw - 16px);padding:8px 8px 10px}
   table.bj{font-size:12px}.bj td{min-width:20px;height:22px}
 }
+
+/* hint tiers */
+.ht{margin:6px 0}
+.ht b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
+.htb{margin-top:3px;font-size:13px;line-height:1.45}
+.ht+.ht{border-top:1px solid var(--line);padding-top:6px}
 </style>
 </head>
 <body>
@@ -1412,6 +1418,17 @@ const SANDBOX={id:0,od:{Y:null},t:['Песочница','Sandbox'],f:'',ins:['A'
   task:['Свободная сборка. Все элементы доступны.','Free build. Every element is available.'],hint:['Тактовый вход C можно переключать вручную.','You can toggle clock input C by hand.']};
 const CHAPTERS=[['Основы','Basics'],['Универсальный элемент','The universal gate'],['Арифметика и выбор','Arithmetic and selection'],['Память и такт','Memory and clock'],
   ['Вычитание и кодирование','Subtraction and codes'],['Автоматы','State machines'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Пробуждение','Awakening']];
+
+
+/* tier-1 nudges for chapter 1 (authored; other chapters use the generated nudge) */
+LV[0].h1=['Соедините вход с лампой напрямую.','Connect the input straight to the lamp.'];
+LV[1].h1=['Лампа должна гореть, когда вход погашен. Нужен элемент, который переворачивает сигнал.','The lamp must light when the input is dark. You need a gate that flips the signal.'];
+LV[2].h1=['Лампа горит, только когда оба входа горят вместе.','The lamp lights only when both inputs are on together.'];
+LV[3].h1=['Лампа гаснет, только когда оба входа погашены.','The lamp goes dark only when both inputs are dark.'];
+LV[4].h1=['Сначала соберите A ∧ B, а потом переверните результат.','First build A ∧ B, then flip the result.'];
+LV[5].h1=['Сначала соберите A ∨ B, а потом переверните результат.','First build A ∨ B, then flip the result.'];
+LV[6].h1=['Входы должны различаться: один горит, другой нет. Два случая — два слагаемых.','The inputs must differ: one on, the other off. Two cases — two terms.'];
+LV[7].h1=['Лампа горит, когда входы одинаковы. На полке есть готовый элемент XOR — переверните его.','The lamp lights when the inputs match. There is a ready XOR on the shelf — flip it.'];
 
 /* ========== content: Bit's voice, quizzes, badges, ranks ========== */
 // Bit: the Machine's control bit. One bit of memory, considers himself the lab's supervising mind.
@@ -2163,7 +2180,7 @@ function buildChrome(){
   $('#lvTitle').textContent=tx(level.t);
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
-  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
+  hintPanelDraw();
   $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
   $('#verify').textContent=ui(level.sandbox?'run':'verify');
   {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
@@ -2723,9 +2740,7 @@ function combBench(B,F){
   B.innerHTML=h+'</table>';
 }
 /* Quine-McCluskey minimisation to a sum of products; literals join by concatenation (AB = A& B), terms by OR */
-function qmExpr(n,minterms,ins){
-  if(!minterms.length)return'0';
-  if(minterms.length>=(1<<n))return'1';
+function qmPrime(n,minterms){
   const full=(1<<n)-1;
   let terms=minterms.map(b=>({b,m:full}));
   const primes=[],pseen=new Set();
@@ -2762,7 +2777,12 @@ function qmExpr(n,minterms,ins){
   }
   const cnt=p=>{let c=0;for(let j=0;j<n;j++)if(p.m&(1<<j))c++;return c};
   pickT.sort((a,b)=>cnt(a)-cnt(b));
-  return pickT.map(p=>{
+  return pickT;
+}
+function qmExpr(n,minterms,ins){
+  if(!minterms.length)return'0';
+  if(minterms.length>=(1<<n))return'1';
+  return qmPrime(n,minterms).map(p=>{
     const ls=[];
     for(let j=0;j<n;j++){
       const bit=1<<(n-1-j);
@@ -2771,6 +2791,196 @@ function qmExpr(n,minterms,ins){
     return ls.join('')||'1';
   }).join(' \u2228 ');
 }
+
+/* ========== hint tiers: ready-circuit synthesis ==========
+   Builds a sum-of-products circuit from the level truth table using only the gates
+   the level offers. Returns null for sequential levels and impossible gate sets.
+   The layout is plain columns by depth; the A* router wires it up. */
+function synth(lv){
+  if(lv.seq||lv.clk)return null;
+  const nIn=lv.ins.length;if(!nIn)return null;
+  const av=lv.gates,has=t=>av.includes(t);
+  // truth vectors per output
+  const bits=k=>lv.vec.map(r=>r.out[k]|0);
+  // estimated term count for a truth vector (qm prime count, constants are cheap)
+  function est(tt){
+    const n1=tt.filter(x=>x).length,N=1<<nIn;
+    if(!n1||n1===N)return 1;
+    return qmPrime(nIn,tt.map((x,i)=>x?i:-1).filter(i=>i>=0)).length;
+  }
+  // algebraic normal form: linear iff only constants and single variables appear
+  function anfLin(tt){
+    const a=tt.slice();
+    for(let j=0;j<nIn;j++)for(let m=0;m<(1<<nIn);m++)if(!(m&(1<<j)))a[m|(1<<j)]^=a[m];
+    // a[m] is the coefficient of the monomial of bit-set m using bit j for variable (nIn-1-j)
+    const vars=[];let lin=true;
+    for(let m=1;m<(1<<nIn);m++){
+      if(!a[m])continue;
+      const pc=m.toString(2).split('1').length-1;
+      if(pc>1){lin=false;break}
+      for(let j=0;j<nIn;j++)if(m&(1<<j))vars.push(nIn-1-j);
+    }
+    if(!lin)return null;
+    return{c0:a[0]|0,vars};
+  }
+  function attempt(flip){
+    const gates=[],wires=[];let nx=1;
+    const depth={},colN={};
+    const need=()=>{throw 'nosynth'};
+    function place(type,deps){
+      const d=1+Math.max(0,...deps.map(sg=>depth[sg[0]]|0));
+      const k=colN[d]=(colN[d]|0)+1;
+      const x=110+d*105,y=-270+(d%2)*45+(k-1)*90;
+      const id='g'+(nx++);gates.push({id,type,x,y});depth[id]=d;return id;
+    }
+    const wire=(f,fp,t,tp)=>wires.push({id:'w'+(nx++),from:{g:f,p:fp},to:{g:t,p:tp},pts:[]});
+    const join=(sig,g)=>{wire(sig[0],sig[1],g,0);wire(sig[0],sig[1],g,1)};
+    function gNOT(sig){
+      let g;
+      if(has('NOT')){g=place('NOT',[sig]);wire(sig[0],sig[1],g,0);return[g,0]}
+      if(has('NAND')){g=place('NAND',[sig]);join(sig,g);return[g,0]}
+      if(has('NOR')){g=place('NOR',[sig]);join(sig,g);return[g,0]}
+      need();
+    }
+    function gAND2(a,b){
+      let g;
+      if(has('AND')){g=place('AND',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0]}
+      if(has('NAND')){g=place('NAND',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return gNOT([g,0])}
+      if(has('NOR')){const na=gNOT(a),nb=gNOT(b);g=place('NOR',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return[g,0]}
+      if(has('OR')&&has('NOT')){const na=gNOT(a),nb=gNOT(b);g=place('OR',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return gNOT([g,0])}
+      need();
+    }
+    function gOR2(a,b){
+      let g;
+      if(has('OR')){g=place('OR',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0]}
+      if(has('NAND')){const na=gNOT(a),nb=gNOT(b);g=place('NAND',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return[g,0]}
+      if(has('NOR')){g=place('NOR',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return gNOT([g,0])}
+      if(has('AND')&&has('NOT')){const na=gNOT(a),nb=gNOT(b);g=place('AND',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return gNOT([g,0])}
+      need();
+    }
+    function gXOR2(a,b,flipLast){
+      const t=flipLast?'XNOR':'XOR';
+      if(!has(t))need();
+      const g=place(t,[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0];
+    }
+    const invC={};
+    function lit(j,neg){
+      const src=['I'+j,0];
+      if(!neg)return src;
+      if(!invC[j])invC[j]=gNOT(src);
+      return invC[j];
+    }
+    function chain(fn,sigs){
+      let acc=sigs[0];
+      for(let i=1;i<sigs.length;i++)acc=fn(acc,sigs[i]);
+      return acc;
+    }
+    lv.outs.forEach((k,oi)=>{
+      const tt=bits(k).map(x=>flip?1-x:x);
+      const lin=has('XOR')?anfLin(tt):null;
+      let sig;
+      if(lin){
+        if(!lin.vars.length){
+          if(!lin.c0)sig=chain(gOR2,[['I0',0],gNOT(['I0',0])]);
+          else sig=chain(gAND2,[['I0',0],lit(0,true)]);
+        }else if(lin.vars.length===1){
+          sig=['I'+lin.vars[0],0];
+          if(lin.c0)sig=gNOT(sig);
+        }else{
+          sig=['I'+lin.vars[0],0];
+          let flipped=false;
+          for(let i=1;i<lin.vars.length;i++){
+            const last=i===lin.vars.length-1,wantFlip=last&&lin.c0&&has('XNOR');
+            sig=gXOR2(sig,['I'+lin.vars[i],0],wantFlip);
+            if(wantFlip)flipped=true;
+          }
+          if(lin.c0&&!flipped)sig=gNOT(sig);
+        }
+      }else{
+        const mts=[];tt.forEach((x,m)=>{if(x)mts.push(m)});
+        const N=1<<nIn;
+        if(!mts.length)sig=gAND2(['I0',0],lit(0,true));
+        else if(mts.length===N)sig=gOR2(['I0',0],lit(0,true));
+        else{
+          const terms=qmPrime(nIn,mts).map(p=>{
+            const ls=[];
+            for(let j=0;j<nIn;j++){const bit=1<<(nIn-1-j);if(p.m&bit)ls.push(lit(j,!(p.b&bit)))}
+            return ls.length===1?ls[0]:chain(gAND2,ls);
+          });
+          sig=terms.length===1?terms[0]:chain(gOR2,terms);
+        }
+      }
+      if(flip)sig=gNOT(sig);
+      wire(sig[0],sig[1],'O'+oi,0);
+    });
+    return{gates,wires};
+  }
+  // try polarity masks, cheapest estimate first
+  const nOut=lv.outs.length,masks=[];
+  for(let m=0;m<(1<<nOut);m++){
+    let c=0;
+    lv.outs.forEach((k,oi)=>{
+      const tt=bits(k);
+      const direct=est(tt),comp=est(tt.map(x=>1-x))+1;
+      c+=Math.min((m>>oi)&1?comp:direct,(m>>oi)&1?comp:direct);
+    });
+    masks.push([c,m]);
+  }
+  // prefer polarity with smaller estimate per output
+  let pref=0;
+  lv.outs.forEach((k,oi)=>{
+    const tt=bits(k);
+    if(est(tt.map(x=>1-x))+1<=est(tt))pref|=(1<<oi);
+  });
+  masks.sort((a,b)=>((a[1]===pref?-1:0)-(b[1]===pref?-1:0))||a[0]-b[0]);
+  for(const [,m] of masks){
+    try{return attempt(m)}catch(e){}
+  }
+  return null;
+}
+function h1Text(lv){
+  if(lv.h1)return tx(lv.h1);
+  const g=lv.gates.map(t=>tx(GATES[t].n)).join(', ');
+  return ui('hGen1',{g:g||'—',n:lv.par});
+}
+function h3Text(lv){
+  const syn=lv._syn||(lv._syn=synth(lv));
+  if(!syn)return tx(lv.hint);
+  const cnt={};syn.gates.forEach(g=>cnt[g.type]=(cnt[g.type]||0)+1);
+  const parts=Object.keys(cnt).map(t=>cnt[t]+'× '+tx(GATES[t].n)).join(', ');
+  return ui('hNeed')+': '+(parts||ui('hNoGates'))+'.';
+}
+function hintPanelDraw(){
+  const el=$('#hint');if(!el||!level)return;
+  const t=hintTier();
+  if(level.sandbox||!t){if(level&&!level.sandbox)el.innerHTML='';el.classList.remove('on');if(level&&level.sandbox){el.innerHTML=mathHTML(tx(level.hint))}return}
+  const sec=(title,body)=>`<div class="ht"><b>${title}</b><div class="htb math">${mathHTML(body)}</div></div>`;
+  let h=sec(ui('hT1'),h1Text(level));
+  if(t>=2)h+=sec(ui('hT2'),tx(level.hint));
+  if(t>=3)h+=sec(ui('hT3'),h3Text(level));
+  if(t>=4)h+=`<div class="ht"><b>${ui('hT4')}</b><div class="htb"><button class="tbtn primary" id="hInsBtn">${ui('hInsert')}</button></div></div>`;
+  el.innerHTML=h;el.classList.add('on');
+}
+function insertSynth(){
+  const syn=level&&(level._syn||(level._syn=synth(level)));
+  if(!syn){say([{t:ui('hNoSeq'),m:'sad'}],{u:1});return}
+  snapshot();
+  C=JSON.parse(JSON.stringify(syn));
+  nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
+  sel=null;multi.clear();
+  hideBubble();changed();fit();
+  toast(ui('hInserted'));
+  sfx('stamp',true);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest||!e.target.closest('#hInsBtn'))return;
+  const syn=level._syn||(level._syn=synth(level));
+  if(!syn){say([{t:ui('hNoSeq'),m:'sad'}],{u:1});return}
+  if(!C.gates.length&&!C.wires.length){insertSynth();return}
+  say([{t:ui('hReplaceQ'),m:'think',ch:[{t:ui('hYes'),f:insertSynth},{t:ui('hNo'),f:hideBubble}]}],{u:1});
+});
+
+/* ========== bench: manual ticks, tick log, sandbox analysis ==========*/
 
 /* ========== audio: everything is synthesized, no sound files ==========
    Buses: music (lab hum + generative theme per chapter), sfx (materials: relay, toggle switch,
@@ -3058,15 +3268,16 @@ function statsLine(){
 }
 function giveHint(){
   if(!level||level.sandbox){say([{t:STORY.noHint,m:'think'}],{u:1});return}
-  if(!hintUsed){
-    const c=hintPrice();
-    if(c>balance()){say([{t:fmt(tx(STORY.broke),{c:ptsN(c),b:ptsN(balance())}),m:'sad',ch:[{t:UIS.cEarn,f:()=>openMenu('shop')},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}],{u:1});return}
-    if(c){spend(c);sfx('coin')}
-    prog.hb=prog.hb||[];if(!prog.hb.includes(level.id))prog.hb.push(level.id);
-    hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save();updHud();
-  }
-  $('#hint').classList.add('on');
-  say([{t:tx(pick(STORY.hintPre))+' '+tx(level.hint),m:'think'}],{u:1});
+  const t=hintTier(),maxT=hintMaxTier();
+  if(t>=maxT){hintPanelDraw();say([{t:tx(pick(STORY.hintPre))+' '+ui('hintOpen'),m:'think'}],{u:1});return}
+  const nt=t+1,c=hintCost(nt);
+  if(c>balance()){say([{t:fmt(tx(STORY.broke),{c:ptsN(c),b:ptsN(balance())}),m:'sad',ch:[{t:UIS.cEarn,f:()=>openMenu('shop')},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}],{u:1});return}
+  if(c){spend(c);sfx('coin')}
+  prog.hb=prog.hb||{};prog.hb[level.id]=nt;
+  hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save();updHud();
+  hintPanelDraw();
+  const body=nt===1?h1Text(level):nt===2?tx(level.hint):nt===3?h3Text(level):ui('hT4')+'. '+ui('hInsert');
+  say([{t:tx(pick(STORY.hintPre))+' '+body,m:'think'}],{u:1});
 }
 function levelIntro(){
   if(!level||$('#ov').classList.contains('on'))return;
@@ -3263,6 +3474,7 @@ $('#bitMini').classList.add('track');
    A stuck player is never locked out: the warm-up pays for correct answers (daily cap),
    and the hint gets cheaper after failed checks (half after 3, free after 6). */
 const HINT_COST=40,BADGE_PTS=25,DAILY_PTS=25,DRILL_PTS=10,DRILL_CAP=150;
+const HTIER_BASE=[0,15,35,70,130];
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
 function earned(){const s=prog.st;return points()+prog.badges.length*BADGE_PTS+(s.drill||0)+(s.daily||0)}
 function balance(){return earned()-(prog.st.spent||0)}
@@ -3273,13 +3485,28 @@ function ptsWord(n){
 }
 const ptsN=n=>num(n)+' '+ptsWord(n);
 let failCount=0;
-function hintBought(){return !!(level&&(prog.hb||[]).includes(level.id))}
-function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;return failCount>=6?0:failCount>=3?HINT_COST/2:HINT_COST}
-function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
+/* hints come in four tiers: nudge, pointer, almost-solution, ready circuit.
+   prog.hb maps level id to the highest tier bought; the old array format migrates to tier 2. */
+function hintMigrate(){if(Array.isArray(prog.hb)){const o={};prog.hb.forEach(id=>o[id]=2);prog.hb=o}}
+hintMigrate();
+function hintTier(){return level&&!level.sandbox?((prog.hb||{})[level.id]|0):0}
+function hintMaxTier(){return level&&(level.seq||level.clk)?3:4}
+function hintBought(){return hintTier()>=1}
+function hintCost(t){
+  if(!level||level.sandbox)return 0;
+  let c=Math.round(HTIER_BASE[t]*(1+(level.ch-1)*.15)/5)*5;
+  if(failCount>=6)return 0;
+  if(failCount>=3)c=Math.max(5,Math.round(c/2/5)*5);
+  return c;
+}
+function hintPrice(){const t=hintTier();if(!level||level.sandbox)return 0;if(t>=hintMaxTier())return 0;return hintCost(t+1)}
+function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintTier()>=hintMaxTier()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
 function hintBtnDraw(){
-  const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
-  b.classList.toggle('owned',own);if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
-  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
+  const b=$('#hintBtn');if(!b)return;const t=hintTier(),maxT=hintMaxTier(),own=t>=maxT,c=hintPrice();
+  b.classList.toggle('owned',own);
+  if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
+  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`
+    :(t?`<span class="hk">✓</span>`:'')+`${ui('hintAsk')}<span class="cost">${t?ui('hintTier'+Math.min(maxT,t+1))+' · ':''}${c?ptsN(c):ui('free')}</span>`;
 }
 function dailyCheck(){
   const d=today();if(prog.st.day===d)return;
@@ -3396,6 +3623,16 @@ $('#shopBox').addEventListener('click',e=>{
   save();wearRefresh();drawShop();
 });
 
+Object.assign(UIS,{
+  hintTier1:['намёк','nudge'],hintTier2:['указание','pointer'],hintTier3:['почти решение','almost there'],hintTier4:['готовая схема','ready circuit'],
+  hT1:['Намёк','Nudge'],hT2:['Указание','Pointer'],hT3:['Почти решение','Almost there'],hT4:['Готовая схема','Ready circuit'],
+  hNeed:['Понадобится','You will need'],hInsert:['Вставить схему','Insert the circuit'],hInserted:['Схема вставлена. Можно двигать элементы и перенастраивать под себя.','The circuit is in. You can move the gates and adjust it.'],
+  hNoSeq:['Для схем с памятью готового решения нет — только указания. Автоматы нужно понять, а не переписать.','No ready circuit for sequential logic — pointers only. State machines must be understood, not copied.'],
+  hReplaceQ:['Вставить готовую схему вместо текущей? Текущая схема будет заменена (можно отменить через Ctrl+Z).','Insert the ready circuit instead of the current one? The current circuit will be replaced (Ctrl+Z undoes).'],
+  hYes:['Вставить','Insert'],hNo:['Не надо','Cancel'],hGates:['элементов','gates'],
+  hGen1:['На полке: {g}. Решение Бита занимает {n} эл. Идите от лампы назад: что должно прийти на неё в последнюю очередь?','On the shelf: {g}. Bit’s record is {n} gates. Work backwards from the lamp: what must feed it last?'],
+  hNoGates:['ни одного элемента, только провода','no gates at all, just wires']
+});
 Object.assign(UIS,{
   shop:['Мастерская','Workshop'],hintAsk:['Подсказка','Hint'],hintOpen:['уже куплено','already bought'],free:['бесплатно','free'],
   dailyToast:['Смена началась: +{p}','Shift started: +{p}'],onAcc:['на счету','in your account'],earnedT:['Заработано {e}, потрачено {s}','Earned {e}, spent {s}'],

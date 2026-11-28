@@ -507,7 +507,7 @@ function buildChrome(){
   $('#lvTitle').textContent=tx(level.t);
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
-  $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
+  hintPanelDraw();
   $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
   $('#verify').textContent=ui(level.sandbox?'run':'verify');
   {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
@@ -1067,9 +1067,7 @@ function combBench(B,F){
   B.innerHTML=h+'</table>';
 }
 /* Quine-McCluskey minimisation to a sum of products; literals join by concatenation (AB = A& B), terms by OR */
-function qmExpr(n,minterms,ins){
-  if(!minterms.length)return'0';
-  if(minterms.length>=(1<<n))return'1';
+function qmPrime(n,minterms){
   const full=(1<<n)-1;
   let terms=minterms.map(b=>({b,m:full}));
   const primes=[],pseen=new Set();
@@ -1106,7 +1104,12 @@ function qmExpr(n,minterms,ins){
   }
   const cnt=p=>{let c=0;for(let j=0;j<n;j++)if(p.m&(1<<j))c++;return c};
   pickT.sort((a,b)=>cnt(a)-cnt(b));
-  return pickT.map(p=>{
+  return pickT;
+}
+function qmExpr(n,minterms,ins){
+  if(!minterms.length)return'0';
+  if(minterms.length>=(1<<n))return'1';
+  return qmPrime(n,minterms).map(p=>{
     const ls=[];
     for(let j=0;j<n;j++){
       const bit=1<<(n-1-j);
@@ -1115,6 +1118,196 @@ function qmExpr(n,minterms,ins){
     return ls.join('')||'1';
   }).join(' \u2228 ');
 }
+
+/* ========== hint tiers: ready-circuit synthesis ==========
+   Builds a sum-of-products circuit from the level truth table using only the gates
+   the level offers. Returns null for sequential levels and impossible gate sets.
+   The layout is plain columns by depth; the A* router wires it up. */
+function synth(lv){
+  if(lv.seq||lv.clk)return null;
+  const nIn=lv.ins.length;if(!nIn)return null;
+  const av=lv.gates,has=t=>av.includes(t);
+  // truth vectors per output
+  const bits=k=>lv.vec.map(r=>r.out[k]|0);
+  // estimated term count for a truth vector (qm prime count, constants are cheap)
+  function est(tt){
+    const n1=tt.filter(x=>x).length,N=1<<nIn;
+    if(!n1||n1===N)return 1;
+    return qmPrime(nIn,tt.map((x,i)=>x?i:-1).filter(i=>i>=0)).length;
+  }
+  // algebraic normal form: linear iff only constants and single variables appear
+  function anfLin(tt){
+    const a=tt.slice();
+    for(let j=0;j<nIn;j++)for(let m=0;m<(1<<nIn);m++)if(!(m&(1<<j)))a[m|(1<<j)]^=a[m];
+    // a[m] is the coefficient of the monomial of bit-set m using bit j for variable (nIn-1-j)
+    const vars=[];let lin=true;
+    for(let m=1;m<(1<<nIn);m++){
+      if(!a[m])continue;
+      const pc=m.toString(2).split('1').length-1;
+      if(pc>1){lin=false;break}
+      for(let j=0;j<nIn;j++)if(m&(1<<j))vars.push(nIn-1-j);
+    }
+    if(!lin)return null;
+    return{c0:a[0]|0,vars};
+  }
+  function attempt(flip){
+    const gates=[],wires=[];let nx=1;
+    const depth={},colN={};
+    const need=()=>{throw 'nosynth'};
+    function place(type,deps){
+      const d=1+Math.max(0,...deps.map(sg=>depth[sg[0]]|0));
+      const k=colN[d]=(colN[d]|0)+1;
+      const x=110+d*105,y=-270+(d%2)*45+(k-1)*90;
+      const id='g'+(nx++);gates.push({id,type,x,y});depth[id]=d;return id;
+    }
+    const wire=(f,fp,t,tp)=>wires.push({id:'w'+(nx++),from:{g:f,p:fp},to:{g:t,p:tp},pts:[]});
+    const join=(sig,g)=>{wire(sig[0],sig[1],g,0);wire(sig[0],sig[1],g,1)};
+    function gNOT(sig){
+      let g;
+      if(has('NOT')){g=place('NOT',[sig]);wire(sig[0],sig[1],g,0);return[g,0]}
+      if(has('NAND')){g=place('NAND',[sig]);join(sig,g);return[g,0]}
+      if(has('NOR')){g=place('NOR',[sig]);join(sig,g);return[g,0]}
+      need();
+    }
+    function gAND2(a,b){
+      let g;
+      if(has('AND')){g=place('AND',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0]}
+      if(has('NAND')){g=place('NAND',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return gNOT([g,0])}
+      if(has('NOR')){const na=gNOT(a),nb=gNOT(b);g=place('NOR',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return[g,0]}
+      if(has('OR')&&has('NOT')){const na=gNOT(a),nb=gNOT(b);g=place('OR',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return gNOT([g,0])}
+      need();
+    }
+    function gOR2(a,b){
+      let g;
+      if(has('OR')){g=place('OR',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0]}
+      if(has('NAND')){const na=gNOT(a),nb=gNOT(b);g=place('NAND',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return[g,0]}
+      if(has('NOR')){g=place('NOR',[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return gNOT([g,0])}
+      if(has('AND')&&has('NOT')){const na=gNOT(a),nb=gNOT(b);g=place('AND',[na,nb]);wire(na[0],na[1],g,0);wire(nb[0],nb[1],g,1);return gNOT([g,0])}
+      need();
+    }
+    function gXOR2(a,b,flipLast){
+      const t=flipLast?'XNOR':'XOR';
+      if(!has(t))need();
+      const g=place(t,[a,b]);wire(a[0],a[1],g,0);wire(b[0],b[1],g,1);return[g,0];
+    }
+    const invC={};
+    function lit(j,neg){
+      const src=['I'+j,0];
+      if(!neg)return src;
+      if(!invC[j])invC[j]=gNOT(src);
+      return invC[j];
+    }
+    function chain(fn,sigs){
+      let acc=sigs[0];
+      for(let i=1;i<sigs.length;i++)acc=fn(acc,sigs[i]);
+      return acc;
+    }
+    lv.outs.forEach((k,oi)=>{
+      const tt=bits(k).map(x=>flip?1-x:x);
+      const lin=has('XOR')?anfLin(tt):null;
+      let sig;
+      if(lin){
+        if(!lin.vars.length){
+          if(!lin.c0)sig=chain(gOR2,[['I0',0],gNOT(['I0',0])]);
+          else sig=chain(gAND2,[['I0',0],lit(0,true)]);
+        }else if(lin.vars.length===1){
+          sig=['I'+lin.vars[0],0];
+          if(lin.c0)sig=gNOT(sig);
+        }else{
+          sig=['I'+lin.vars[0],0];
+          let flipped=false;
+          for(let i=1;i<lin.vars.length;i++){
+            const last=i===lin.vars.length-1,wantFlip=last&&lin.c0&&has('XNOR');
+            sig=gXOR2(sig,['I'+lin.vars[i],0],wantFlip);
+            if(wantFlip)flipped=true;
+          }
+          if(lin.c0&&!flipped)sig=gNOT(sig);
+        }
+      }else{
+        const mts=[];tt.forEach((x,m)=>{if(x)mts.push(m)});
+        const N=1<<nIn;
+        if(!mts.length)sig=gAND2(['I0',0],lit(0,true));
+        else if(mts.length===N)sig=gOR2(['I0',0],lit(0,true));
+        else{
+          const terms=qmPrime(nIn,mts).map(p=>{
+            const ls=[];
+            for(let j=0;j<nIn;j++){const bit=1<<(nIn-1-j);if(p.m&bit)ls.push(lit(j,!(p.b&bit)))}
+            return ls.length===1?ls[0]:chain(gAND2,ls);
+          });
+          sig=terms.length===1?terms[0]:chain(gOR2,terms);
+        }
+      }
+      if(flip)sig=gNOT(sig);
+      wire(sig[0],sig[1],'O'+oi,0);
+    });
+    return{gates,wires};
+  }
+  // try polarity masks, cheapest estimate first
+  const nOut=lv.outs.length,masks=[];
+  for(let m=0;m<(1<<nOut);m++){
+    let c=0;
+    lv.outs.forEach((k,oi)=>{
+      const tt=bits(k);
+      const direct=est(tt),comp=est(tt.map(x=>1-x))+1;
+      c+=Math.min((m>>oi)&1?comp:direct,(m>>oi)&1?comp:direct);
+    });
+    masks.push([c,m]);
+  }
+  // prefer polarity with smaller estimate per output
+  let pref=0;
+  lv.outs.forEach((k,oi)=>{
+    const tt=bits(k);
+    if(est(tt.map(x=>1-x))+1<=est(tt))pref|=(1<<oi);
+  });
+  masks.sort((a,b)=>((a[1]===pref?-1:0)-(b[1]===pref?-1:0))||a[0]-b[0]);
+  for(const [,m] of masks){
+    try{return attempt(m)}catch(e){}
+  }
+  return null;
+}
+function h1Text(lv){
+  if(lv.h1)return tx(lv.h1);
+  const g=lv.gates.map(t=>tx(GATES[t].n)).join(', ');
+  return ui('hGen1',{g:g||'—',n:lv.par});
+}
+function h3Text(lv){
+  const syn=lv._syn||(lv._syn=synth(lv));
+  if(!syn)return tx(lv.hint);
+  const cnt={};syn.gates.forEach(g=>cnt[g.type]=(cnt[g.type]||0)+1);
+  const parts=Object.keys(cnt).map(t=>cnt[t]+'× '+tx(GATES[t].n)).join(', ');
+  return ui('hNeed')+': '+(parts||ui('hNoGates'))+'.';
+}
+function hintPanelDraw(){
+  const el=$('#hint');if(!el||!level)return;
+  const t=hintTier();
+  if(level.sandbox||!t){if(level&&!level.sandbox)el.innerHTML='';el.classList.remove('on');if(level&&level.sandbox){el.innerHTML=mathHTML(tx(level.hint))}return}
+  const sec=(title,body)=>`<div class="ht"><b>${title}</b><div class="htb math">${mathHTML(body)}</div></div>`;
+  let h=sec(ui('hT1'),h1Text(level));
+  if(t>=2)h+=sec(ui('hT2'),tx(level.hint));
+  if(t>=3)h+=sec(ui('hT3'),h3Text(level));
+  if(t>=4)h+=`<div class="ht"><b>${ui('hT4')}</b><div class="htb"><button class="tbtn primary" id="hInsBtn">${ui('hInsert')}</button></div></div>`;
+  el.innerHTML=h;el.classList.add('on');
+}
+function insertSynth(){
+  const syn=level&&(level._syn||(level._syn=synth(level)));
+  if(!syn){say([{t:ui('hNoSeq'),m:'sad'}],{u:1});return}
+  snapshot();
+  C=JSON.parse(JSON.stringify(syn));
+  nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
+  sel=null;multi.clear();
+  hideBubble();changed();fit();
+  toast(ui('hInserted'));
+  sfx('stamp',true);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest||!e.target.closest('#hInsBtn'))return;
+  const syn=level._syn||(level._syn=synth(level));
+  if(!syn){say([{t:ui('hNoSeq'),m:'sad'}],{u:1});return}
+  if(!C.gates.length&&!C.wires.length){insertSynth();return}
+  say([{t:ui('hReplaceQ'),m:'think',ch:[{t:ui('hYes'),f:insertSynth},{t:ui('hNo'),f:hideBubble}]}],{u:1});
+});
+
+/* ========== bench: manual ticks, tick log, sandbox analysis ==========*/
 
 /* ========== audio: everything is synthesized, no sound files ==========
    Buses: music (lab hum + generative theme per chapter), sfx (materials: relay, toggle switch,

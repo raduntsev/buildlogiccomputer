@@ -117,15 +117,16 @@ function statsLine(){
 }
 function giveHint(){
   if(!level||level.sandbox){say([{t:STORY.noHint,m:'think'}],{u:1});return}
-  if(!hintUsed){
-    const c=hintPrice();
-    if(c>balance()){say([{t:fmt(tx(STORY.broke),{c:ptsN(c),b:ptsN(balance())}),m:'sad',ch:[{t:UIS.cEarn,f:()=>openMenu('shop')},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}],{u:1});return}
-    if(c){spend(c);sfx('coin')}
-    prog.hb=prog.hb||[];if(!prog.hb.includes(level.id))prog.hb.push(level.id);
-    hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save();updHud();
-  }
-  $('#hint').classList.add('on');
-  say([{t:tx(pick(STORY.hintPre))+' '+tx(level.hint),m:'think'}],{u:1});
+  const t=hintTier(),maxT=hintMaxTier();
+  if(t>=maxT){hintPanelDraw();say([{t:tx(pick(STORY.hintPre))+' '+ui('hintOpen'),m:'think'}],{u:1});return}
+  const nt=t+1,c=hintCost(nt);
+  if(c>balance()){say([{t:fmt(tx(STORY.broke),{c:ptsN(c),b:ptsN(balance())}),m:'sad',ch:[{t:UIS.cEarn,f:()=>openMenu('shop')},{t:UIS.cSelf,r:{t:UIS.selfR,m:'smug'}}]}],{u:1});return}
+  if(c){spend(c);sfx('coin')}
+  prog.hb=prog.hb||{};prog.hb[level.id]=nt;
+  hintUsed=true;prog.st.hints=(prog.st.hints||0)+1;save();updHud();
+  hintPanelDraw();
+  const body=nt===1?h1Text(level):nt===2?tx(level.hint):nt===3?h3Text(level):ui('hT4')+'. '+ui('hInsert');
+  say([{t:tx(pick(STORY.hintPre))+' '+body,m:'think'}],{u:1});
 }
 function levelIntro(){
   if(!level||$('#ov').classList.contains('on'))return;

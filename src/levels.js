@@ -227,3 +227,14 @@ const SANDBOX={id:0,od:{Y:null},t:['Песочница','Sandbox'],f:'',ins:['A'
   task:['Свободная сборка. Все элементы доступны.','Free build. Every element is available.'],hint:['Тактовый вход C можно переключать вручную.','You can toggle clock input C by hand.']};
 const CHAPTERS=[['Основы','Basics'],['Универсальный элемент','The universal gate'],['Арифметика и выбор','Arithmetic and selection'],['Память и такт','Memory and clock'],
   ['Вычитание и кодирование','Subtraction and codes'],['Автоматы','State machines'],['Регистры','Registers'],['АЛУ','ALU'],['Испытания','Trials'],['Пробуждение','Awakening']];
+
+
+/* tier-1 nudges for chapter 1 (authored; other chapters use the generated nudge) */
+LV[0].h1=['Соедините вход с лампой напрямую.','Connect the input straight to the lamp.'];
+LV[1].h1=['Лампа должна гореть, когда вход погашен. Нужен элемент, который переворачивает сигнал.','The lamp must light when the input is dark. You need a gate that flips the signal.'];
+LV[2].h1=['Лампа горит, только когда оба входа горят вместе.','The lamp lights only when both inputs are on together.'];
+LV[3].h1=['Лампа гаснет, только когда оба входа погашены.','The lamp goes dark only when both inputs are dark.'];
+LV[4].h1=['Сначала соберите A ∧ B, а потом переверните результат.','First build A ∧ B, then flip the result.'];
+LV[5].h1=['Сначала соберите A ∨ B, а потом переверните результат.','First build A ∨ B, then flip the result.'];
+LV[6].h1=['Входы должны различаться: один горит, другой нет. Два случая — два слагаемых.','The inputs must differ: one on, the other off. Two cases — two terms.'];
+LV[7].h1=['Лампа горит, когда входы одинаковы. На полке есть готовый элемент XOR — переверните его.','The lamp lights when the inputs match. There is a ready XOR on the shelf — flip it.'];

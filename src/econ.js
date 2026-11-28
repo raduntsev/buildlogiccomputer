@@ -4,6 +4,7 @@
    A stuck player is never locked out: the warm-up pays for correct answers (daily cap),
    and the hint gets cheaper after failed checks (half after 3, free after 6). */
 const HINT_COST=40,BADGE_PTS=25,DAILY_PTS=25,DRILL_PTS=10,DRILL_CAP=150;
+const HTIER_BASE=[0,15,35,70,130];
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
 function earned(){const s=prog.st;return points()+prog.badges.length*BADGE_PTS+(s.drill||0)+(s.daily||0)}
 function balance(){return earned()-(prog.st.spent||0)}
@@ -14,13 +15,28 @@ function ptsWord(n){
 }
 const ptsN=n=>num(n)+' '+ptsWord(n);
 let failCount=0;
-function hintBought(){return !!(level&&(prog.hb||[]).includes(level.id))}
-function hintPrice(){if(!level||level.sandbox||hintUsed||hintBought())return 0;return failCount>=6?0:failCount>=3?HINT_COST/2:HINT_COST}
-function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintUsed||hintBought()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
+/* hints come in four tiers: nudge, pointer, almost-solution, ready circuit.
+   prog.hb maps level id to the highest tier bought; the old array format migrates to tier 2. */
+function hintMigrate(){if(Array.isArray(prog.hb)){const o={};prog.hb.forEach(id=>o[id]=2);prog.hb=o}}
+hintMigrate();
+function hintTier(){return level&&!level.sandbox?((prog.hb||{})[level.id]|0):0}
+function hintMaxTier(){return level&&(level.seq||level.clk)?3:4}
+function hintBought(){return hintTier()>=1}
+function hintCost(t){
+  if(!level||level.sandbox)return 0;
+  let c=Math.round(HTIER_BASE[t]*(1+(level.ch-1)*.15)/5)*5;
+  if(failCount>=6)return 0;
+  if(failCount>=3)c=Math.max(5,Math.round(c/2/5)*5);
+  return c;
+}
+function hintPrice(){const t=hintTier();if(!level||level.sandbox)return 0;if(t>=hintMaxTier())return 0;return hintCost(t+1)}
+function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="cost">${hintTier()>=hintMaxTier()?ui('hintOpen'):c?ptsN(c):ui('free')}</span>`}
 function hintBtnDraw(){
-  const b=$('#hintBtn');if(!b)return;const own=hintUsed||hintBought(),c=hintPrice();
-  b.classList.toggle('owned',own);if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
-  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`:`${ui('hintAsk')}<span class="cost">${c?ptsN(c):ui('free')}</span>`;
+  const b=$('#hintBtn');if(!b)return;const t=hintTier(),maxT=hintMaxTier(),own=t>=maxT,c=hintPrice();
+  b.classList.toggle('owned',own);
+  if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
+  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`
+    :(t?`<span class="hk">✓</span>`:'')+`${ui('hintAsk')}<span class="cost">${t?ui('hintTier'+Math.min(maxT,t+1))+' · ':''}${c?ptsN(c):ui('free')}</span>`;
 }
 function dailyCheck(){
   const d=today();if(prog.st.day===d)return;
@@ -137,6 +153,16 @@ $('#shopBox').addEventListener('click',e=>{
   save();wearRefresh();drawShop();
 });
 
+Object.assign(UIS,{
+  hintTier1:['намёк','nudge'],hintTier2:['указание','pointer'],hintTier3:['почти решение','almost there'],hintTier4:['готовая схема','ready circuit'],
+  hT1:['Намёк','Nudge'],hT2:['Указание','Pointer'],hT3:['Почти решение','Almost there'],hT4:['Готовая схема','Ready circuit'],
+  hNeed:['Понадобится','You will need'],hInsert:['Вставить схему','Insert the circuit'],hInserted:['Схема вставлена. Можно двигать элементы и перенастраивать под себя.','The circuit is in. You can move the gates and adjust it.'],
+  hNoSeq:['Для схем с памятью готового решения нет — только указания. Автоматы нужно понять, а не переписать.','No ready circuit for sequential logic — pointers only. State machines must be understood, not copied.'],
+  hReplaceQ:['Вставить готовую схему вместо текущей? Текущая схема будет заменена (можно отменить через Ctrl+Z).','Insert the ready circuit instead of the current one? The current circuit will be replaced (Ctrl+Z undoes).'],
+  hYes:['Вставить','Insert'],hNo:['Не надо','Cancel'],hGates:['элементов','gates'],
+  hGen1:['На полке: {g}. Решение Бита занимает {n} эл. Идите от лампы назад: что должно прийти на неё в последнюю очередь?','On the shelf: {g}. Bit’s record is {n} gates. Work backwards from the lamp: what must feed it last?'],
+  hNoGates:['ни одного элемента, только провода','no gates at all, just wires']
+});
 Object.assign(UIS,{
   shop:['Мастерская','Workshop'],hintAsk:['Подсказка','Hint'],hintOpen:['уже куплено','already bought'],free:['бесплатно','free'],
   dailyToast:['Смена началась: +{p}','Shift started: +{p}'],onAcc:['на счету','in your account'],earnedT:['Заработано {e}, потрачено {s}','Earned {e}, spent {s}'],
