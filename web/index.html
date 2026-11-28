@@ -960,6 +960,10 @@ text.ffq.on{fill:var(--acc)}
 .ht b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
 .htb{margin-top:3px;font-size:13px;line-height:1.45}
 .ht+.ht{border-top:1px solid var(--line);padding-top:6px}
+
+/* wardrobe lock */
+.wr.locked .wr-bit{opacity:.35;filter:grayscale(.6)}
+.wr-lock{font-size:11px;color:var(--dim);text-align:center;line-height:1.3}
 </style>
 </head>
 <body>
@@ -3567,13 +3571,15 @@ document.addEventListener('click',e=>{
 
 /* ---------- Bit's wardrobe ---------- */
 const WEAR=[
-  {id:'tie',c:150,n:['Бабочка','Bow tie']},
-  {id:'monocle',c:200,n:['Монокль','Monocle']},
-  {id:'hat',c:250,n:['Каска','Hard hat']},
-  {id:'phones',c:300,n:['Наушники','Headphones']},
-  {id:'bowler',c:400,n:['Котелок','Bowler hat']},
-  {id:'mortar',c:600,n:['Шапочка выпускника','Graduation cap']}
+  {id:'tie',c:150,ch:1,n:['Бабочка','Bow tie']},
+  {id:'monocle',c:200,ch:2,n:['Монокль','Monocle']},
+  {id:'hat',c:250,ch:3,n:['Каска','Hard hat']},
+  {id:'phones',c:350,ch:5,n:['Наушники','Headphones']},
+  {id:'bowler',c:450,ch:6,n:['Котелок','Bowler hat']},
+  {id:'mortar',c:600,ch:8,n:['Шапочка выпускника','Graduation cap']}
 ];
+function chapReached(ch){return typeof LV!=='undefined'&&LV.some(l=>l.ch===ch&&available(l))}
+function wearUnlocked(w){return chapReached(w.ch||1)}
 function wearSVG(id){
   const k='var(--ink)';
   switch(id){
@@ -3607,15 +3613,17 @@ function drawShop(){
       <p class="sh-p sh-note">${ui('hintRule',{a:ptsN(HINT_COST),b:ptsN(HINT_COST/2)})}</p></section>
    </div>
    <section class="sh-card"><h3>${ui('wardrobe')}</h3><p class="sh-p">${ui('wardAbout')}</p>
-    <div class="wr-grid">${WEAR.map(w=>{const has=owned.includes(w.id),on=wear===w.id,can=balance()>=w.c;
-      return `<div class="wr${on?' on':''}"><svg class="bitsvg wr-bit" viewBox="0 -4 80 100">${bitSVG('idle',w.id)}</svg><b>${tx(w.n)}</b>
-       <button class="tbtn${on?'':has?' primary':''}" data-w="${w.id}" ${!has&&!can?'disabled':''}>${on?ui('takeOff'):has?ui('putOn'):ptsN(w.c)}</button></div>`}).join('')}</div></section>`;
+    <div class="wr-grid">${WEAR.map(w=>{const has=owned.includes(w.id),on=wear===w.id,can=balance()>=w.c,unl=wearUnlocked(w);
+      return `<div class="wr${on?' on':''}${unl?'':' locked'}"><svg class="bitsvg wr-bit" viewBox="0 -4 80 100">${bitSVG('idle',w.id)}</svg><b>${tx(w.n)}</b>
+       ${unl?`<button class="tbtn${on?'':has?' primary':''}" data-w="${w.id}" ${!has&&!can?'disabled':''}>${on?ui('takeOff'):has?ui('putOn'):ptsN(w.c)}</button>`
+        :`<span class="wr-lock">${ui('availFrom',{n:w.ch})}</span>`}</div>`}).join('')}</div></section>`;
   drawShopHead();drawDrill();
 }
 $('#shopBox').addEventListener('click',e=>{
   const b=e.target.closest('[data-w]');if(!b)return;
   const w=WEAR.find(x=>x.id===b.dataset.w),owned=prog.st.owned=prog.st.owned||[];
   if(!owned.includes(w.id)){
+    if(!wearUnlocked(w)){toast(ui('availFrom',{n:w.ch}));return}
     if(balance()<w.c){toast(ui('noFunds'));return}
     spend(w.c);owned.push(w.id);prog.st.wear=w.id;sfx('badge');
     say([{t:fmt(tx(pick(STORY.bought)),{n:tx(w.n).toLowerCase()}),m:'happy',wave:1}],{u:1});
@@ -3642,7 +3650,8 @@ Object.assign(UIS,{
   howEarn:['Как заработать','How to earn'],eLevel:['Пройти уровень','Pass a level'],eStar:['Добрать звезду на пройденном уровне','Get a missing star on a passed level'],
   eTest:['Сдать контрольный тест','Pass a chapter test'],upTo:['до {p}','up to {p}'],eBadge:['Получить бейдж','Earn a badge'],eDaily:['Зайти в игру (раз в день)','Play today (once a day)'],
   eDrill:['Верный ответ в разминке','Correct warm-up answer'],gotToday:['получено','claimed'],
-  hintRule:['Подсказка в уровне стоит {a}. После трёх неудачных проверок — {b}, после шести — бесплатно.','A hint costs {a}. After three failed checks it costs {b}, after six it is free.'],
+  hintRule:['Подсказки идут ступенями: намёк, указание, почти решение и готовая схема — каждая дороже предыдущей. После трёх неудачных проверок цена вдвое ниже, после шести — бесплатно.','Hints come in tiers: nudge, pointer, almost-solution and a ready circuit — each costs more than the last. After three failed checks the price halves, after six it is free.'],
+  availFrom:['доступно с главы {n}','available from chapter {n}'],
   wardrobe:['Гардероб Бита','Bit’s wardrobe'],wardAbout:['Бит носит то, что вы купили, на всех экранах. Он делает вид, что ему всё равно.','Bit wears what you buy on every screen. He pretends not to care.'],
   putOn:['Надеть','Wear'],takeOff:['Снять','Take off'],noFunds:['Не хватает баллов','Not enough points'],cEarn:['Заработать баллы','Earn points'],
   balanceH:['На счету','Balance']

@@ -858,3 +858,7 @@ text.ffq.on{fill:var(--acc)}
 .ht b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
 .htb{margin-top:3px;font-size:13px;line-height:1.45}
 .ht+.ht{border-top:1px solid var(--line);padding-top:6px}
+
+/* wardrobe lock */
+.wr.locked .wr-bit{opacity:.35;filter:grayscale(.6)}
+.wr-lock{font-size:11px;color:var(--dim);text-align:center;line-height:1.3}
