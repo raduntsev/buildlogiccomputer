@@ -12,54 +12,11 @@ const GATES={
 const ALL_GATES=Object.keys(GATES);
 SANDBOX.gates=ALL_GATES;
 
-/* ========== solved circuits as reusable blocks ==========
-   A solved combinational level becomes a chip in later levels and the sandbox.
-   The chip is simulated through a truth table captured from the player's own
-   circuit, so the settle loop needs no special casing at all. */
-function blkType(lv){return 'B'+lv.id}
-function blkList(){
-  return LV.filter(l=>!l.sandbox&&!l.seq&&!l.clk&&done.has(l.id)&&saves[l.id]&&saves[l.id].gates&&saves[l.id].gates.length).sort((a,b)=>a.id-b.id);
-}
-function blkTable(lv){
-  const n=lv.ins.length,rows=[];
-  const keepC=C,keepLevel=level,keepNext=nextId;
-  level=lv;C=JSON.parse(JSON.stringify(saves[lv.id]));
-  for(let m=0;m<(1<<n);m++){
-    resetSim();
-    settle(lv.ins.map((_,j)=>(m>>(n-1-j))&1));
-    const o=readOuts();
-    rows.push(lv.outs.map(k=>o[k]|0));
-  }
-  C=keepC;level=keepLevel;nextId=keepNext;
-  resetSim();settle(liveIn);
-  return rows;
-}
-function blkRegister(lv){
-  const t=blkType(lv);
-  if(GATES[t])return;
-  const rows=blkTable(lv);
-  const nIn=lv.ins.length;
-  GATES[t]={
-    n:lv.t,ins:nIn,outs:lv.outs.length,blk:lv.id,
-    h:Math.max(40,Math.max(nIn,lv.outs.length)*20+16),
-    f:ii=>rows[ii.reduce((a,b,j)=>a|((b|0)<<(nIn-1-j)),0)].slice()
-  };
-}
-function blkRegisterAll(){blkList().forEach(blkRegister)}
-function blkTypesFor(l){
-  return blkList().filter(b=>l.sandbox||b.id<l.id).map(blkType);
-}
-function blkRefresh(lv){delete GATES[blkType(lv)];blkRegister(lv)}
 function sandboxGates(){const s=new Set();LV.forEach(x=>{if(done.has(x.id))(x.gates||[]).forEach(g=>s.add(g))});if(!s.size)['NOT','AND','OR'].forEach(g=>s.add(g));return ALL_GATES.filter(g=>s.has(g))}
 const TOUCH=(()=>{try{return matchMedia('(pointer:coarse)').matches}catch(e){return false}})();
 let knife=false;
 function gPins(type){
   if(type==='DFF') return {i:[20,40],o:[20,40]};
-  const G=GATES[type];
-  if(G.blk){
-    const h=G.h,spread=n=>n===1?[h/2]:Array.from({length:n},(_,k)=>10+k*(h-20)/(n-1));
-    return {i:spread(G.ins),o:spread(G.outs)};
-  }
   return {i:GATES[type].ins===1?[20]:[10,30],o:[20]};
 }
 
@@ -85,6 +42,12 @@ function ioY(n,i){return (i-(n-1)/2)*80}
 const OUTX=()=>innerWidth<640?(level.sandbox?320:Math.min(300,180+40*(level.ins.length+level.outs.length))):level.sandbox?640:Math.min(700,260+60*(level.ins.length+level.outs.length+(level.clk?1:0))+(level.gates.length>2?60:0));
 
 function save(){store.set('ll_saves',saves);store.set('ll_done',[...done]);store.set('ll_set',settings);store.set('ll_seen',[...seen]);store.set('ll_prog',prog)}
+/* old saves and library entries may mention gate types that no longer exist (e.g. the retired B-blocks):
+   drop those gates and every wire that touches them instead of crashing */
+function sanitizeC(){
+  const bad=new Set(C.gates.filter(g=>!GATES[g.type]).map(g=>g.id));
+  if(bad.size){C.gates=C.gates.filter(g=>!bad.has(g.id));C.wires=C.wires.filter(w=>!bad.has(w.from.g)&&!bad.has(w.to.g))}
+}
 /* the circuit is written out 0.3 s after the last edit, not on every click */
 let persistT=0;
 function ioHome(id){const i=+id.slice(1);return id[0]==='I'?{x:0,y:ioY(ioIns().length,i)}:{x:OUTX(),y:ioY(level.outs.length,i)}}
@@ -100,13 +63,11 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){persistNow
 
 function loadLevel(l){
   if(l.sandbox)l.gates=sandboxGates();
-  blkRegisterAll();
-  if(!l.gates0)l.gates0=(l.gates||[]).slice();
-  l.gates=l.gates0.concat(blkTypesFor(l));
   if(l.sandbox&&saves[l.id]&&saves[l.id].sbio){l.ins=saves[l.id].sbio.ins.slice();l.outs=saves[l.id].sbio.outs.slice()}
   level=l;knifeSet(false);$('#result').classList.remove('on');
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
+  sanitizeC();prevOuts={};lampT={};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
   undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;journal=[];benchOpen(false);
   liveIn=ioIns().map(()=>0);
@@ -297,6 +258,7 @@ function vecInVals(row,c){const a=level.ins.map(k=>row.in[k]|0);if(level.clk)a.p
 /* ========== render ========== */
 const world=$('#world'), board=$('#board'), fxG=$('#fx');
 let tmp=null, cut=null, ghost=null, hover=null, ioClick=null;
+let prevOuts={},lampT={};   // lamp state: light-up flare + breathing glow
 
 function gateSVG(type,gost,extraCls){
   const h=GATES[type].h,P=gPins(type);
@@ -304,12 +266,6 @@ function gateSVG(type,gost,extraCls){
   // stubs
   P.i.forEach(y=>s+=`<path class="gst" d="M0,${y}H12"/>`);
   P.o.forEach(y=>s+=`<path class="gst" d="M48,${y}H60"/>`);
-  if(GATES[type].blk){
-    s+=`<rect class="gb" x="12" y="0" width="36" height="${h}" rx="7"/>`;
-    const nm=tx(GATES[type].n),abbr=nm.split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
-    s+=`<text class="gl" x="30" y="${h/2+4}" text-anchor="middle" style="font-size:11px">${esc(abbr)}</text>`;
-    return s;
-  }
   const inv=['NOT','NAND','NOR','XNOR'].includes(type);
   if(type==='DFF'){
     s+=`<rect class="gb" x="12" y="0" width="36" height="60" rx="7"/>`;
@@ -407,11 +363,11 @@ function render(){
   }
   // gates
   for(const g of C.gates){
-    s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
+    s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})"><g class="gin">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
     if(g.type==='DFF'){const q_=(sim.ff[g.id]||{q:0}).q;s+=`<text class="ffq${q_?' on':''}" x="30" y="56" text-anchor="middle">${q_}</text>`}
-    s+=`</g>`;K('g'+g.id);
+    s+=`</g></g>`;K('g'+g.id);
   }
   const sh=new Set(shorts());
   // pins of gates
@@ -439,16 +395,19 @@ function render(){
   // outputs (lamps)
   const ov_=readOuts();
   level.outs.forEach((k,i)=>{
-    const n=nodePos('O'+i),val=ov_[k];
+    const n=nodePos('O'+i),val=ov_[k]|0,was=prevOuts[k]|0,now=performance.now();
+    if(val&&!was)lampT[k]=now;prevOuts[k]=val;
+    const flare=val&&now-lampT[k]<700;
+    s+=`<g class="ogrp">`;
     if(NH&&NH.n.has('O'+i))s+=`<circle class="nethl" cx="${n.x+28}" cy="${n.y}" r="25"/>`;
     s+=`<path class="gst" d="M${n.x},${n.y}H${n.x+10}"/>`;
-    if(val)s+=`<circle cx="${n.x+28}" cy="${n.y}" r="27" fill="var(--acc)" opacity=".35"/><circle cx="${n.x+28}" cy="${n.y}" r="34" fill="none" stroke="var(--acc)" stroke-width="1.5" opacity=".6"/>`;
+    if(val)s+=`<circle class="lglow" cx="${n.x+28}" cy="${n.y}" r="26"/><circle class="lring" cx="${n.x+28}" cy="${n.y}" r="33"/>${flare?`<circle class="lflare" cx="${n.x+28}" cy="${n.y}" r="24"/>`:''}`;
     s+=`<circle cx="${n.x+28}" cy="${n.y}" r="19" fill="${val?'var(--acc)':'var(--paper)'}" stroke="var(--ink)" stroke-width="1.8"/>`;
     s+=`<text class="lbl" x="${n.x+28}" y="${n.y}" fill="var(--ink)">${subS(disp(k))}</text>`;
     {const d=outDesc(level,k);s+=`<circle class="odhit" data-out="${i}"${d?` data-od="${i}" aria-label="${esc(disp(k)+' — '+tx(d))}"`:''} cx="${n.x+28}" cy="${n.y}" r="21"/>`}
     s+=pinIn(n.x,n.y);
     if(sh.has('O'+i+':0'))s+=`<circle class="short" cx="${n.x}" cy="${n.y}" r="10"/>`;
-    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;K('o'+i);
+    s+=`<circle class="pin-hit" data-pin="O${i}|i|0" cx="${n.x}" cy="${n.y}" r="11"/>`;s+=`</g>`;K('o'+i);
   });
   // temp wire
   if(tmp){
@@ -464,7 +423,7 @@ function render(){
   board.classList.toggle('demo',demoOn);
   placeSelPop();
   renderTable();
-  $('#undo').disabled=!undoS.length;$('#redo').disabled=!redoS.length;
+  dockSync();
 }
 
 /* each wire, gate, input and lamp is its own <g>; only the ones whose markup changed are rebuilt,
@@ -485,7 +444,17 @@ function wcolPop(on){const p=$('#wcolPop'),b=$('#wcolBtn');on=!!on&&!!selWire();
   if(!on)return;if(netOn)netOpen(false);const w=selWire();
   p.innerHTML=['',...Object.keys(WCOL)].map(k=>`<button role="menuitemradio" aria-checked="${(w.c||'')===k}" data-wc="${k}" title="${ui(k?'wc_'+k:'wcolDef')}" aria-label="${ui(k?'wc_'+k:'wcolDef')}"${k?` style="--wc:${WCOL[k]}"`:''}></button>`).join('');
   const r=b.getBoundingClientRect();p.style.top=(r.top+r.height/2)+'px';p.style.right=(innerWidth-r.left+8)+'px'}
-function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.disabled=$('#wnoteBtn').disabled=!w||demoOn;b.style.setProperty('--wc',w&&WCOL[w.c]||'');$('#netBtn').disabled=!w||demoOn;if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw()}
+/* the tool dock shows only what is currently usable: undo/redo need a stack,
+   the wire tools need a selected wire. Hidden items collapse with an animation. */
+function dockSync(){
+  const w=!!selWire()&&!demoOn,u=undoS.length>0,r=redoS.length>0;
+  const t=(id,on)=>{const el=$(id);if(el)el.classList.toggle('off',!on)};
+  t('#undo',u);t('#redo',r);t('#tsepU',u||r);
+  t('#wcolBtn',w);t('#wnoteBtn',w);t('#netBtn',w);t('#tsepW',w);
+}
+function wcolSync(){const b=$('#wcolBtn');if(!b)return;const w=selWire();b.style.setProperty('--wc',w&&WCOL[w.c]||'');if(!w||demoOn){wcolPop(false);if(noteW)queueMicrotask(wnoteCommit);if(netOn){netOn=false;$('#netInsp').classList.remove('on');$('#netBtn').setAttribute('aria-expanded',false);$('#netBtn').classList.remove('on')}}else netDraw();dockSync()}
+/* cycle the selected wire's colour: default → r → o → g → b → v → default */
+function wcolCycle(){const w=selWire();if(!w)return;const ks=Object.keys(WCOL),i=ks.indexOf(w.c||''),c=ks[(i+1)%(ks.length+1)]||'';snapshot();if(c)w.c=c;else delete w.c;persist();render();sfx('place')}
 let netOn=false;
 function netOf(w){return C.wires.filter(x=>x.from.g===w.from.g&&x.from.p===w.from.p)}
 function netHL(){const w=netOn&&selWire();
@@ -562,12 +531,14 @@ function buildChrome(){
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
   hintPanelDraw();histDraw();
-  $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
-  $('#verify').textContent=ui(level.sandbox?'run':'verify');
-  {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
+  $('#hintBtn').style.display=level.hint&&!level.sandbox?'':'none';hintBtnDraw();
+  $('#vLab').textContent=ui(level.sandbox?'run':'verify');
+  {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.classList.toggle('on',sh&&benchOn)}
   const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
-  pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:GATES[t].blk?Math.min(64,GATES[t].h*.8):32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
+  pal.innerHTML=level.gates.map((t,i)=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}${i<10?`<kbd class="pk">${(i+1)%10}</kbd>`:''}</span></div>`).join('')
     +(level.sandbox&&level.gates.length<ALL_GATES.length?`<div class="pnote">${ui('sbMore',{n:ALL_GATES.length-level.gates.length})}</div>`:'');
+  pal.onscroll=()=>pal.classList.toggle('psc',pal.scrollHeight>pal.clientHeight+8||pal.scrollWidth>pal.clientWidth+8);
+  pal.onscroll();
   updCount();
 }
 /* the task card sits level with the top buttons when it fits between them, otherwise below them */
@@ -655,18 +626,17 @@ $('#ttWrap').addEventListener('click',e=>{
   const r=level.vec[+tr.dataset.row];liveIn=ioIns().map(k=>r.in[k]|0);rowMark=null;update();
 });
 $('#hintBtn').onclick=e=>{e.stopPropagation();if(sheetH<160)setSheet(220);giveHint()};
-$('#sheetTog').onclick=e=>{e.stopPropagation();sheetToggle()};
 
-/* sheet resize */
+/* sheet resize + tap-to-collapse on the grip */
 const SHEET_MIN=52;
 let sheetH=Math.min(store.get('ll_sheet',150),190),lastSheet=Math.max(150,sheetH);
 function sheetToggle(){if(sheetH>60){lastSheet=sheetH;setSheet(SHEET_MIN)}else setSheet(Math.max(150,lastSheet));sfx('ui')}
 function setSheet(h){sheetH=clamp(h,SHEET_MIN,innerHeight*.7/UI());$('#sheet').style.height=sheetH+'px';$('#sheet').classList.toggle('min',sheetH<=60);$('#zoom').style.bottom=(sheetH+28)+'px';if(window.bitReady)zoomPlace();else $('#zoom').style.right=(settings.bit==='off'||innerWidth<=760?(innerWidth<=760?8:16):92)+'px';const mob=innerWidth<=760;if(mob)$('#zoom').style.bottom=(sheetH+84)+'px';$('#mascot').style.bottom=$('#bitDock').style.bottom=(sheetH+(mob?16:28))+'px';if(window.bitReady)bitPlace();document.documentElement.style.setProperty('--dock',(sheetH*UI()+14)+'px');store.set('ll_sheet',sheetH,true)}
 setSheet(sheetH);
 (()=>{const g=$('#grip');let sy=null,sh=0,moved=false;
-  g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn,#sheetTog'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
+  g.addEventListener('pointerdown',e=>{if(e.target.closest('#hintBtn'))return;document.body.classList.add('sheetDrag');sy=e.clientY;sh=sheetH;moved=false;g.setPointerCapture(e.pointerId)});
   g.addEventListener('pointermove',e=>{if(sy==null)return;if(Math.abs(e.clientY-sy)>3)moved=true;setSheet(sh+(sy-e.clientY)/UI())});
-  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved);else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
+  g.addEventListener('pointerup',()=>{document.body.classList.remove('sheetDrag');if(sy!=null){if(!moved)sheetToggle();else if(sheetH<100)setSheet(SHEET_MIN);else{lastSheet=sheetH;setSheet(sheetH)}}sy=null});
 })();
 
 /* ========== view ========== */
@@ -768,11 +738,13 @@ function finishWire(to){
 }
 function delWire(id){snapshot();C.wires=C.wires.filter(w=>w.id!==id);sfx('remove');changed()}
 function atLimit(){if(level.max&&C.gates.length>=level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return true}return false}
-function updCount(){const el=$('#pcount');if(el){el.textContent=C.gates.length+' / '+level.max;el.classList.toggle('full',C.gates.length>=level.max)}
-  const m=$('#stampTbl');if(!m)return;
-  if(level.sandbox){m.innerHTML=`<div class="met"><b>${C.gates.length}</b><span>${ui('mGates')}</span></div>`;return}
-  const best=(prog.lv[level.id]||{}).g;
-  m.innerHTML=`<div class="met${level.max&&C.gates.length>level.max?' over':''}"><b>${C.gates.length}${level.max?`<small>/ ${level.max}</small>`:''}</b><span>${ui('mGates')}</span></div><div class="met"><b>${level.par}${best!=null&&best<999?`<small>${ui('mYours',{n:best})}</small>`:''}</b><span>${ui('mPar')}</span></div>`;
+/* gates used / limit / Bit's record as a compact pill next to the Test button */
+function updCount(){
+  const m=$('#gmet');if(!m||!level)return;
+  if(level.sandbox){m.innerHTML=`<b>${C.gates.length}</b>`;m.title=ui('mGates')+': '+C.gates.length;return}
+  const best=(prog.lv[level.id]||{}).g,over=level.max&&C.gates.length>level.max;
+  m.innerHTML=`<b class="n${over?' over':''}">${C.gates.length}${level.max?`<i>/${level.max}</i>`:''}</b><b class="p">★${level.par}${best!=null&&best<999?`<i>· ${best}</i>`:''}</b>`;
+  m.title=ui('mGates')+': '+C.gates.length+(level.max?' / '+level.max:'')+' · '+ui('mPar')+': '+level.par+(best!=null&&best<999?' · '+ui('mYours',{n:best}):'');
 }
 function disp(k){return (LANG==='en'&&level.dl&&level.dl[k])||k}
 function delGate(id){{const g=C.gates.find(x=>x.id===id);if(g)fxRing(g.x+30,g.y+20,22,1)}snapshot();C.gates=C.gates.filter(g=>g.id!==id);C.wires=C.wires.filter(w=>w.from.g!==id&&w.to.g!==id);if(hover&&hover.g===id)hover=null;sel=null;multiNorm();sfx('remove');changed()}
@@ -979,9 +951,11 @@ $('#palette').addEventListener('pointerup',e=>{
   }
 });
 
-const KEYDEF={undo:['Ctrl+Z'],redo:['Ctrl+Y','Ctrl+Shift+Z'],del:['Delete','Backspace'],verify:['Enter'],menu:['Escape'],fit:['F'],zin:['='],zout:['-'],
-  hint:['H'],knife:['K'],sheet:['T'],bit:['B'],selall:['Ctrl+A']};
-const KEYORDER=['verify','undo','redo','del','selall','knife','hint','fit','zin','zout','sheet','bit','menu'];
+const KEYDEF={undo:['Ctrl+Z'],redo:['Ctrl+Y','Ctrl+Shift+Z'],del:['Delete','Backspace'],verify:['Enter'],menu:['Escape'],fit:['F'],zin:['=','Num +','Shift+='],zout:['-','Num −'],
+  hint:['H'],knife:['K'],sheet:['S'],dock:['D'],tick:['T'],wcol:['C'],wnote:['N'],netInsp:['I'],library:['L'],settings:[','],bit:['B'],selall:['Ctrl+A']};
+/* palette gates: digits 1–9 and 0 place the N-th gate */
+[1,2,3,4,5,6,7,8,9,0].forEach(d=>KEYDEF['g'+d]=[String(d)]);
+const KEYORDER=['verify','tick','undo','redo','del','selall','knife','wcol','wnote','netInsp','hint','fit','zin','zout','library','settings','sheet','dock','bit','menu','g1','g2','g3','g4','g5','g6','g7','g8','g9','g0'];
 function keysFor(a){const k=settings.keys&&settings.keys[a];return k?[k]:KEYDEF[a]}
 function keyName(e){
   const c=e.code||'';
@@ -994,6 +968,17 @@ function keyName(e){
 }
 function combo(e){const k=keyName(e);if(['Control','Shift','Alt','Meta'].includes(k))return null;return (e.ctrlKey||e.metaKey?'Ctrl+':'')+(e.altKey?'Alt+':'')+(e.shiftKey?'Shift+':'')+k}
 function keyLabel(k){return LANG==='en'?k:k.replace('Space','Пробел').replace('Delete','Del').replace('Backspace','Backspace').replace('Escape','Esc').replace('Enter','Enter')}
+/* drop the N-th palette gate under the mouse if it is over the board, else at the visible centre
+   (lastMX/lastMY are the cursor globals kept by bit.js) */
+function placeGateKey(i){
+  if(!level||demoOn)return;const t=level.gates[i];if(!t||!GATES[t])return;
+  const el=document.elementFromPoint(lastMX,lastMY);
+  const p=(el&&(el===board||board.contains(el)))?toW(lastMX,lastMY):toW(innerWidth/2,(innerHeight-sheetH*UI())/2+28);
+  let x=snap(p.x-30),y=snap(p.y-GATES[t].h/2);
+  while(C.gates.some(g=>Math.abs(g.x-x)<60&&Math.abs(g.y-y)<60))y+=80;
+  if(atLimit())return;
+  snapshot();C.gates.push({id:'g'+(nextId++),type:t,x,y});fxRing(x+30,y+GATES[t].h/2,22);sfx('place');changed();gatePlaced();
+}
 const KEYACT={
   undo:()=>undo(),redo:()=>redo(),
   selall:()=>selectAll(),
@@ -1001,9 +986,13 @@ const KEYACT={
   verify:()=>{if(!$('#result').classList.contains('on'))$('#verify').click()},
   fit:()=>fit(),zin:()=>$('#zIn').click(),zout:()=>$('#zOut').click(),
   hint:()=>{if(level&&level.hint&&!level.sandbox)$('#hintBtn').click()},
-  knife:()=>$('#knifeBtn').click(),sheet:()=>sheetToggle(),
+  knife:()=>$('#knifeBtn').click(),sheet:()=>sheetToggle(),dock:()=>$('#toolsTog').click(),
+  tick:()=>{if($('#benchBtn').style.display!=='none')doTick()},
+  wcol:()=>wcolCycle(),wnote:()=>{if(selWire())$('#wnoteBtn').click()},netInsp:()=>{if(selWire())$('#netBtn').click()},
+  library:()=>openMenu('lib'),settings:()=>openMenu('settings'),
   bit:()=>{if($('#chat').classList.contains('on'))hideBubble();else $('#bitTab').click()}
 };
+[1,2,3,4,5,6,7,8,9,0].forEach(d=>KEYACT['g'+d]=()=>placeGateKey(d===0?9:d-1));
 let kbNav=false;
 window.addEventListener('pointerdown',()=>{kbNav=false},true);
 window.addEventListener('keydown',e=>{if(e.key==='Tab')kbNav=true},true);
@@ -1020,7 +1009,7 @@ window.addEventListener('keydown',e=>{
 });
 $('#undo').onclick=undo;$('#redo').onclick=redo;
 // icon buttons: name and current hotkey in the tooltip
-function toolTips(){for(const el of $$('[data-tl]')){const a=el.dataset.tl,k=KEYDEF[a]?keysFor(a)[0]:'',t=ui(a);el.setAttribute('aria-label',t);el.title=k?t+' ('+keyLabel(k)+')':t}}
+function toolTips(){for(const el of $$('[data-tl]')){const a=el.dataset.tl,k=KEYDEF[a]?keysFor(a)[0]:'',t=ui(a);el.setAttribute('aria-label',t);el.title=k?t+' ('+keyLabel(k)+')':t;const tk=el.querySelector('.tk');if(tk)tk.textContent=k?keyLabel(k):''}}
 $('#btnClear').onclick=()=>{if(!C.gates.length&&!C.wires.length)return;snapshot();C={gates:[],wires:[]};changed()};
 
 let tT;function toast(t,ms=2600){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('on'),ms)}
@@ -1034,7 +1023,7 @@ $('#verify').onclick=async()=>{
   if(level.max&&C.gates.length>level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return}
   hideBubble();
   ensureAudio();
-  demoOn=true;demoSkip=false;rowMark=[];$('#verify').textContent=ui('skip');
+  demoOn=true;demoSkip=false;rowMark=[];$('#vLab').textContent=ui('skip');
   if(sheetH<120)setSheet(210);
   resetSim();
   const n=level.vec.length,dt=(n>32?120:n>8?340:n>4?540:760)*settings.demo;
@@ -1049,7 +1038,7 @@ $('#verify').onclick=async()=>{
     if(!demoSkip){render();scrollRow(ri);sfx('tick',ok);await sleep(dt)}
     if(level.clk){settle(vecInVals(r,1));if(!demoSkip){sfx('clock');liveIn=vecInVals(r,1);render();await sleep(dt*.45)}}
   }
-  demoOn=false;demoRow=-1;$('#verify').textContent=ui('verify');
+  demoOn=false;demoRow=-1;$('#vLab').textContent=ui('verify');
   liveIn=ioIns().map(()=>0);resetSim();settle(liveIn);render();
   if(!fails){sfx('stamp',true);level.outs.forEach((_,i)=>{const n_=nodePos('O'+i);fxBits(n_.x+28,n_.y)});onSolved()}
   else{sfx('stamp',false);onFailed(fails,n)}

@@ -34,9 +34,10 @@ function hintLabel(){const c=hintPrice();return `${ui('hintAsk')}<span class="co
 function hintBtnDraw(){
   const b=$('#hintBtn');if(!b)return;const t=hintTier(),maxT=hintMaxTier(),own=t>=maxT,c=hintPrice();
   b.classList.toggle('owned',own);
-  if(own)b.setAttribute('aria-label',ui('hintAsk')+': '+ui('hintOpen'));else b.removeAttribute('aria-label');
-  b.innerHTML=own?`<span class="hk">✓</span><span class="hko">${ui('hintAsk')} · ${ui('hintOpen')}</span>`
-    :(t?`<span class="hk">✓</span>`:'')+`${ui('hintAsk')}<span class="cost">${t?ui('hintTier'+Math.min(maxT,t+1))+' · ':''}${c?ptsN(c):ui('free')}</span>`;
+  b.querySelector('.hk').textContent=(own||t)?'✓':'';
+  const lab=own?ui('hintAsk')+' · '+ui('hintOpen'):ui('hintAsk')+`<span class="cost">${t?ui('hintTier'+Math.min(maxT,t+1))+' · ':''}${c?ptsN(c):ui('free')}</span>`;
+  b.querySelector('.tl').innerHTML=lab;
+  b.setAttribute('aria-label',lab.replace(/<[^>]+>/g,''));
 }
 function dailyCheck(){
   const d=today();if(prog.st.day===d)return;

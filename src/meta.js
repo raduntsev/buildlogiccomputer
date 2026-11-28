@@ -17,8 +17,6 @@ function onSolved(){
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
   done.add(id);save();updHud();histDraw();$('#lvStars').innerHTML=starsHTML(ns);
-  const becameBlk=!level.seq&&!level.clk&&C.gates.length&&(first||!GATES[blkType(level)]);
-  if(!level.seq&&!level.clk&&C.gates.length)try{blkRefresh(level)}catch(e){}
   const chDone=first&&chapterDone(level.ch);
   const nx=nextLevel();
   const btns=[{t:ui('stay')},{t:ui('levels'),f:()=>openMenu('levels')}];
@@ -30,7 +28,6 @@ function onSolved(){
      <div class="rmet"><div><b class="${C.gates.length<=level.par?'hl':''}">${C.gates.length}</b><span>${ui('mGates')}</span></div><div><b>${level.par}</b><span>${ui('mPar')}</span></div><div><b class="hl">+${gain}</b><span>${ui('points').toLowerCase()}</span></div></div>`,btns);
   musicMood('bright',30000);
   const lines=[{t:pick(bits===7?STORY.win3:STORY.win),m:bits===7?'smug':'happy'}];
-  if(becameBlk)lines.push({t:STORY.blkNew,m:'happy'});
   if(chDone){if(level.ch===10)lines.push(...STORY.final);else lines.push({t:STORY.chDone[level.ch],m:'happy'})}
   say(lines);
   badge('FIRST_LEVEL');
@@ -374,7 +371,7 @@ function openMenu(s){
 }
 function closeMenu(){qTimerStop();$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
 $('#btnMenu').onclick=()=>openMenu('main');
-$('#btnLevels').onclick=()=>openMenu('levels');$('#btnSettings').onclick=()=>openMenu('settings');
+$('#btnSettings').onclick=()=>openMenu('settings');
 $('#hud').onclick=()=>openMenu('profile');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   ensureAudio();sfx('ui');
@@ -503,7 +500,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
-  $('#verify').textContent=demoOn?ui('skip'):ui(level&&level.sandbox?'run':'verify');
+  $('#vLab').textContent=demoOn?ui('skip'):ui(level&&level.sandbox?'run':'verify');
   updHud();drawMachine();
   if(level){buildChrome();render()}
   if(curScr==='levels')drawTree();if(curScr==='profile')drawProfile();if(curScr==='quiz'&&QZ)drawQuiz();
@@ -528,6 +525,6 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
 })();
 window.LL={LV,get C(){return C},set C(v){C=v},loadLevel,settle,readOuts,resetSim,changed,get level(){return level},done,prog,points,openQuiz,openMenu,badge,get QZ(){return QZ}};
 
-STORY.blkNew=['Эта схема стала блоком: вы найдёте её на полке в следующих уровнях и в песочнице. Эту схему вы будете использовать дальше — Машина запоминает всё.','This circuit is now a block: you will find it on the shelf in later levels and in the sandbox. You will use it again — the Machine remembers everything.'];
+
 
 STORY.quizUnit=['Записываю в протокол: узел «{u}» проверен и включён. Машина оживает: {n} из {N} узлов на питании.','Logging to the protocol: the “{u}” unit is tested and online. The Machine is waking up: {n} of {N} units powered.'];

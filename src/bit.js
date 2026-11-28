@@ -37,7 +37,7 @@ function bitAnim(c){if(settings.calm)return;const b=$('#bit');b.classList.remove
 
 const norm=l=>(typeof l==='string'||Array.isArray(l))?{t:l}:l;
 function logPush(text,me){Bit.log.push({t:text.replace(/<[^>]+>/g,''),me:!!me});if(Bit.log.length>120)Bit.log.splice(0,Bit.log.length-120);store.set('ll_log',Bit.log,true)}
-function hideBubble(){clearTimeout(Bit.timer);clearInterval(Bit.typer);Bit.q=[];Bit.cur=null;Bit.typing=false;$('#chat').classList.remove('on','logon');document.body.classList.remove('bitOn');bitMood('idle')}
+function hideBubble(){clearTimeout(Bit.timer);clearInterval(Bit.typer);Bit.q=[];Bit.cur=null;Bit.typing=false;$('#chat').classList.remove('on','logon');document.body.classList.remove('bitOn');bitMood('idle');if(window.bitReady)bitPlace()}
 
 // opt.u: the player asked (bypasses mute and "hints only"); opt.hint: gameplay help (allowed in "hints only")
 function say(lines,opt={}){
@@ -167,7 +167,10 @@ function bitObstacles(){
   for(const el of $$('#top .tb>*,#palette,#taskCard,#toolDock')){const r=rectOf(el);if(r)o.push(r)}
   // the sheet and the zoom buttons animate, so use where they are going rather than where they are
   const sh=(14+sheetH)*z;o.push({x:16*z,y:innerHeight-sh,w:innerWidth-32*z,h:sh});
-  if(!BIT.home){const zm=$('#zoom');if(zm.offsetWidth){const w=zm.offsetWidth*z,h=zm.offsetHeight*z;o.push({x:innerWidth-16*z-w,y:innerHeight-(sheetH+26)*z-h,w,h})}}
+  // the zoom pill is always an obstacle, wherever it is heading (it slides with the sheet and the dock)
+  {const zm=$('#zoom');if(zm.offsetWidth){const w=zm.offsetWidth*z,h=zm.offsetHeight*z,mob=innerWidth<=760;
+    const zb=(mob?sheetH+84:sheetH+28)*z,zr=(mob?8:(settings.bit!=='off'&&BIT.home?92:16))*z;
+    o.push({x:innerWidth-zr-w,y:innerHeight-zb-h,w,h})}}
   return o;
 }
 /* move rectangle r into the free area: inside the window and off every obstacle.
@@ -203,8 +206,8 @@ function bitPlace(){
     if(r.width){let fx=0,fy=0;const pad=e;
       if(r.left<pad)fx=(pad-r.left)/z;if(r.right>innerWidth-pad)fx=(innerWidth-pad-r.right)/z;
       if(r.top<pad)fy=(pad-r.top)/z;if(r.bottom>innerHeight-pad)fy=(innerHeight-pad-r.bottom)/z;
-      // never sit on the element strip: lift the tab above it
-      const pr=rectOf($('#palette'));if(pr&&!$('#ov').classList.contains('on')&&hits({x:r.left+fx*z,y:r.top+fy*z,w:r.width,h:r.bottom-r.top},pr)){const up=(pr.y-pad-(r.bottom+fy*z))/z;if(r.top+(fy+up)*z>=pad)fy+=up}
+      // never sit on the element strip or the zoom control: lift the tab above them
+      for(const q of [$('#palette'),$('#zoom')]){const pr=rectOf(q);if(pr&&!$('#ov').classList.contains('on')&&hits({x:r.left+fx*z,y:r.top+fy*z,w:r.width,h:r.bottom-r.top},pr)){const up=(pr.y-pad-(r.bottom+fy*z))/z;if(r.top+(fy+up)*z>=pad)fy+=up}}
       if(fx||fy){BP.dx+=fx;BP.dy+=fy;T.style.translate=`${BP.dx}px ${BP.dy}px`}}
     const ch=$('#chat').offsetHeight;BP.my=clamp(BP.my||0,0,Math.max(0,innerHeight/z-ch-120));
     $('#chat').style.top=(52+BP.my)+'px';M.classList.remove('fl','ft');return;

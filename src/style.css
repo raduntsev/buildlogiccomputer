@@ -41,6 +41,16 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .tbtn:disabled{opacity:.4;pointer-events:none;box-shadow:none}
 .tbtn.primary{color:#fff;background:var(--ink);padding:0 22px}
 .tbtn.primary:hover{background:#000}
+/* icon buttons: the label (and hotkey) slides in on hover / keyboard focus */
+.tbtn.ico{padding:0 12px;overflow:hidden}
+.tbtn.ico svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tl{display:inline-flex;align-items:center;gap:6px;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .25s ease,opacity .2s ease,margin-left .25s ease}
+.tbtn.ico:hover .tl,.tbtn.ico:focus-visible .tl,.ib:hover .tl,.ib:focus-visible .tl{max-width:240px;opacity:1;margin-left:8px}
+.ib{width:auto;min-width:36px;overflow:hidden}
+.ib .tl{margin-left:0}
+.tk{font:inherit;font-size:11px;font-weight:600;line-height:1.4;color:var(--mute);border:1.5px solid var(--line);border-radius:6px;padding:0 5px}
+.tbtn.primary .tk{color:#D5D7D0;border-color:rgba(255,255,255,.4)}
+@media (hover:none){.tbtn.ico .tl,.ib .tl{display:none}}
 #formula{height:44px;display:flex;align-items:center;padding:0 22px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow);font-size:21px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;pointer-events:none}
 #formula:empty{display:none}
 .ov{text-decoration:overline;text-decoration-thickness:1.5px;text-underline-offset:0}
@@ -51,17 +61,29 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 #hud{gap:10px}
 #hud .hr{color:var(--ink2);font-weight:500}
 #hud .hp{font-variant-numeric:tabular-nums;font-weight:600;background:var(--acc);border-radius:999px;padding:3px 10px;margin-right:-8px}
+/* gates / record pill next to the Test button */
+#gmet{display:inline-flex;align-items:center;gap:9px;height:32px;padding:0 13px;border-radius:999px;background:var(--card2);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;cursor:default}
+#gmet:empty{display:none}
+#gmet i{font-style:normal;font-size:11.5px;color:var(--mute);font-weight:500}
+#gmet .p{font-size:13px;font-weight:500;color:var(--ink2)}
+#gmet .over{color:var(--coral)}
 
 /* ---------- element toolbar ---------- */
-#palette{position:fixed;left:16px;top:76px;display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:var(--r);padding:6px;box-shadow:var(--shadow);z-index:3;max-height:calc(100vh - 100px);overflow:auto}
+#palette{position:fixed;left:16px;top:76px;display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:var(--r);padding:6px;box-shadow:var(--shadow);z-index:3;max-height:calc(100vh - 100px);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#palette::-webkit-scrollbar{width:5px;height:5px}
+#palette::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+#palette::-webkit-scrollbar-track{background:transparent}
+#palette::-webkit-scrollbar-button{display:none;width:0;height:0}
 #palette:empty{display:none}
-.pi{display:flex;flex-direction:column;align-items:center;width:72px;padding:9px 0 7px;cursor:grab;color:var(--ink2);touch-action:none;border-radius:16px}
+/* long names wrap to a second line instead of colliding with the next item */
+.pi{display:flex;flex-direction:column;align-items:center;width:72px;padding:9px 0 7px;cursor:grab;color:var(--ink2);touch-action:none;border-radius:16px;transition:transform .12s,background .12s}
 .pi:hover{background:var(--card2);color:var(--ink)}
-.pi:active{background:var(--acc)}
+.pi:active{background:var(--acc);transform:scale(.94)}
 .pi svg{width:48px;height:30px;overflow:visible}
-.pi span{font-size:11.5px;margin-top:4px;font-weight:500;text-align:center;line-height:1.15}
-.pcount{margin-top:4px;font-size:13px;text-align:center;font-weight:600;padding:6px 0;border-radius:12px;background:var(--card2);font-variant-numeric:tabular-nums}
-.pcount.full{background:var(--coral);color:#fff}
+.pi span{font-size:11.5px;margin-top:4px;font-weight:500;text-align:center;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pk{display:inline-block;margin-left:4px;font-size:9px;font-weight:600;color:var(--mute);border:1px solid var(--line);border-radius:4px;padding:0 3px;vertical-align:1px}
+@media (hover:none){.pk{display:none}}
+@media (min-width:761px){#palette.psc{-webkit-mask-image:linear-gradient(#000 0 88%,transparent 99%);mask-image:linear-gradient(#000 0 88%,transparent 99%)}}
 
 /* ---------- zoom ---------- */
 #zoom{position:fixed;right:16px;z-index:4;display:flex;gap:4px;transition:bottom .15s}
@@ -73,7 +95,9 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 /* ---------- bottom dock ---------- */
 #sheet{position:fixed;left:16px;right:16px;bottom:14px;background:var(--paper);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:3;overflow:hidden}
 #grip{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 10px 0 18px;cursor:ns-resize;touch-action:none;position:relative}
-#grip::before{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:4px;background:var(--line)}
+/* the handle bar is also the collapse toggle: a tap (<4 px move) toggles, a drag resizes */
+#grip::before{content:"";position:absolute;left:50%;top:7px;width:44px;height:5px;margin-left:-22px;border-radius:5px;background:var(--line);transition:background .15s,transform .15s}
+#grip:hover::before{background:var(--mute);transform:scaleX(1.15)}
 #lvNum{font-size:30px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1}
 #lvHead{display:inline-flex;align-items:baseline;gap:12px;min-width:0}
 #lvTitle{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -101,12 +125,6 @@ table.tt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .tt tr.ok td{background:var(--ok);color:var(--ok-ink)}
 .tt tr.bad td{background:var(--bad);color:var(--bad-ink)}
 .tt .act{display:inline-block;font-size:11px;line-height:16px;min-width:16px;margin-right:5px;background:var(--coral);color:#fff;border-radius:8px;font-weight:600;vertical-align:1px}
-#stampTbl{display:flex;flex-direction:column;gap:8px;min-width:150px}
-.met{background:var(--card2);border-radius:18px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;flex:1}
-.met b{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
-.met b small{font-size:13px;font-weight:500;color:var(--mute);letter-spacing:0;margin-left:3px}
-.met span{font-size:12px;color:var(--mute);margin-top:4px}
-.met.over{background:var(--bad)}
 
 /* ---------- toast ---------- */
 #toast{position:fixed;left:50%;top:72px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:500;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:90vw;text-align:center;z-index:8}
@@ -368,9 +386,7 @@ table.tt{border-collapse:separate;border-spacing:3px 2px;font-size:17px}
 .tt td:hover{outline:2px solid var(--ink);outline-offset:-2px}
 .tt .act{position:absolute;right:-5px;top:-7px;margin:0;min-width:15px;line-height:15px;font-size:10px;background:var(--ink);color:#fff;border-radius:8px}
 /* dock without the table */
-#sheetBody{grid-template-columns:minmax(220px,1fr) auto}
-#stampTbl{flex-direction:row;min-width:0}
-.met{min-width:130px}
+#sheetBody{grid-template-columns:minmax(220px,1fr)}
 /* headings: page titles calm, content heroes large */
 .scr h2{font-size:30px;letter-spacing:-.02em;margin-bottom:22px}
 .pf-k{margin-top:6px}
@@ -603,6 +619,18 @@ body.bitDragging #chat.on{opacity:.72}
 body.bitDragging:not(.bitOn) #bitTab{opacity:.75}
 body.bitDragging #bit .legs{transform-origin:40px 72px;transform-box:view-box;animation:dangle .7s ease-in-out infinite}
 @keyframes dangle{25%{transform:rotate(7deg)}75%{transform:rotate(-7deg)}}
+/* lamp: breathing halo + turn-on flare (SVG transform-box keeps positions intact) */
+.lglow{fill:var(--acc);opacity:.42;transform-box:fill-box;transform-origin:center;animation:lampBre 2.6s ease-in-out infinite}
+.lring{fill:none;stroke:var(--acc);stroke-width:1.5;opacity:.5;transform-box:fill-box;transform-origin:center;animation:lampRing 2.6s ease-in-out infinite}
+.lflare{fill:none;stroke:var(--acc);stroke-width:3;transform-box:fill-box;transform-origin:center;animation:lampFlare .55s ease-out forwards}
+@keyframes lampBre{50%{transform:scale(1.16);opacity:.16}}
+@keyframes lampRing{50%{transform:scale(1.07);opacity:.22}}
+@keyframes lampFlare{from{transform:scale(.5);opacity:.95}to{transform:scale(1.9);opacity:0}}
+/* press feedback: board parts and chrome both dip under the pointer */
+.gin,.flag,.ogrp{transform-box:fill-box;transform-origin:center;transition:transform .13s ease}
+.gate:active .gin,.flag:active,.ogrp:active{transform:scale(.94)}
+.tbtn,.ib,.cbtn,.pi{transition:transform .1s}
+.tbtn:active,.ib:active,.cbtn:active{transform:scale(.95)}
 /* delete button next to the selection */
 #selPop{position:fixed;left:0;top:0;z-index:4;height:36px;padding:0 16px;border-radius:999px;background:var(--ink);color:#fff;font-size:14px;font-weight:600;
   box-shadow:var(--shadow);display:none;align-items:center;white-space:nowrap;margin-top:-8px}
@@ -619,10 +647,6 @@ body.bitDragging #bit .legs{transform-origin:40px 72px;transform-box:view-box;an
 #knifeBtn.on{background:var(--coral);color:#fff}
 body.knife #board{cursor:crosshair}
 /* dock: hide / show */
-#sheetTog{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-#sheetTog:hover{background:var(--line)}
-#sheetTog svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
-#sheet.min #sheetTog svg{transform:rotate(180deg)}
 #sheet{transition:height .22s cubic-bezier(.3,.9,.4,1)}
 body.sheetDrag #sheet{transition:none}
 .pnote{font-size:11px;line-height:1.25;color:var(--mute);text-align:center;padding:6px 4px 4px;max-width:72px}
@@ -688,7 +712,7 @@ body.treeMob #treeList{display:block}
 /* ================= v3.6 ================= */
 /* undo, redo and scissors: one icon group next to Menu */
 .tgrp{display:flex;align-items:center;gap:2px;height:40px;padding:0 4px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow)}
-.ib{width:36px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:0 0 auto}
+.ib{width:auto;min-width:36px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:0 0 auto;padding:0 9px}
 .ib svg,#chatX svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .ib:hover{background:var(--card2)}
 .ib:disabled{opacity:.3;pointer-events:none}
@@ -762,13 +786,16 @@ body.calm #gtip{transform:none}
 #navGrp .ib svg{width:18px;height:18px}
 /* floating editor tools on the right edge, centred between the top bar and the sheet */
 #toolDock{position:fixed;right:16px;top:calc((76px + 100vh - var(--dock,180px))/2);transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px}
-#toolDock .tgrp{flex-direction:column;height:auto;width:44px;padding:4px 0;gap:2px}
-#toolDock .tsep{width:20px;height:1px;margin:4px 0}
+#toolDock .tgrp{flex-direction:column;height:auto;width:44px;padding:4px 0;gap:2px;overflow:hidden;transition:opacity .2s,width .2s,padding .2s,transform .2s}
+#toolDock .tsep{width:20px;height:1px;margin:4px 0;flex:0 0 auto;transition:height .2s,margin .2s,opacity .2s}
+#toolDock .tsep.off{height:0;margin:0;opacity:0}
+#toolDock .ib{transition:height .2s,margin .2s,opacity .18s,transform .2s,background .12s,color .12s}
+#toolDock .ib.off{height:0;min-height:0;margin:0;opacity:0;transform:scale(.5);pointer-events:none}
 #toolsTog{width:28px;height:28px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--mute)}
 #toolsTog:hover{color:var(--ink)}
 #toolsTog svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 #toolDock.hide #toolsTog svg{transform:rotate(180deg)}
-#toolDock.hide #tools{display:none}
+#toolDock.hide #tools{opacity:0;width:0;padding-left:0;padding-right:0;transform:translateX(10px);pointer-events:none}
 .w.wc{stroke:var(--wc)}
 .w0.wc{opacity:.38}
 #wcolBtn .wcdot{fill:var(--wc,transparent);stroke:none}

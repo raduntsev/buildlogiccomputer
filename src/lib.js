@@ -72,6 +72,7 @@ function loadLibEntry(id){
   if(saves[0]){saves[0].sbio={ins:SANDBOX.ins.slice(),outs:SANDBOX.outs.slice()}}
   loadLevel(SANDBOX);closeMenu();
   C=JSON.parse(JSON.stringify({gates:e.gates,wires:e.wires}));
+  sanitizeC();
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)||0),...C.wires.map(w=>+w.id.slice(1)||0));
   sel=null;multi.clear();
   undoS.length=0;redoS.length=0;
