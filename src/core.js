@@ -56,7 +56,15 @@ const UIS={
   stay:['Остаться','Stay'],next:['Следующий уровень','Next level'],fix:['Исправить','Fix it'],toQuiz:['Контрольный тест','Take the test'],
   starSolved:['решено','solved'],starNoHint:['без подсказок','no hints'],starPar:['не больше {p} эл.','{p} gates or fewer'],
   unlocksAfter:['откроется после: {r}','unlocks after: {r}'],testN:['тест {n}','test {n}'],quizNode:['Контрольный тест','Checkpoint test'],
-  quizTitle:['Контрольное испытание, глава {n}','Checkpoint test, chapter {n}'],qOf:['Вопрос {i} из {n}','Question {i} of {n}'],
+  quizTitle:['Контрольное испытание · Глава {n}','Checkpoint test · Chapter {n}'],qOf:['Вопрос {i} из {n}','Question {i} of {n}'],
+  qSubmit:['Сдать','Submit'],qAnswered:['Отвечено: {k} / {n}','Answered: {k} / {n}'],
+  qBoard:['Схема на доске','Circuit on the board'],qBuild:['Собрать на доске','Build on the board'],
+  qNotStarted:['не начато','not started'],qOpened:['начато','started'],qBuilt:['собрано: {n} эл.','built: {n} gates'],
+  qBackToTest:['Вернуться к тесту','Back to the test'],qLimit:['лимит {n}','limit {n}'],
+  qNoAns:['без ответа','no answer'],qTimeUp:['время вышло','time ran out'],
+  qCircOk:['схема верна','circuit correct'],qCircBad:['схема неверна','circuit incorrect'],
+  qRows:['верных строк {x} из {y}','rows correct {x} of {y}'],qGatesLim:['{n} эл. (лимит {m})','{n} gates (limit {m})'],
+  qEffort:['Время: {t} · правок ответов: {c} · мгновенных ответов: {s} · практика: открыто {o} из {b}, элементов {g}, правок {e}','Time: {t} · answer edits: {c} · snap guesses: {s} · board work: {o} of {b} opened, {g} gates, {e} edits'],
   qNext:['Следующий вопрос','Next question'],qDone:['Результат','Result'],qScore:['{s} из {n}','{s} of {n}'],qPass:['Зачёт','Passed'],qFail:['Не зачёт','Failed'],
   qRetry:['Пройти ещё раз','Try again'],qLocked:['Сначала пройдите все уровни главы','Finish every level in the chapter first'],
   rank:['Допуск','Clearance'],points:['Очки','Points'],toNext:['до «{r}»: {p}','to “{r}”: {p}'],maxRank:['высший допуск','top clearance'],
@@ -100,7 +108,18 @@ const OPSVG={'⊕':'<circle cx="8" cy="8" r="6"/><path d="M8 3.4V12.6M3.4 8H12.6
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function mo(c){return `<span class="mo">${OPSVG[c]?`<svg class="mos" viewBox="0 0 16 16">${OPSVG[c]}</svg>`:c}</span>`}
 function mathHTML(h){
-  return String(h).replace(/∧/g,'&amp;').split(/(<[^>]+>)/).map(p=>p[0]==='<'?p:p.replace(
+  const s=String(h).replace(/∧/g,'&amp;').split(/(<[^>]+>)/).map(p=>p[0]==='<'?p:p.replace(
     /&amp;|&gt;|&lt;|[⊕⊙∨→←=+−]| [?:] |(?<![A-Za-z])(?:Co|Bo|[A-Z]{1,2}|n|k)(?![A-Za-z])/g,
     m=>m==='&amp;'?mo('&amp;'):m==='&gt;'||m==='&lt;'?mo(m):/^ [?:] $/.test(m)?' '+mo(m.trim())+' ':(OPSVG[m]||'=+−'.includes(m))?mo(m):/^[A-Z]{2}$/.test(m)?m.split('').map(c=>`<i class="mv">${c}</i>`).join(''):`<i class="mv">${m}</i>`)).join('');
+  // formulas must not wrap mid-expression: glue a text-node space when both neighbours are
+  // math-ish units (variable/operator/overline tags, digits, math punctuation). Tag internals
+  // are never touched, so attributes stay intact.
+  const mtag=p=>p[0]==='<'&&(/class="(?:mo|mv|ov)"|<sub|<sup/.test(p)||/^<\/(?:i|span|sub|sup)>/.test(p));
+  const mword=w=>/^[A-Z]{2}$/.test(w)||/^(?:[0-9₂]+|Co|Bo)[0-9₂.,:;)\]]*$|^[−+.,:;()\[\]¬=]+$/.test(w);
+  const u=[];
+  s.split(/(<[^>]+>)/).forEach(p=>{
+    if(p[0]==='<'){u.push({x:p,m:mtag(p)});return}
+    p.split(' ').forEach((w,i)=>{if(i)u.push({x:' ',sp:1});if(w)u.push({x:w,m:mword(w)})});
+  });
+  return u.reduce((out,a,i)=>out+(a.sp&&i&&u[i-1].m&&u[i+1]&&u[i+1].m?'\u00A0':a.x),'');
 }

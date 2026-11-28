@@ -129,7 +129,7 @@ function giveHint(){
   say([{t:tx(pick(STORY.hintPre))+' '+body,m:'think'}],{u:1});
 }
 function levelIntro(){
-  if(!level||$('#ov').classList.contains('on'))return;
+  if(!level||level.quiz||$('#ov').classList.contains('on'))return;
   if(level.sandbox){if(!seen.has(0)){seen.add(0);save();setTimeout(()=>say([{t:STORY.sandbox,m:'smug'}]),350)}return}
   if(seen.has(level.id))return;
   const lines=[];

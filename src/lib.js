@@ -70,7 +70,7 @@ function loadLibEntry(id){
   // the sandbox adopts the entry's inputs and outputs
   SANDBOX.ins=e.io.ins.slice();SANDBOX.outs=e.io.outs.slice();
   if(saves[0]){saves[0].sbio={ins:SANDBOX.ins.slice(),outs:SANDBOX.outs.slice()}}
-  loadLevel(SANDBOX);closeMenu();
+  loadLevel(SANDBOX);closeWiki();closeMenu();
   C=JSON.parse(JSON.stringify({gates:e.gates,wires:e.wires}));
   sanitizeC();
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)||0),...C.wires.map(w=>+w.id.slice(1)||0));
@@ -121,7 +121,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.id==='libFile'&&e.target.files.length){libImport(e.target.files[0]);e.target.value=''}
 });
-$('#btnLib').onclick=()=>openMenu('lib');
+$('#btnLib').onclick=()=>openWiki();
 
 Object.assign(UIS,{
   library:['Библиотека','Library'],libSave:['Сохранить текущую','Save current'],libName:['Название схемы…','Circuit name…'],

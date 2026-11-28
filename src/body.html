@@ -12,7 +12,7 @@
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn ico" id="btnMenu" data-tl="menu"><svg viewBox="0 0 24 24"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg><span class="tl"><span data-t="menu"></span><kbd class="tk"></kbd></span></button><div class="tgrp" id="navGrp"><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><path d="M10.2 3.6l.3-1.6h3l.3 1.6a6.9 6.9 0 0 1 1.9.8l1.5-.7 2.1 2.1-.7 1.5a6.9 6.9 0 0 1 .8 1.9l1.6.3v3l-1.6.3a6.9 6.9 0 0 1-.8 1.9l.7 1.5-2.1 2.1-1.5-.7a6.9 6.9 0 0 1-1.9.8l-.3 1.6h-3l-.3-1.6a6.9 6.9 0 0 1-1.9-.8l-1.5.7-2.1-2.1.7-1.5a6.9 6.9 0 0 1-.8-1.9l-1.6-.3v-3l1.6-.3a6.9 6.9 0 0 1 .8-1.9l-.7-1.5 2.1-2.1 1.5.7a6.9 6.9 0 0 1 1.9-.8Z"/><circle cx="12" cy="12" r="3.1"/></svg><span class="tl"><span data-t="settings"></span><kbd class="tk"></kbd></span></button><button class="ib" id="btnLib" data-tl="library"><svg viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H6.5A2.5 2.5 0 0 0 4 22Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg><span class="tl"><span data-t="library"></span><kbd class="tk"></kbd></span></button></div></div>
+  <div class="tb"><button class="tbtn ico" id="btnMenu" data-tl="menu"><svg viewBox="0 0 24 24"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg><span class="tl"><span data-t="menu"></span><kbd class="tk"></kbd></span></button><div class="tgrp" id="navGrp"><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><path d="M10.2 3.6l.3-1.6h3l.3 1.6a6.9 6.9 0 0 1 1.9.8l1.5-.7 2.1 2.1-.7 1.5a6.9 6.9 0 0 1 .8 1.9l1.6.3v3l-1.6.3a6.9 6.9 0 0 1-.8 1.9l.7 1.5-2.1 2.1-1.5-.7a6.9 6.9 0 0 1-1.9.8l-.3 1.6h-3l-.3-1.6a6.9 6.9 0 0 1-1.9-.8l-1.5.7-2.1-2.1.7-1.5a6.9 6.9 0 0 1-.8-1.9l-1.6-.3v-3l1.6-.3a6.9 6.9 0 0 1 .8-1.9l-.7-1.5 2.1-2.1 1.5.7a6.9 6.9 0 0 1 1.9-.8Z"/><circle cx="12" cy="12" r="3.1"/></svg><span class="tl"><span data-t="settings"></span><kbd class="tk"></kbd></span></button><button class="ib" id="btnLib" data-tl="library"><svg viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H6.5A2.5 2.5 0 0 0 4 22Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg><span class="tl"><span data-t="library"></span><kbd class="tk"></kbd></span><i id="libDot" class="wdot" style="display:none"></i></button></div></div>
   <div class="tb r"><button class="tbtn" id="hud"></button><span id="gmet" role="status"></span><button class="tbtn ico" id="btnClear" data-tl="clear"><svg viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 13h9.2l.9-13M10 11v5M14 11v5"/></svg><span class="tl"><span data-t="clear"></span><kbd class="tk"></kbd></span></button><button class="tbtn ico" id="benchBtn" data-tl="tick" style="display:none"><svg viewBox="0 0 24 24"><path d="M3 13h4l2.5-8 4 16 2.5-8H20"/></svg><span class="tl"><span data-t="tickDo"></span><kbd class="tk"></kbd></span></button><button class="tbtn ico primary" id="verify" data-tl="verify"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 6.5"/></svg><span class="tl"><span id="vLab"></span><kbd class="tk"></kbd></span></button></div>
 </header>
 <div id="toolDock" class="zz"><div class="tgrp" id="tools" role="toolbar">
@@ -87,11 +87,6 @@
     <div id="shopBox"></div>
     <button class="mi small" data-go="main" data-t="back"></button>
   </div>
-  <div class="scr zz" id="scrLib">
-    <h2 data-t="library"></h2>
-    <div id="libBox"></div>
-    <button class="mi small" data-go="main" data-t="back"></button>
-  </div>
   <div class="scr zz" id="scrQuiz">
     <div id="quizBox"></div>
     <button class="mi small" data-go="levels" data-t="back"></button>
@@ -109,6 +104,23 @@
       <p style="margin-top:14px" data-t="aboutT2"></p>
     </div>
     <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+</div>
+
+<div id="wikiOv" role="dialog" aria-modal="true">
+  <div class="wkBack"></div>
+  <div class="wkPanel">
+    <div class="wkHead">
+      <div class="wkTabs"><button class="wkt on" data-wt="art" data-t="wTabArt"></button><button class="wkt" data-wt="my" data-t="wTabMy"></button></div>
+      <button class="ib" id="wkX" aria-label="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="wkBody">
+      <div id="wkArtV">
+        <aside class="wkSide"><input id="wkQ" autocomplete="off" spellcheck="false"><div id="wkList"></div></aside>
+        <div class="wkDocWrap" id="wkDocWrap"><div id="wkDoc"></div></div>
+      </div>
+      <div id="wkMyV" style="display:none"><div id="libBox"></div></div>
+    </div>
   </div>
 </div>
 

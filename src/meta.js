@@ -2,7 +2,7 @@
 // Stars per level (bit mask): 1 solved, 2 solved without a hint, 4 solved with ≤ par gates.
 function starsHTML(s){return [[1,'starSolved'],[2,'starNoHint'],[4,'starPar']].filter(([b])=>s&b).map(([,k])=>`<span class="st on" title="${ui(k,{p:level?level.par:''})}">★</span>`).join('')}
 const lvPts=s=>s?100+(s&2?50:0)+(s&4?50:0):0;
-const quizPts=q=>q&&q.pass?q.best*20+(q.best===5?50:0):0;
+const quizPts=q=>{if(!q||!q.pass)return 0;const n=q.n||5;return Math.round(q.best/n*5)*20+(q.best===n?50:0)};
 function points(){let p=0;for(const id in prog.lv)p+=lvPts(prog.lv[id].s);for(const c in prog.quiz)p+=quizPts(prog.quiz[c]);return p}
 function rankIdx(p=earned()){let r=0;RANKS.forEach((x,i)=>{if(p>=x[0])r=i});return r}
 const quizPassed=ch=>!!(prog.quiz[ch]&&prog.quiz[ch].pass);
@@ -73,7 +73,7 @@ function gatePlaced(){if(level.sandbox&&C.gates.length>=10)badge('SANDBOX')}
    chapter's levels (fresh each attempt, so retakes are not memorisation) plus two from
    the chapter pool. 25 seconds per task; running out of time counts as a wrong answer. */
 let QZ=null;
-const QTIME=25;
+const QTOTAL=270; // one timer for the whole test: 2 board tasks × 75 s + 4 questions × 30 s
 const rbQ=()=>Math.random()<.5?0:1,riQ=n=>Math.floor(Math.random()*n);
 function qOpts(right,pool){const o=new Set([right]);let g=0;while(o.size<4&&g++<80)o.add(pool());return[...o].sort(()=>Math.random()-.5)}
 /* truth table with one hidden cell */
@@ -164,36 +164,100 @@ function genPractical(ch){
   if(ch>=9)bag.push(qTable,qFormula);
   return pick(bag)();
 }
+/* ---- board tasks: a mutated variant of a combinational level the player solved ---- */
+function qCombPool(ch){
+  const ok=l=>!l.seq&&!l.clk&&!l.sandbox&&l.par>0&&l.ins.length&&l.gates.length&&l.vec&&l.vec.length===(1<<l.ins.length)&&done.has(l.id);
+  const own=LV.filter(l=>l.ch===ch&&ok(l)),back=LV.filter(l=>l.ch<=ch&&ok(l));
+  return {own,back:back.length?back:own};
+}
+/* permute inputs / negate an input / negate an output; the result must differ and not be constant.
+   Rows stay in canonical minterm order (row m holds the input vector m): the synthesizer and the
+   grader index truth values by position. */
+function qMutate(l){
+  const n=l.ins.length,oldByKey={};
+  l.vec.forEach(r=>{oldByKey[l.ins.map(k=>r.in[k]|0).join('')]=r.out});
+  for(let t=0;t<40;t++){
+    const perm=l.ins.map((_,j)=>j);
+    if(n>1&&Math.random()<.7)for(let i=n-1;i>0;i--){const j=riQ(i+1),x=perm[i];perm[i]=perm[j];perm[j]=x}
+    const negI=Math.random()<.5?riQ(n):-1,negO=Math.random()<.5?riQ(l.outs.length):-1;
+    if(perm.every((p,i)=>p===i)&&negI<0&&negO<0)continue;
+    const vec=[];
+    for(let m=0;m<(1<<n);m++){
+      const v=l.ins.map((_,j)=>(m>>(n-1-j))&1);
+      const u=l.ins.map(()=>0);
+      l.ins.forEach((k,j)=>{u[perm[j]]=v[j]^(j===negI?1:0)});
+      const oo=oldByKey[u.join('')];
+      vec.push({in:Object.fromEntries(l.ins.map((k,j)=>[k,v[j]])),
+        out:Object.fromEntries(l.outs.map((k,o)=>[k,(oo[k]|0)^(o===negO?1:0)]))});
+    }
+    if(!vec.some((r,i)=>l.outs.some(k=>r.out[k]!==l.vec[i].out[k])))continue;
+    if(!l.outs.every(k=>{let z=0,o=0;vec.forEach(r=>{r.out[k]?o++:z++});return z&&o}))continue;
+    return{vec};
+  }
+  return null;
+}
+function qFormulaOf(ins,outs,vec){
+  const n=ins.length;
+  return outs.map(k=>{
+    const mts=[];vec.forEach(r=>{if(r.out[k]|0){let m=0;ins.forEach((kk,j)=>m|=(r.in[kk]&1)<<(n-1-j));mts.push(m)}});
+    return esc(k)+' = '+qmExpr(n,mts,ins);
+  }).join(' '+SEP+' ');
+}
+function genBoardTask(ch){
+  const {own,back}=qCombPool(ch);if(!back.length)return null;
+  for(let t=0;t<60;t++){
+    const pool=t<30&&own.length?own:back;
+    const l=pick(pool),m=qMutate(l);if(!m)continue;
+    const nl={id:'qz'+ch+'x'+t,quiz:true,ch:l.ch,ins:l.ins.slice(),outs:l.outs.slice(),gates:l.gates.slice(),vec:m.vec,dl:l.dl,
+      t:['Практическое задание','Practical task'],
+      f:qFormulaOf(l.ins,l.outs,m.vec),
+      task:['Соберите схему по таблице истинности. Проверка — при сдаче теста.','Build a circuit matching the truth table. It is graded when the test is submitted.']};
+    const syn=synth(nl);if(!syn||syn.gates.length<2)continue;
+    nl.max=syn.gates.length+2;
+    return{kind:'b',lv:nl,limit:nl.max,c:null,opened:false,edits:0,boardTime:0,seenT:0,lastT:0};
+  }
+  return null;
+}
 function openQuiz(ch){
   if(!chapterDone(ch)){toast(ui('qLocked'));return}
-  const gen=[];const seen=new Set();
-  while(gen.length<3){const q=genPractical(ch),k=tx(q.q);if(seen.has(k))continue;seen.add(k);gen.push(q)}
+  const boards=[];for(let i=0;i<2;i++){const b=genBoardTask(ch);if(b)boards.push(b)}
+  const gen=[];const seen=new Set();let g=0;
+  while(gen.length<2&&g++<40){const q=genPractical(ch),k=tx(q.q);if(seen.has(k))continue;seen.add(k);gen.push(q)}
   const pool=QUIZ[ch].slice().sort(()=>Math.random()-.5).slice(0,2);
-  const qs=gen.concat(pool).sort(()=>Math.random()-.5).map(q=>({q,order:q.a.map((_,i)=>i).sort(()=>Math.random()-.5)}));
-  QZ={ch,qs,i:0,score:0,answered:false,t0:Date.now()};
-  openMenu('quiz');drawQuiz();
+  const mk=q=>({kind:'q',q,order:q.a.map((_,i)=>i).sort(()=>Math.random()-.5),pick:null,seenT:0,changes:0,snapped:false,lastT:0});
+  const qs=gen.concat(pool).sort(()=>Math.random()-.5).map(mk);
+  while(boards.length<2)boards.push(mk(genPractical(ch)));
+  const prevL=level&&level.quiz?(QZ&&QZ.prevL):level;
+  QZ={ch,items:boards.concat(qs),tl:QTOTAL,changes:0,t0:Date.now(),done:false,bid:null,io:null,prevL};
+  openMenu('quiz');drawQuiz();qTimerStart();
   say([{t:STORY.quizIntro,m:'smug'}],{u:1});
 }
 function qTimerStop(){if(QZ&&QZ.tm){clearInterval(QZ.tm);QZ.tm=null}}
 function qTimerStart(){
   qTimerStop();if(!QZ)return;
-  QZ.tl=QTIME;
   QZ.tm=setInterval(()=>{
-    if(!QZ){qTimerStop();return}
-    QZ.tl-=0.1;
-    const bar=$('#qtim');if(bar)bar.style.width=Math.max(0,QZ.tl/QTIME*100)+'%';
-    if(QZ.tl<=0){qTimerStop();qTimeout()}
-  },100);
+    if(!QZ||QZ.done){qTimerStop();return}
+    QZ.tl-=0.25;qTimerDraw();
+    if(QZ.tl<=0){qTimerStop();quizSubmit(true)}
+  },250);
 }
-function qTimeout(){
-  if(!QZ||QZ.answered)return;
-  QZ.answered=true;QZ.timeouts=(QZ.timeouts||0)+1;
-  const {q}=QZ.qs[QZ.i];
-  $$('.qb').forEach(x=>{if(+x.dataset.k===q.c)x.classList.add('ok');x.disabled=true});
-  sfx('qbad');
-  say([{t:pick(STORY.quizWrong),m:'sad'}],{u:1});
-  const nx=$('.qnext');if(nx)nx.innerHTML=`<button class="tbtn primary" id="qNext">${QZ.i+1<QZ.qs.length?ui('qNext'):ui('qDone')}</button>`;
-  const b=$('#qNext');if(b)b.onclick=()=>{QZ.i++;drawQuiz()};
+function qTimerDraw(){
+  if(!QZ)return;const t=Math.max(0,Math.ceil(QZ.tl)),mm=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
+  const tm=$('#qtm');if(tm)tm.textContent=mm;
+  const bar=$('#qbar');if(bar)bar.style.width=Math.max(0,QZ.tl/QTOTAL*100)+'%';
+  const hd=$('#qhead');if(hd)hd.classList.toggle('hot',QZ.tl<30);
+  const c=$('#qchip');if(c){c.querySelector('b').textContent=mm;c.classList.toggle('hot',QZ.tl<30);c.querySelector('i').style.width=Math.max(0,QZ.tl/QTOTAL*100)+'%'}
+}
+const qItemDone=it=>it.kind==='q'?it.pick!=null:!!(it.c&&it.c.gates.length);
+function qBoardStatus(it){
+  return it.c&&it.c.gates.length?ui('qBuilt',{n:it.c.gates.length}):it.opened?ui('qOpened'):ui('qNotStarted');
+}
+function qCntDraw(){
+  if(!QZ)return;const a=QZ.items.filter(qItemDone).length;
+  const el=$('#qcnt');if(el)el.textContent=ui('qAnswered',{k:a,n:QZ.items.length});
+  $$('#quizBox .qcard').forEach(c=>{const it=QZ.items[+c.dataset.i];if(!it)return;
+    const num=c.querySelector('.qnum');if(num)num.classList.toggle('done',qItemDone(it));
+    const st=c.querySelector('.qst');if(st)st.textContent=qBoardStatus(it)});
 }
 function figSVG(f){
   const P=gPins(f.g);
@@ -202,42 +266,128 @@ function figSVG(f){
   s+=gateSVG(f.g,settings.gost)+`<path d="M60,20H72" class="gst"/><text x="78" y="26" class="qv">Y = ?</text></svg>`;
   return s;
 }
-function drawQuiz(){
-  const z=QZ,el=$('#quizBox');
-  if(z.i>=z.qs.length){
-    const old=prog.quiz[z.ch]||{best:0,pass:false},prevRank=rankIdx(),pass=z.score>=4;
-    const before=quizPts(old);prog.quiz[z.ch]={best:Math.max(old.best,z.score),pass:old.pass||pass};
-    const gain=quizPts(prog.quiz[z.ch])-before;save();updHud();
-    el.innerHTML=`<div class="qh">${ui('quizTitle',{n:z.ch})}</div><div class="qres ${pass?'ok':'bad'}">${pass?ui('qPass'):ui('qFail')}</div>
-      <div class="qscore">${ui('qScore',{s:z.score,n:z.qs.length})}</div><div class="rpts">${gain?ui('pts',{p:gain}):''}</div>
-      <div class="qact"><button class="mi" id="qRetry">${ui('qRetry')}</button><button class="mi" id="qBack">${ui('levels')}</button></div>`;
-    $('#qRetry').onclick=()=>openQuiz(z.ch);$('#qBack').onclick=()=>openMenu('levels');
-    if(pass){badge('QUIZ_FIRST');if(z.score===5)badge('QUIZ_PERFECT');if(CHAPTERS.every((_,i)=>quizPassed(i+1)))badge('QUIZ_ALL')}
-    const ql=[{t:pass?(z.score===5?STORY.quizPerfect:STORY.quizPass):STORY.quizFail,m:pass?'happy':'sad'}];
-    if(pass&&!old.pass){const on=CHAPTERS.filter((_,i)=>quizPassed(i+1)).length;
-      ql.push({t:fmt(tx(STORY.quizUnit),{u:tx(MUNITS[z.ch-1]).toLowerCase(),n:on,N:10}),m:'happy'})}
-    say(ql,{u:1});
-    checkRank(prevRank);
-    return;
+function qTT(lv){
+  const lab=k=>mathHTML(subH(esc(k)));
+  let h='<table class="tt">';
+  lv.ins.forEach(k=>h+=`<tr><th>${lab(k)}</th>${lv.vec.map(r=>`<td>${r.in[k]}</td>`).join('')}</tr>`);
+  h+=`<tr class="ttsep"><th></th><td colspan="${lv.vec.length}"></td></tr>`;
+  lv.outs.forEach(k=>h+=`<tr class="out"><th>${lab(k)}</th>${lv.vec.map(r=>`<td>${r.out[k]}</td>`).join('')}</tr>`);
+  return h+'</table>';
+}
+function qCardHTML(it,i){
+  const n=`<span class="qnum${qItemDone(it)?' done':''}">${i+1}</span>`;
+  if(it.kind==='q'){
+    const q=it.q,tbl=q.tbl?`<table class="qt">${q.tbl.map((r,ri)=>`<tr>${r.map(c=>`<t${ri?'d':'h'}>${c}</t${ri?'d':'h'}>`).join('')}</tr>`).join('')}</table>`:'';
+    return `<div class="qcard" data-i="${i}">${n}<div class="qq">${mathHTML(tx(q.q))}</div>${q.fig?figSVG(q.fig):''}${tbl}
+      <div class="qa">${it.order.map(k=>`<button class="qb${it.pick===k?' sel':''}" data-k="${k}">${mathHTML(tx(q.a[k]))}</button>`).join('')}</div></div>`;
   }
-  const {q,order}=z.qs[z.i];z.answered=false;
-  const tbl=q.tbl?`<table class="qt">${q.tbl.map((r,ri)=>`<tr>${r.map(c=>`<t${ri?'d':'h'}>${c}</t${ri?'d':'h'}>`).join('')}</tr>`).join('')}</table>`:'';
-  el.innerHTML=`<div class="qh">${ui('quizTitle',{n:z.ch})}. ${tx(CHAPTERS[z.ch-1])}</div><div class="qp">${ui('qOf',{i:z.i+1,n:z.qs.length})}</div>
-    <div class="qtwrap"><div id="qtim"></div></div>
-    <div class="qq">${mathHTML(tx(q.q))}</div>${q.fig?figSVG(q.fig):''}${tbl}
-    <div class="qa">${order.map(k=>`<button class="qb" data-k="${k}">${mathHTML(tx(q.a[k]))}</button>`).join('')}</div><div class="qnext"></div>`;
-  qTimerStart();
+  return `<div class="qcard" data-i="${i}">${n}
+    <div class="qbt"><b>${ui('qBoard')}</b><span class="qst">${qBoardStatus(it)}</span></div>
+    <div class="qf math">${mathHTML(it.lv.f)}</div>
+    ${qTT(it.lv)}
+    <div class="qg">${it.lv.gates.map(t=>`<span>${esc(tx(GATES[t].n))}</span>`).join('')}<em>${ui('qLimit',{n:it.limit})}</em></div>
+    <button class="tbtn primary qgo" data-i="${i}">${ui('qBuild')}</button></div>`;
+}
+function drawQuiz(){
+  const z=QZ,el=$('#quizBox');if(!z)return;
+  if(z.done){drawQResult();return}
+  el.innerHTML=`<div id="qhead"><div class="qhl"><b>${ui('quizTitle',{n:z.ch})}. ${esc(tx(CHAPTERS[z.ch-1]))}</b>
+    <span id="qcnt"></span><b id="qtm"></b><button class="tbtn primary" id="qSubmit">${ui('qSubmit')}</button></div>
+    <div class="qtwrap"><i id="qbar"></i></div></div>`+z.items.map(qCardHTML).join('');
+  $('#qSubmit').onclick=()=>quizSubmit(false);
+  if(z.io)z.io.disconnect();
+  z.io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const it=z.items[+e.target.dataset.i];if(it&&!it.seenT){it.seenT=Date.now();z.io.unobserve(e.target)}}}),{root:$('#ov'),threshold:.35});
+  $$('#quizBox .qcard').forEach(c=>z.io.observe(c));
+  qCntDraw();qTimerDraw();
+}
+/* open the board task in the regular editor; the test timer keeps running in the top bar */
+function quizBoard(i){
+  const it=QZ&&QZ.items[i];if(!it||it.kind!=='b')return;
+  it.opened=true;it.firstOpenT=it.firstOpenT||Date.now();
+  QZ.bid=i;QZ.bT0=Date.now();
+  loadLevel(it.lv);
+  if(it.c){C=JSON.parse(JSON.stringify(it.c));nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));resetSim();update()}
+  closeMenu();
+  if(!$('#qchip')){const r=$('#top .tb.r'),c=document.createElement('button');
+    c.id='qchip';c.className='tbtn';c.innerHTML='<b>0:00</b><i></i>';r.insertBefore(c,$('#gmet'));c.onclick=quizBoardReturn}
+  qTimerDraw();
+}
+function quizBoardReturn(){
+  if(!QZ){openMenu('quiz');return}
+  if(QZ.bid!=null&&level&&level.quiz){const it=QZ.items[QZ.bid];it.c=JSON.parse(JSON.stringify(C));it.boardTime=(it.boardTime||0)+Date.now()-QZ.bT0;it.lastT=Date.now();QZ.bid=null}
+  const c=$('#qchip');if(c)c.remove();
+  openMenu('quiz');drawQuiz();sfx('ui');
+}
+/* grade everything, write prog.quiz, show the report */
+function quizSubmit(timedOut){
+  if(!QZ||QZ.done)return;const z=QZ;z.done=true;z.timedOut=timedOut;qTimerStop();if(z.io)z.io.disconnect();
+  if(z.bid!=null&&level&&level.quiz){const it=z.items[z.bid];it.c=JSON.parse(JSON.stringify(C));it.boardTime=(it.boardTime||0)+Date.now()-z.bT0;it.lastT=Date.now();z.bid=null}
+  const ch=$('#qchip');if(ch)ch.remove();
+  const svL=level,svC=C;
+  z.rep=z.items.map(it=>{
+    if(it.kind==='q')return{it,ok:it.pick===it.q.c};
+    const c=it.c||{gates:[],wires:[]};let rows=0;
+    level=it.lv;C=JSON.parse(JSON.stringify(c));resetSim();
+    it.lv.vec.forEach(r=>{settle(vecInVals(r,0));const o=readOuts();if(it.lv.outs.every(k=>(o[k]|0)===(r.out[k]|0)))rows++});
+    return{it,ok:rows===it.lv.vec.length&&c.gates.length<=it.limit,rows,n:it.lv.vec.length,gates:c.gates.length};
+  });
+  level=svL;C=svC;resetSim();if(level)settle(liveIn);
+  // leave quiz board mode: the editor goes back to the level the player came from
+  if(level&&level.quiz)loadLevel(z.prevL||LV.find(l=>!done.has(l.id))||LV[0]);
+  z.score=z.rep.filter(r=>r.ok).length;z.totalT=Date.now()-z.t0;
+  const old=prog.quiz[z.ch]||{best:0,pass:false},prevRank=rankIdx(),pass=z.score>=5;
+  const before=quizPts(old);prog.quiz[z.ch]=z.score/6>=old.best/(old.n||5)?{best:z.score,n:6,pass:old.pass||pass}:{...old,pass:old.pass||pass};
+  z.gain=quizPts(prog.quiz[z.ch])-before;z.pass=pass;save();updHud();
+  if(pass){badge('QUIZ_FIRST');if(z.score===6)badge('QUIZ_PERFECT');if(CHAPTERS.every((_,i)=>quizPassed(i+1)))badge('QUIZ_ALL')}
+  openMenu('quiz');drawQResult();
+  const bo=z.items.filter(it=>it.kind==='b'),opened=bo.filter(it=>it.opened).length;
+  const answered=z.items.filter(qItemDone).length,snaps=z.items.filter(it=>it.snapped).length;
+  const ql=[{t:pass?(z.score===6?STORY.quizPerfect:STORY.quizPass):STORY.quizFail,m:pass?'happy':'sad'},
+    {t:!opened||answered<=2?STORY.quizEffortIdle:snaps>=3?STORY.quizEffortGuess:STORY.quizEffortWork,m:!opened||answered<=2?'sad':'smug'}];
+  if(pass&&!old.pass){const on=CHAPTERS.filter((_,i)=>quizPassed(i+1)).length;
+    ql.push({t:fmt(tx(STORY.quizUnit),{u:tx(MUNITS[z.ch-1]).toLowerCase(),n:on,N:10}),m:'happy'})}
+  say(ql,{u:1});
+  checkRank(prevRank);
+}
+function drawQResult(){
+  const z=QZ,el=$('#quizBox');
+  const fmtT=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+  const itT=it=>{const t=it.kind==='b'?(it.boardTime||0):(it.lastT&&it.seenT?it.lastT-it.seenT:0);return t>900?fmtT(t):'—'};
+  const marks=(it,un)=>{const m=[];if(un)m.push(ui('qNoAns'));if(un&&z.timedOut)m.push(ui('qTimeUp'));return m.length?`<em class="qmk">${m.join(' · ')}</em>`:''};
+  const rows=z.rep.map((r,i)=>{
+    const it=r.it;
+    if(it.kind==='q'){const q=it.q,un=it.pick==null,ya=un?ui('qNoAns'):mathHTML(tx(q.a[it.pick])),ca=mathHTML(tx(q.a[q.c]));
+      return `<li class="${r.ok?'ok':'bad'}"><b>${i+1}.</b><div class="qrt"><span class="qmath">${mathHTML(tx(q.q))}</span>
+        <span class="qra">${r.ok?'✓':'✗'} ${ya}${r.ok?'':` <i>→</i> ${ca}`}</span></div>
+        <span class="qtm2">${itT(it)}</span>${marks(it,un)}</li>`}
+    const un=!(it.c&&it.c.gates.length);
+    return `<li class="${r.ok?'ok':'bad'}"><b>${i+1}.</b><div class="qrt"><span class="qmath">${ui('qBoard')}</span>
+      <span class="qra">${r.ok?'✓ '+ui('qCircOk'):'✗ '+ui('qCircBad')+': '+ui('qRows',{x:r.rows,y:r.n})} · ${ui('qGatesLim',{n:r.gates,m:it.limit})}</span></div>
+      <span class="qtm2">${itT(it)}</span>${marks(it,un)}</li>`});
+  const bo=z.items.filter(it=>it.kind==='b'),opened=bo.filter(it=>it.opened).length,
+    gates=bo.reduce((a,it)=>a+(it.c?it.c.gates.length:0),0),edits=bo.reduce((a,it)=>a+(it.edits||0),0),
+    snaps=z.items.filter(it=>it.snapped).length;
+  el.innerHTML=`<div class="qh">${ui('quizTitle',{n:z.ch})}. ${esc(tx(CHAPTERS[z.ch-1]))}</div>
+    <div class="qres ${z.pass?'ok':'bad'}">${z.pass?ui('qPass'):ui('qFail')}</div>
+    <div class="qscore">${ui('qScore',{s:z.score,n:z.items.length})}${z.gain?` · ${ui('pts',{p:z.gain})}`:''}</div>
+    <ul class="qrep">${rows.join('')}</ul>
+    <div class="qeff">${ui('qEffort',{t:fmtT(z.totalT),c:z.changes,s:snaps,o:opened,b:bo.length,g:gates,e:edits})}</div>
+    <div class="qact"><button class="tbtn primary" id="qRetry">${ui('qRetry')}</button><button class="tbtn" id="qBack">${ui('levels')}</button></div>`;
+  $('#qRetry').onclick=()=>openQuiz(z.ch);$('#qBack').onclick=()=>openMenu('levels');
 }
 $('#quizBox').addEventListener('click',e=>{
-  const b=e.target.closest('.qb');if(!b||!QZ||QZ.answered)return;
-  const {q}=QZ.qs[QZ.i],k=+b.dataset.k,ok=k===q.c;QZ.answered=true;qTimerStop();
-  $$('.qb').forEach(x=>{if(+x.dataset.k===q.c)x.classList.add('ok');else if(x===b)x.classList.add('bad');x.disabled=true});
-  if(ok)QZ.score++;
-  sfx(ok?'qok':'qbad');
-  say([{t:pick(ok?STORY.quizRight:STORY.quizWrong),m:ok?'smug':'sad'}],{u:1});
-  $('.qnext').innerHTML=`<button class="tbtn primary" id="qNext">${QZ.i+1<QZ.qs.length?ui('qNext'):ui('qDone')}</button>`;
-  $('#qNext').onclick=()=>{QZ.i++;drawQuiz()};
+  if(!QZ)return;
+  const go=e.target.closest('.qgo');if(go&&!QZ.done){quizBoard(+go.dataset.i);sfx('ui');return}
+  const b=e.target.closest('.qb');if(!b||QZ.done)return;
+  const card=b.closest('.qcard'),it=card&&QZ.items[+card.dataset.i];if(!it||it.kind!=='q')return;
+  const k=+b.dataset.k,now=Date.now();if(!it.seenT)it.seenT=now;
+  if(it.pick==null){it.pick=k;it.firstPickT=now;if(now-it.seenT<3000)it.snapped=true}
+  else if(it.pick!==k){it.pick=k;it.changes=(it.changes||0)+1;QZ.changes++}
+  it.lastT=now;
+  card.querySelectorAll('.qb').forEach(x=>x.classList.toggle('sel',+x.dataset.k===k));
+  sfx('ui');qCntDraw();
 });
+$('#scrQuiz [data-go]').addEventListener('click',()=>{qTimerStop();QZ=null});
 
 /* ========== personnel file ========== */
 function drawProfile(){
@@ -269,7 +419,7 @@ function drawTreeList(){
       <div class="tl-body">${ls.map(l=>{const d=done.has(l.id),av=available(l),st=(prog.lv[l.id]||{}).s||0;
         return `<button class="tl-l${d?' done':av?' av':' lock'}" data-l="${l.id}" ${av?'':'disabled'}><b>${l.id}</b><span>${tx(l.t)}</span>
           <i class="tl-st">${d?[1,2,4].map(b=>`<u class="${st&b?'on':''}"></u>`).join(''):av?ui('tlNew'):ui('tlLock')}</i></button>`}).join('')}
-        <button class="tl-q${qp?' pass':qa?' av':' lock'}" data-q="${ch}" ${qa?'':'disabled'}><span>${ui('quizNode')}</span><b>${qp?prog.quiz[ch].best+' / 5':qa?ui('qReady'):ui('tlLock')}</b></button>
+        <button class="tl-q${qp?' pass':qa?' av':' lock'}" data-q="${ch}" ${qa?'':'disabled'}><span>${ui('quizNode')}</span><b>${qp?prog.quiz[ch].best+' / '+(prog.quiz[ch].n||5):qa?ui('qReady'):ui('tlLock')}</b></button>
       </div></section>`}).join('');
 }
 $('#treeList').addEventListener('click',e=>{
@@ -305,7 +455,7 @@ function drawTree(){
     const av=chapterDone(ch),ps=quizPassed(ch);
     s+=`<path d="M${xOf(last)+17},${q.y}H${q.x-30}" stroke="${av?'var(--ink)':'var(--grid2)'}" stroke-width="2"/>`;
     s+=`<g class="node${av?'':' lock'}" data-q="${ch}"><rect x="${q.x-30}" y="${q.y-17}" width="60" height="34" rx="17" fill="${ps?'var(--acc)':av?'var(--ink)':'var(--paper)'}" stroke="${av||ps?'none':'var(--grid2)'}"/>
-      <text x="${q.x}" y="${q.y+1}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="var(--font)" fill="${ps?'var(--ink)':av?'#fff':'var(--mute)'}">${ps?prog.quiz[ch].best+'/5':(LANG==='en'?'test':'тест')}</text>
+      <text x="${q.x}" y="${q.y+1}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="var(--font)" fill="${ps?'var(--ink)':av?'#fff':'var(--mute)'}">${ps?prog.quiz[ch].best+'/'+(prog.quiz[ch].n||5):(LANG==='en'?'test':'тест')}</text>
       <rect x="${q.x-46}" y="${q.y-24}" width="92" height="62" fill="transparent"/></g>`;});
   LV.forEach(l=>{
     const x=xOf(l),y=yOf(l),dn=done.has(l.id),av=available(l),st=(prog.lv[l.id]||{}).s||0,nm=tx(l.t);
@@ -321,7 +471,7 @@ function drawTree(){
     n.onmouseenter=()=>$('#treeTip').innerHTML=`<b>${l.id}. ${tx(l.t)}</b><span class="tm">&ensp;${available(l)?`<span class="math">${mathHTML(tx(l.f))}</span>`:ui('unlocksAfter',{r:l.req.map(r=>typeof r==='string'?ui('testN',{n:r.slice(1)}):r).join(', ')})}</span>`;
     n.onclick=()=>{if(!available(l))return;sfx('ui');loadLevel(l);closeMenu()}});
   sv.querySelectorAll('[data-q]').forEach(n=>{const ch=+n.dataset.q;
-    n.onmouseenter=()=>$('#treeTip').innerHTML=`<b>${ui('quizNode')}. ${tx(CHAPTERS[ch-1])}</b><span class="tm">&ensp;${chapterDone(ch)?(quizPassed(ch)?ui('qScore',{s:prog.quiz[ch].best,n:5}):ui('qReady')):ui('qLocked')}</span>`;
+    n.onmouseenter=()=>$('#treeTip').innerHTML=`<b>${ui('quizNode')}. ${tx(CHAPTERS[ch-1])}</b><span class="tm">&ensp;${chapterDone(ch)?(quizPassed(ch)?ui('qScore',{s:prog.quiz[ch].best,n:prog.quiz[ch].n||5}):ui('qReady')):ui('qLocked')}</span>`;
     n.onclick=()=>{if(chapterDone(ch))openQuiz(ch)}});
 }
 
@@ -354,10 +504,11 @@ function drawMachine(){
   if($('#mmLevels'))$('#mmLevels').textContent=ui('mmDone',{n:solved,N:LV.length});
   if($('#mmProfile'))$('#mmProfile').textContent=tx(RANKS[rankIdx()][1]);
   if($('#mmShop'))$('#mmShop').textContent=ptsN(balance());
+  wikiBadges();
 }
 
 /* ========== menu ========== */
-const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz',lib:'#scrLib'};
+const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
 let curScr='main';
 function openMenu(s){
   window.keyCapture=null;
@@ -365,11 +516,11 @@ function openMenu(s){
   $$('.scr').forEach(x=>x.classList.remove('on'));$(SCR[s]).classList.add('on');
   if(s!=='main'&&s!=='quiz')hideBubble();
   document.body.classList.toggle('mainScr',s==='main');
-  if(s==='main'){drawMachine();requestAnimationFrame(menuBitStart)}else menuBitStop();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();if(s==='shop')drawShop();if(s==='lib')drawLib();
+  if(s==='main'){drawMachine();requestAnimationFrame(menuBitStart)}else menuBitStop();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();if(s==='shop')drawShop();
   musicChapter(s==='quiz'&&QZ?QZ.ch:topChapter(),s==='quiz')
   $('#ov').scrollTop=0;
 }
-function closeMenu(){qTimerStop();$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
+function closeMenu(){$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
 $('#btnMenu').onclick=()=>openMenu('main');
 $('#btnSettings').onclick=()=>openMenu('settings');
 $('#hud').onclick=()=>openMenu('profile');
@@ -379,6 +530,7 @@ $$('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   if(g==='continue'){if(!level||level.sandbox)loadLevel(lastLevel());closeMenu();return}
   if(g==='sandbox'){loadLevel(SANDBOX);closeMenu();return}
   if(g==='quit'){persistNow();store.flush(true);window.desktop&&window.desktop.quit&&window.desktop.quit();return}
+  if(g==='lib'){openWiki();return}
   openMenu(g);
 }));
 
@@ -500,10 +652,11 @@ function applyLang(){
   document.documentElement.lang=LANG;
   $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
-  $('#vLab').textContent=demoOn?ui('skip'):ui(level&&level.sandbox?'run':'verify');
+  $('#vLab').textContent=demoOn?ui('skip'):ui(level&&level.quiz?'qBackToTest':level&&level.sandbox?'run':'verify');
   updHud();drawMachine();
   if(level){buildChrome();render()}
   if(curScr==='levels')drawTree();if(curScr==='profile')drawProfile();if(curScr==='quiz'&&QZ)drawQuiz();
+  if(wikiOpen())drawWiki();
 }
 
 /* ========== boot ========== */
