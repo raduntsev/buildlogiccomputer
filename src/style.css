@@ -881,3 +881,10 @@ text.ffq.on{fill:var(--acc)}
 #hist.on{display:block}
 .histin{border-left:2px solid var(--acc);padding:6px 10px;background:var(--card2);border-radius:0 9px 9px 0;font-size:12.5px;line-height:1.45;color:var(--ink2)}
 .histin b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-bottom:2px}
+
+/* quiz: timer and generated tables */
+.qtwrap{height:5px;background:var(--line);border-radius:3px;margin:4px 0 12px;overflow:hidden}
+#qtim{height:100%;width:100%;background:var(--acc);border-radius:3px;transition:width .1s linear}
+table.qt{border-collapse:collapse;margin:8px 0 12px}
+table.qt th,table.qt td{border:1.5px solid var(--line);padding:5px 14px;text-align:center;font-size:14px}
+table.qt th{background:var(--card2);font-weight:600}
