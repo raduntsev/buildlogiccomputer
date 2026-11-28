@@ -233,7 +233,7 @@ function drawMachine(){
 }
 
 /* ========== menu ========== */
-const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz'};
+const SCR={shop:'#scrShop',main:'#scrMain',levels:'#scrLevels',settings:'#scrSettings',about:'#scrAbout',profile:'#scrProfile',quiz:'#scrQuiz',lib:'#scrLib'};
 let curScr='main';
 function openMenu(s){
   window.keyCapture=null;
@@ -241,7 +241,7 @@ function openMenu(s){
   $$('.scr').forEach(x=>x.classList.remove('on'));$(SCR[s]).classList.add('on');
   if(s!=='main'&&s!=='quiz')hideBubble();
   document.body.classList.toggle('mainScr',s==='main');
-  if(s==='main'){drawMachine();requestAnimationFrame(menuBitStart)}else menuBitStop();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();if(s==='shop')drawShop();
+  if(s==='main'){drawMachine();requestAnimationFrame(menuBitStart)}else menuBitStop();if(s==='levels')drawTree();if(s==='settings')drawSettings();if(s==='profile')drawProfile();if(s==='shop')drawShop();if(s==='lib')drawLib();
   musicChapter(s==='quiz'&&QZ?QZ.ch:topChapter(),s==='quiz')
   $('#ov').scrollTop=0;
 }

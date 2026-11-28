@@ -48,7 +48,7 @@ function ioDrop(id){delete C.io[id];if(!Object.keys(C.io).length)delete C.io}
 function ioBox(id,n){return id[0]==='I'?[n.x-62,n.x+28,n.y-19,n.y+19]:[n.x-8,n.x+50,n.y-19,n.y+19]}
 function ioHits(id,q){const a=ioBox(id,q),ids=[...ioIns().map((_,i)=>'I'+i),...level.outs.map((_,i)=>'O'+i)];
   return ids.some(o=>{if(o===id)return false;const b=ioBox(o,nodePos(o));return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3]})}
-function persist(){saves[level.id]={gates:C.gates,wires:C.wires};if(C.io)saves[level.id].io=C.io;clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
+function persist(){saves[level.id]={gates:C.gates,wires:C.wires};if(C.io)saves[level.id].io=C.io;if(level.sandbox)saves[level.id].sbio={ins:level.ins.slice(),outs:level.outs.slice()};clearTimeout(persistT);persistT=setTimeout(()=>{persistT=0;save()},300);if(window.savedPing)savedPing()}
 function persistNow(){if(persistT){clearTimeout(persistT);persistT=0;save()}}
 window.addEventListener('beforeunload',()=>{persistNow();store.flush(true)});
 window.addEventListener('pagehide',()=>{persistNow();store.flush(true)});
@@ -56,6 +56,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){persistNow
 
 function loadLevel(l){
   if(l.sandbox)l.gates=sandboxGates();
+  if(l.sandbox&&saves[l.id]&&saves[l.id].sbio){l.ins=saves[l.id].sbio.ins.slice();l.outs=saves[l.id].sbio.outs.slice()}
   level=l;knifeSet(false);$('#result').classList.remove('on');
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};

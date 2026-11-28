@@ -12,7 +12,7 @@
 <div id="frame"></div>
 
 <header id="top" class="zz">
-  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div></div>
+  <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button><button class="ib" id="btnLib" data-tl="library"><svg viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H6.5A2.5 2.5 0 0 0 4 22Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg></button></div></div>
   <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn" id="benchBtn" style="display:none"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 <div id="toolDock" class="zz"><div class="tgrp" id="tools" role="toolbar">
@@ -62,6 +62,7 @@
       <button class="mi" data-go="profile"><span data-t="profile"></span><span class="mm" id="mmProfile"></span></button>
       <button class="mi" data-go="shop"><span data-t="shop"></span><span class="mm" id="mmShop"></span></button>
       <button class="mi" data-go="sandbox"><span data-t="sandbox"></span></button>
+      <button class="mi" data-go="lib"><span data-t="library"></span><span class="mm" id="mmLib"></span></button>
       <button class="mi" data-go="settings"><span data-t="settings"></span></button>
       <button class="mi" data-go="about"><span data-t="about"></span></button>
       <button class="mi" data-go="quit" id="quitBtn"><span data-t="quit"></span></button>
@@ -84,6 +85,11 @@
   <div class="scr zz" id="scrShop">
     <h2 data-t="shop"></h2>
     <div id="shopBox"></div>
+    <button class="mi small" data-go="main" data-t="back"></button>
+  </div>
+  <div class="scr zz" id="scrLib">
+    <h2 data-t="library"></h2>
+    <div id="libBox"></div>
     <button class="mi small" data-go="main" data-t="back"></button>
   </div>
   <div class="scr zz" id="scrQuiz">
