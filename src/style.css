@@ -875,3 +875,9 @@ text.ffq.on{fill:var(--acc)}
 .lib-acts .tbtn{font-size:12px;padding:5px 9px}
 .lib-empty{color:var(--dim);max-width:420px;line-height:1.5}
 .tbtn.danger{color:var(--coral)}
+
+/* historical note */
+#hist{display:none;margin-top:8px}
+#hist.on{display:block}
+.histin{border-left:2px solid var(--acc);padding:6px 10px;background:var(--card2);border-radius:0 9px 9px 0;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.histin b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-bottom:2px}

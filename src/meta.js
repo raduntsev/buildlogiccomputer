@@ -16,7 +16,7 @@ function onSolved(){
   const bits=1|(hintUsed||hintBought()?0:2)|(C.gates.length<=level.par?4:0);
   const ns=old.s|bits,gain=lvPts(ns)-lvPts(old.s);
   prog.lv[id]={s:ns,g:Math.min(old.g,C.gates.length)};
-  done.add(id);save();updHud();$('#lvStars').innerHTML=starsHTML(ns);
+  done.add(id);save();updHud();histDraw();$('#lvStars').innerHTML=starsHTML(ns);
   const becameBlk=!level.seq&&!level.clk&&C.gates.length&&(first||!GATES[blkType(level)]);
   if(!level.seq&&!level.clk&&C.gates.length)try{blkRefresh(level)}catch(e){}
   const chDone=first&&chapterDone(level.ch);

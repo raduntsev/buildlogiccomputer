@@ -561,7 +561,7 @@ function buildChrome(){
   $('#lvTitle').textContent=tx(level.t);
   $('#lvStars').innerHTML=level.sandbox?'':starsHTML((prog.lv[level.id]||{}).s||0);
   $('#taskText').innerHTML=mathHTML(tx(level.task));
-  hintPanelDraw();
+  hintPanelDraw();histDraw();
   $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
   $('#verify').textContent=ui(level.sandbox?'run':'verify');
   {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
@@ -1342,6 +1342,13 @@ function hintPanelDraw(){
   if(t>=4)h+=`<div class="ht"><b>${ui('hT4')}</b><div class="htb"><button class="tbtn primary" id="hInsBtn">${ui('hInsert')}</button></div></div>`;
   el.innerHTML=h;el.classList.add('on');
 }
+function histDraw(){
+  const el=$('#hist');if(!el||!level)return;
+  if(!level.sandbox&&level.hist&&done.has(level.id)){
+    el.innerHTML=`<div class="histin"><b>${ui('histH')}</b><span>${tx(level.hist)}</span></div>`;
+    el.classList.add('on');
+  }else{el.innerHTML='';el.classList.remove('on')}
+}
 function insertSynth(){
   const syn=level&&(level._syn||(level._syn=synth(level)));
   if(!syn){say([{t:ui('hNoSeq'),m:'sad'}],{u:1});return}
@@ -1361,6 +1368,7 @@ document.addEventListener('click',e=>{
   say([{t:ui('hReplaceQ'),m:'think',ch:[{t:ui('hYes'),f:insertSynth},{t:ui('hNo'),f:hideBubble}]}],{u:1});
 });
 
+Object.assign(UIS,{histH:['Из протокола','From the protocol']});
 /* ========== bench: manual ticks, tick log, sandbox analysis ==========*/
 
 /* ========== audio: everything is synthesized, no sound files ==========
