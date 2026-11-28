@@ -4206,7 +4206,10 @@ function drawQuiz(){
       <div class="qact"><button class="mi" id="qRetry">${ui('qRetry')}</button><button class="mi" id="qBack">${ui('levels')}</button></div>`;
     $('#qRetry').onclick=()=>openQuiz(z.ch);$('#qBack').onclick=()=>openMenu('levels');
     if(pass){badge('QUIZ_FIRST');if(z.score===5)badge('QUIZ_PERFECT');if(CHAPTERS.every((_,i)=>quizPassed(i+1)))badge('QUIZ_ALL')}
-    say([{t:pass?(z.score===5?STORY.quizPerfect:STORY.quizPass):STORY.quizFail,m:pass?'happy':'sad'}],{u:1});
+    const ql=[{t:pass?(z.score===5?STORY.quizPerfect:STORY.quizPass):STORY.quizFail,m:pass?'happy':'sad'}];
+    if(pass&&!old.pass){const on=CHAPTERS.filter((_,i)=>quizPassed(i+1)).length;
+      ql.push({t:fmt(tx(STORY.quizUnit),{u:tx(MUNITS[z.ch-1]).toLowerCase(),n:on,N:10}),m:'happy'})}
+    say(ql,{u:1});
     checkRank(prevRank);
     return;
   }
@@ -4513,6 +4516,8 @@ window.addEventListener('resize',()=>{if(settings.ui==='auto')applySettings(true
 window.LL={LV,get C(){return C},set C(v){C=v},loadLevel,settle,readOuts,resetSim,changed,get level(){return level},done,prog,points,openQuiz,openMenu,badge,get QZ(){return QZ}};
 
 STORY.blkNew=['Эта схема стала блоком: вы найдёте её на полке в следующих уровнях и в песочнице. Эту схему вы будете использовать дальше — Машина запоминает всё.','This circuit is now a block: you will find it on the shelf in later levels and in the sandbox. You will use it again — the Machine remembers everything.'];
+
+STORY.quizUnit=['Записываю в протокол: узел «{u}» проверен и включён. Машина оживает: {n} из {N} узлов на питании.','Logging to the protocol: the “{u}” unit is tested and online. The Machine is waking up: {n} of {N} units powered.'];
 
 </script>
 </body>
