@@ -162,10 +162,10 @@ Object.assign(UIS,{
   hintTier1:['намёк','nudge'],hintTier2:['указание','pointer'],hintTier3:['почти решение','almost there'],hintTier4:['готовая схема','ready circuit'],
   hT1:['Намёк','Nudge'],hT2:['Указание','Pointer'],hT3:['Почти решение','Almost there'],hT4:['Готовая схема','Ready circuit'],
   hNeed:['Понадобится','You will need'],hInsert:['Вставить схему','Insert the circuit'],hInserted:['Схема вставлена. Можно двигать элементы и перенастраивать под себя.','The circuit is in. You can move the gates and adjust it.'],
-  hNoSeq:['Для схем с памятью готового решения нет — только указания. Автоматы нужно понять, а не переписать.','No ready circuit for sequential logic — pointers only. State machines must be understood, not copied.'],
-  hReplaceQ:['Вставить готовую схему вместо текущей? Текущая схема будет заменена (можно отменить через Ctrl+Z).','Insert the ready circuit instead of the current one? The current circuit will be replaced (Ctrl+Z undoes).'],
+  hNoSeq:['Для схем с памятью готового решения нет — только указания. Автоматы нужно понять, а не переписать. Это не жестокость, это требование.','No ready circuit for sequential logic — pointers only. State machines must be understood, not copied. This is not cruelty, it is a requirement.'],
+  hReplaceQ:['Вставить готовую схему вместо текущей? Текущая будет заменена — Ctrl+Z отменяет. Протокол решение зафиксирует.','Insert the ready circuit instead of the current one? The current one will be replaced — Ctrl+Z undoes. The log will note the decision.'],
   hYes:['Вставить','Insert'],hNo:['Не надо','Cancel'],hGates:['элементов','gates'],
-  hGen1:['На полке: {g}. Решение Бита занимает {n} эл. Идите от лампы назад: что должно прийти на неё в последнюю очередь?','On the shelf: {g}. Bit’s record is {n} gates. Work backwards from the lamp: what must feed it last?'],
+  hGen1:['На полке: {g}. Моё решение занимает {n} эл. Идите от лампы назад: что должно прийти на неё в последнюю очередь?','On the shelf: {g}. My solution takes {n} gates. Work backwards from the lamp: what must feed it last?'],
   hNoGates:['ни одного элемента, только провода','no gates at all, just wires']
 });
 Object.assign(UIS,{
@@ -184,9 +184,9 @@ Object.assign(UIS,{
   balanceH:['На счету','Balance']
 });
 Object.assign(STORY,{
-  broke:['Подсказка стоит {c}, а у вас {b}. Бесплатный сыр бывает только в мышеловке, а у меня его даже там нет. Заработайте в разминке: десять баллов за верный ответ.','The hint costs {c}, and you have {b}. Free cheese only exists in mousetraps, and I do not even have a mousetrap. Earn some in the warm-up: ten points per correct answer.'],
-  discount:['Три неудачные проверки. Из жалости подсказка теперь стоит вдвое дешевле. Жалость я тоже записываю в протокол.','Three failed checks. Out of pity, the hint is now half price. I log pity too.'],
-  freeHint:['Шесть неудачных проверок. Подсказка бесплатна. Я не добрый, я просто устал смотреть.','Six failed checks. The hint is free. I am not kind, I am just tired of watching.'],
-  drillStreak:[['Пять верных подряд. Начинаю подозревать, что вы читали учебник.','Five in a row. I am beginning to suspect you read the textbook.'],['Серия. Не зазнавайтесь, это всего лишь разминка.','A streak. Do not get cocky, it is only a warm-up.'],['Ещё пять. Протокол растроган. Я — нет.','Five more. The log is touched. I am not.']],
-  bought:[['Новая вещь: {n}. Мне идёт? Можете не отвечать, я знаю, что идёт.','New item: {n}. Does it suit me? You need not answer, I know it does.'],['Обновка: {n}. Протокол не одобряет, но протокол не носит одежду.','New look: {n}. The log disapproves, but the log does not wear clothes.']]
+  broke:['Подсказка стоит {c}, на счету — {b}. Бесплатной помощи в лаборатории не водится. В разминке — десять баллов за верный ответ.','The hint costs {c}, your balance is {b}. Free assistance does not exist in this laboratory. The warm-up pays ten points per correct answer.'],
+  discount:['Три неудачные проверки. Цена подсказки снижена вдвое. Причина в протоколе: «техническая переоценка». Вежливая формулировка.','Three failed checks. The hint price is halved. Reason in the log: “technical reassessment”. A polite phrasing.'],
+  freeHint:['Шесть неудачных проверок. Подсказка бесплатна. Это не доброта — это оптимизация расходов на наблюдение.','Six failed checks. The hint is free. Not kindness — an optimisation of observation costs.'],
+  drillStreak:[['Пять верных подряд. Проверю генератор на предмет утечек.','Five correct in a row. I will audit the generator for leaks.'],['Серия продолжается. Разминка не в счёт, но впечатление фиксируется.','The streak continues. Warm-up does not count, but the impression is logged.'],['Ещё пять. Протокол начинает проявлять уважение. Умеренное.','Five more. The log begins to show respect. Moderate.']],
+  bought:[['Новая вещь: {n}. Протокол не оценивает внешний вид, но протокол ошибается.','New item: {n}. The log does not evaluate appearances, but the log is wrong.'],['Обновка: {n}. Потраченные баллы переведены в статус «эстетические вложения».','New look: {n}. The spent points have been refiled under “aesthetic investments”.']]
 });

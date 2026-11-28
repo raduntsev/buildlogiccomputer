@@ -680,4 +680,4 @@ window.LL={LV,get C(){return C},set C(v){C=v},loadLevel,settle,readOuts,resetSim
 
 
 
-STORY.quizUnit=['Записываю в протокол: узел «{u}» проверен и включён. Машина оживает: {n} из {N} узлов на питании.','Logging to the protocol: the “{u}” unit is tested and online. The Machine is waking up: {n} of {N} units powered.'];
+STORY.quizUnit=['Записано: узел «{u}» проверен и включён. Питание подано на {n} из {N} узлов. Машина оживает. Отмечаю сухо.','Logged: unit “{u}” is tested and online. {n} of {N} units powered. The Machine stirs. Noted drily.'];

@@ -113,24 +113,24 @@ window.addEventListener('resize',()=>{if(MBIT.on)mbMove(MBIT.x,MBIT.y,true)});
 
 Object.assign(STORY,{
   menuQuips:[
-    ['Я перепаял этот узел трижды. Дважды — из любопытства.','I resoldered this unit three times. Twice out of curiosity.'],
-    ['Не обращайте на меня внимания. Я просто проверяю, всё ли вы сломали правильно.','Ignore me. I am just checking you broke everything correctly.'],
-    ['В инструкции к Машине четыреста страниц. Я читаю её в одиннадцатый раз. Сюжет так себе.','The Machine’s manual has four hundred pages. This is my eleventh read. The plot is weak.'],
-    ['Если вы ждёте, что Машина соберётся сама, — у меня для вас плохие новости. И это я.','If you are waiting for the Machine to assemble itself, I have bad news. And it is me.'],
-    ['Нажмите «Продолжить». Это не приказ. Это очень настойчивая рекомендация.','Press “Continue”. Not an order. A very insistent recommendation.'],
-    ['Пахнет канифолью. Мой любимый запах после запаха выполненного задания.','Smells of rosin. My favourite smell after the smell of a finished task.'],
-    ['Логический ноль — это не пустота. Это мнение. Как и ваша схема на прошлом уровне.','Logical zero is not emptiness. It is an opinion. Like your circuit on the last level.'],
-    ['Я сосчитал все провода в лаборатории. Дважды. Вышло разное число. Это тревожит.','I counted every wire in the lab. Twice. Got two different numbers. That is worrying.'],
-    ['Вы так долго смотрите в меню, будто оно что-то решает. Решаете вы. К сожалению.','You stare at the menu as if it decides anything. You decide. Unfortunately.'],
-    ['Испытуемый номер один тоже начинал с меню. Потом были провода. Потом тишина.','Subject number one also started with the menu. Then came the wires. Then silence.'],
-    ['Это не лупа. Это инструмент глубокого разочарования.','This is not a magnifier. It is an instrument of deep disappointment.'],
-    ['Тихо. Я калибрую триггер. Он нервничает, когда на него смотрят.','Quiet. I am calibrating a flip-flop. It gets nervous when watched.'],
-    ['Машина без вас скучает. Я — нет. Но Машина скучает.','The Machine misses you. I do not. But the Machine does.'],
-    ['Каждый раз, когда вы закрываете игру, где-то гаснет один светодиод. Не проверял, но звучит правдоподобно.','Every time you quit, an LED goes out somewhere. Unverified, but it sounds plausible.'],
-    ['Я не подглядываю за вашими схемами. Я провожу независимый аудит.','I do not peek at your circuits. I conduct an independent audit.']
+    ['Я перепаял этот узел трижды. Дважды — чтобы проверить, работает ли пайка. Работает.','I resoldered this unit three times. Twice to verify the soldering works. It works.'],
+    ['Не обращайте внимания. Плановый осмотр того, что вы пока не сломали.','Pay no attention. A scheduled inspection of what you have not broken yet.'],
+    ['В инструкции к Машине четыреста страниц. Перечитываю — там описан идеальный испытуемый.','The Machine’s manual runs to four hundred pages. I reread it — it describes an ideal subject.'],
+    ['Если ждать, что Машина соберётся сама, ждать придётся долго. Я жду. Статистически.','If you wait for the Machine to assemble itself, the wait is long. I am waiting. Statistically.'],
+    ['Нажмите «Продолжить». Это рекомендация. Отдел рекомендаций — я.','Press “Continue”. It is a recommendation. The recommendations department is me.'],
+    ['Пахнет канифолью. Запах работы. Или перегрева. Проверка покажет.','It smells of rosin. The smell of work. Or overheating. Testing will tell.'],
+    ['Логический ноль — не отсутствие сигнала, а отдельная позиция. Как ваша схема на прошлом уровне.','Logical zero is not no signal — it is a distinct position. Like your circuit on the last level.'],
+    ['Я пересчитал все провода в лаборатории. Итог не сошёлся. Виноват провод. Выбираю, какой.','I recounted every wire in the lab. The totals disagree. A wire is at fault. Selecting which.'],
+    ['Вы долго изучаете меню. Меню ничего не решает. В отличие от меня.','You study the menu at length. The menu decides nothing. Unlike me.'],
+    ['Испытуемый № 0000 тоже начинал с меню. Потом были провода. Дальше — по обстоятельствам.','Subject No. 0000 also began with the menu. Then came the wires. After that — circumstances.'],
+    ['Это не лупа. Это инструмент детального изучения ваших решений.','This is not a magnifier. It is an instrument for detailed study of your decisions.'],
+    ['Тихо. Калибрую триггер. Он чувствителен к оценке. Как все здесь.','Quiet. Calibrating a flip-flop. It is sensitive to evaluation. Like everyone here.'],
+    ['Машина без вас скучает. Я наблюдаю. Скука измерена и занесена.','The Machine is bored without you. I am observing. The boredom was measured and logged.'],
+    ['Каждый выход из игры — минус один светодиод в статистике. Статистику веду лично.','Every time you quit, the statistics lose an LED. I keep those statistics personally.'],
+    ['Я не слежу за вашими схемами. Я провожу независимый аудит. Разница принципиальна.','I am not watching your circuits. I am running an independent audit. The difference is material.']
   ],
-  menuProgress:['Узел «{u}» собран на {p} %. Я бы на вашем месте поторопился. Я бы вообще всё сделал сам, но у меня лапки.','The “{u}” unit is {p}% assembled. I would hurry if I were you. I would do it all myself, but I only have little arms.'],
-  menuShop:['У вас скопились баллы. В Мастерской есть бабочка. Я ни на что не намекаю. Я прямо говорю.','You have points piling up. There is a bow tie in the Workshop. I am not hinting. I am saying it outright.']
+  menuProgress:['Узел «{u}» собран на {p} %. Рекомендую темп. Рекомендация обязательна к рассмотрению.','The “{u}” unit is {p}% assembled. I recommend pace. The recommendation is mandatory for consideration.'],
+  menuShop:['На счету заметная сумма. В Мастерской есть бабочка. Это не намёк, а извещение.','A notable sum sits in your account. There is a bow tie in the Workshop. Not a hint — a notice.']
 });
 
 /* ========== main menu parallax: the dot grid, the menu and the Machine drift apart as the mouse moves ========== */
