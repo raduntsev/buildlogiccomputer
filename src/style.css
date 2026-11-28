@@ -821,3 +821,34 @@ body.calm #gtip{transform:none}
 /* indices sit below the baseline like in a textbook */
 sub{vertical-align:baseline;position:relative;top:.34em;line-height:0}
 sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}
+
+/* ========== bench: manual ticks, tick log, sandbox analysis ========== */
+#bench{position:fixed;left:50%;bottom:calc(var(--dock,180px) + 10px);transform:translateX(-50%) translateY(12px);z-index:5;width:min(680px,calc(100vw - 24px));background:var(--paper);border-radius:var(--r,18px);box-shadow:var(--shadow);padding:10px 14px 12px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+#bench.on{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+#bHead{display:flex;align-items:baseline;gap:10px;padding:2px 0 8px}
+#bTitle{font-size:15px}
+#bNote{flex:1;color:var(--mute);font-size:12px}
+#bX{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--mute);align-self:center}
+#bX:hover{background:var(--card2);color:var(--ink)}
+#bX svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+#bBody{max-height:min(38vh,330px);overflow:auto}
+#bFoot{display:flex;gap:8px;justify-content:center;padding-top:10px}
+.bempty{color:var(--mute);text-align:center;padding:18px 0;font-size:14px}
+table.bj{border-collapse:separate;border-spacing:3px 2px;font-size:14px;margin:0 auto}
+.bj th{font-weight:400;color:var(--ink);padding:0 8px;text-align:center;font-size:14px}
+.bj th.o{border-left:2px solid var(--line)}
+.bj td{min-width:26px;height:26px;padding:0 4px;text-align:center;border-radius:7px;background:var(--card2);font-weight:500;color:var(--ink2)}
+.bj td.o{border-radius:7px}
+.bj td.one{background:var(--acc);color:var(--paper)}
+.bj td#x{min-width:0}
+.bj tr td:first-child{background:none;color:var(--mute);font-size:11px;min-width:14px}
+.bj td.st{font-family:inherit;letter-spacing:2px}
+.bforms{padding:4px 2px 10px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.bforms .bf{font-size:19px;line-height:1.35}
+#benchBtn.on{background:var(--acc);color:var(--paper)}
+text.ffq{font-size:12px;font-weight:700;fill:var(--mute)}
+text.ffq.on{fill:var(--acc)}
+@media (max-width:760px){
+  #bench{bottom:calc(var(--dock,180px) + 64px);width:calc(100vw - 16px);padding:8px 8px 10px}
+  table.bj{font-size:12px}.bj td{min-width:20px;height:22px}
+}

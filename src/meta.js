@@ -376,7 +376,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
-  $('#verify').textContent=demoOn?ui('skip'):ui('verify');
+  $('#verify').textContent=demoOn?ui('skip'):ui(level&&level.sandbox?'run':'verify');
   updHud();drawMachine();
   if(level){buildChrome();render()}
   if(curScr==='levels')drawTree();if(curScr==='profile')drawProfile();if(curScr==='quiz'&&QZ)drawQuiz();

@@ -923,6 +923,37 @@ body.calm #gtip{transform:none}
 /* indices sit below the baseline like in a textbook */
 sub{vertical-align:baseline;position:relative;top:.34em;line-height:0}
 sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}
+
+/* ========== bench: manual ticks, tick log, sandbox analysis ========== */
+#bench{position:fixed;left:50%;bottom:calc(var(--dock,180px) + 10px);transform:translateX(-50%) translateY(12px);z-index:5;width:min(680px,calc(100vw - 24px));background:var(--paper);border-radius:var(--r,18px);box-shadow:var(--shadow);padding:10px 14px 12px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+#bench.on{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+#bHead{display:flex;align-items:baseline;gap:10px;padding:2px 0 8px}
+#bTitle{font-size:15px}
+#bNote{flex:1;color:var(--mute);font-size:12px}
+#bX{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--mute);align-self:center}
+#bX:hover{background:var(--card2);color:var(--ink)}
+#bX svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+#bBody{max-height:min(38vh,330px);overflow:auto}
+#bFoot{display:flex;gap:8px;justify-content:center;padding-top:10px}
+.bempty{color:var(--mute);text-align:center;padding:18px 0;font-size:14px}
+table.bj{border-collapse:separate;border-spacing:3px 2px;font-size:14px;margin:0 auto}
+.bj th{font-weight:400;color:var(--ink);padding:0 8px;text-align:center;font-size:14px}
+.bj th.o{border-left:2px solid var(--line)}
+.bj td{min-width:26px;height:26px;padding:0 4px;text-align:center;border-radius:7px;background:var(--card2);font-weight:500;color:var(--ink2)}
+.bj td.o{border-radius:7px}
+.bj td.one{background:var(--acc);color:var(--paper)}
+.bj td#x{min-width:0}
+.bj tr td:first-child{background:none;color:var(--mute);font-size:11px;min-width:14px}
+.bj td.st{font-family:inherit;letter-spacing:2px}
+.bforms{padding:4px 2px 10px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.bforms .bf{font-size:19px;line-height:1.35}
+#benchBtn.on{background:var(--acc);color:var(--paper)}
+text.ffq{font-size:12px;font-weight:700;fill:var(--mute)}
+text.ffq.on{fill:var(--acc)}
+@media (max-width:760px){
+  #bench{bottom:calc(var(--dock,180px) + 64px);width:calc(100vw - 16px);padding:8px 8px 10px}
+  table.bj{font-size:12px}.bj td{min-width:20px;height:22px}
+}
 </style>
 </head>
 <body>
@@ -941,7 +972,7 @@ sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}
 
 <header id="top" class="zz">
   <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div></div>
-  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
+  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn" id="benchBtn" style="display:none"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 <div id="toolDock" class="zz"><div class="tgrp" id="tools" role="toolbar">
     <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
@@ -966,6 +997,12 @@ sup{vertical-align:baseline;position:relative;top:-.5em;line-height:0}
     <div id="stampTbl"></div>
   </div>
 </section>
+
+<div id="bench" class="zz">
+  <div id="bHead"><b id="bTitle"></b><span id="bNote"></span><button id="bX" data-tl="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="bBody"></div>
+  <div id="bFoot"><button class="tbtn primary" id="bTick"></button><button class="tbtn" id="bReset"></button></div>
+</div>
 
 <div id="toast" class="zz"></div>
 <button id="selPop" data-t="delete"></button>
@@ -1089,6 +1126,10 @@ const UIS={
   aboutT2:['Тяните от точки — получится провод. Клик по пустому месту во время прокладки — изгиб. Тяните от провода — ответвление. Правый клик или свайп поперёк провода — удалить. Ctrl+Z — отменить.','Drag from a dot to lay a wire. Click empty space while routing to add a bend. Drag from a wire to branch it. Right-click or swipe across a wire to delete it. Ctrl+Z undoes.'],
   reset:['Сбросить прогресс','Reset progress'],resetSure:['нажмите ещё раз','click again'],progReset:['Прогресс сброшен','Progress reset'],
   tick:['такт','tick'],step:['шаг','step'],
+  run:['Запуск','Run'],bench:['Стенд','Bench'],tickDo:['Такт','Tick'],bReset:['Сбросить','Reset'],
+  bEmpty:['Соберите схему — пока нечего запускать','Build a circuit first'],bStates:['тригг.','FF'],
+  bNoFF:['Комбинационная схема: формулы и таблица истинности','Combinational circuit: formulas and truth table'],
+  bSeqN:['Последовательностная схема: журнал тактов','Sequential circuit: tick log'],bInit:['старт','start'],
   shortToast:['Два провода на одном входе — короткое замыкание','Two wires on one input: short circuit'],shortFirst:['Сначала уберите короткое замыкание','Remove the short circuit first'],
   emptyToast:['Схема пуста','The circuit is empty'],limitToast:['Лимит элементов: {m}','Element limit: {m}'],
   correct:['Принято','Accepted'],mismatch:['На доработку','Rework'],stampSub:['ОТК, контролёр Бит','QC, inspector Bit'],gatesN:['Элементов: {n}','Gates: {n}'],parN:['рекорд Бита: {p}','Bit’s record: {p}'],
@@ -1675,7 +1716,7 @@ function loadLevel(l){
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
-  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;
+  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;journal=[];benchOpen(false);
   liveIn=ioIns().map(()=>0);
   resetSim();
   if(!l.sandbox)store.set('ll_last',l.id,true);
@@ -1692,7 +1733,7 @@ function loadLevel(l){
 function snapshot(){undoS.push(JSON.stringify(C));if(undoS.length>200)undoS.shift();redoS=[]}
 function undo(){if(!undoS.length)return;prog.st.undo=(prog.st.undo||0)+1;if(prog.st.undo>=50)badge('UNDO_50');redoS.push(JSON.stringify(C));C=JSON.parse(undoS.pop());changed()}
 function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(C));C=JSON.parse(redoS.pop());changed()}
-function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount()}
+function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount();if(typeof benchOn!=='undefined'&&benchOn)benchRender()}
 
 /* ========== geometry ========== */
 function nodePos(id){
@@ -1971,6 +2012,7 @@ function render(){
     s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
+    if(g.type==='DFF'){const q_=(sim.ff[g.id]||{q:0}).q;s+=`<text class="ffq${q_?' on':''}" x="30" y="56" text-anchor="middle">${q_}</text>`}
     s+=`</g>`;K('g'+g.id);
   }
   const sh=new Set(shorts());
@@ -2123,7 +2165,8 @@ function buildChrome(){
   $('#taskText').innerHTML=mathHTML(tx(level.task));
   $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
   $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
-  $('#verify').style.display=level.sandbox?'none':'';
+  $('#verify').textContent=ui(level.sandbox?'run':'verify');
+  {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
   const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
     +(level.sandbox&&level.gates.length<ALL_GATES.length?`<div class="pnote">${ui('sbMore',{n:ALL_GATES.length-level.gates.length})}</div>`:'');
@@ -2547,6 +2590,7 @@ let tT;function toast(t,ms=2600){const el=$('#toast');el.textContent=t;el.classL
 /* ========== verify / demo ========== */
 $('#verify').onclick=async()=>{
   if(demoOn){demoSkip=true;return}
+  if(level.sandbox){benchOpen(!benchOn);sfx('ui');return}
   if(shorts().length){toast(ui('shortFirst'));say([STORY.short],{hint:1});return}
   if(!C.wires.length){toast(ui('emptyToast'));say([STORY.empty],{hint:1});return}
   if(level.max&&C.gates.length>level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return}
@@ -2573,6 +2617,129 @@ $('#verify').onclick=async()=>{
   else{sfx('stamp',false);onFailed(fails,n)}
 };
 function scrollRow(ri){const td=$('#ttWrap td[data-row="'+ri+'"]');if(td)td.scrollIntoView({block:'nearest',inline:'nearest'})}
+/* ========== bench: manual ticks, tick log, sandbox analysis ========== */
+let journal=[],benchOn=false;
+const benchHasFF=()=>C.gates.some(g=>g.type==='DFF');
+const benchSeq=()=>level&&(level.sandbox?benchHasFF():!!level.clk);
+function capRow(){const o=readOuts();return{in:liveIn.slice(),out:level.outs.map(k=>o[k]|0),ff:C.gates.filter(g=>g.type==='DFF').map(g=>(sim.ff[g.id]||{q:0}).q)}}
+function doTick(){
+  if(!level||demoOn)return;ensureAudio();
+  if(shorts().length){toast(ui('shortFirst'));return}
+  if(!journal.length)journal.push(capRow());
+  if(level.clk){
+    const ci=ioIns().length-1;
+    liveIn[ci]=0;settle(liveIn);
+    liveIn[ci]=1;settle(liveIn);
+    journal.push(capRow());
+    liveIn[ci]=0;settle(liveIn);
+    sfx('clock');
+  }else{settle(liveIn);journal.push(capRow());sfx('tick',true)}
+  if(journal.length>200)journal.shift();
+  benchOpen(true);render();
+}
+function benchOpen(on){
+  benchOn=!!on;$('#bench').classList.toggle('on',benchOn);
+  const bb=$('#benchBtn');if(bb)bb.classList.toggle('on',benchOn&&bb.style.display!=='none');
+  if(benchOn){if(benchSeq()&&!journal.length&&C.gates.length)journal.push(capRow());benchRender()}
+}
+$('#benchBtn').onclick=()=>doTick();
+$('#bX').onclick=()=>{benchOpen(false);sfx('ui')};
+$('#bTick').onclick=()=>doTick();
+$('#bReset').onclick=()=>{resetSim();settle(liveIn);journal=[];render();benchRender();sfx('remove')};
+$('#bench').addEventListener('pointerdown',e=>e.stopPropagation());
+function benchRender(){
+  if(!benchOn)return;
+  $('#bTitle').textContent=ui('bench');
+  const B=$('#bBody'),F=$('#bFoot');
+  if(!C.gates.length&&!C.wires.length){B.innerHTML=`<div class="bempty">${ui('bEmpty')}</div>`;F.style.display='none';$('#bNote').textContent='';return}
+  if(benchSeq())seqBench(B,F);else combBench(B,F);
+}
+function seqBench(B,F){
+  F.style.display='';
+  $('#bTick').textContent=ui('tickDo');$('#bReset').textContent=ui('bReset');
+  $('#bNote').textContent=ui('bSeqN');
+  let ins=ioIns();if(level.clk)ins=ins.slice(0,-1);
+  const nf=C.gates.filter(g=>g.type==='DFF').length;
+  let h='<table class="bj"><tr><th></th>'+ins.map(k=>`<th>${mathHTML(subH(esc(k)))}</th>`).join('')+level.outs.map(k=>`<th class="o">${mathHTML(subH(esc(disp(k))))}</th>`).join('')+(nf?`<th class="o">${ui('bStates')}</th>`:'')+'</tr>';
+  journal.forEach((r,ri)=>{
+    const inp=level.clk?r.in.slice(0,-1):r.in;
+    h+='<tr><td>'+(ri||ui('bInit'))+'</td>'+inp.map(v=>`<td>${v}</td>`).join('')+r.out.map(v=>`<td class="o${v?' one':''}">${v}</td>`).join('')+(nf?`<td class="o st${r.ff.some(x=>x)?' one':''}">${r.ff.length?r.ff.join(''):'—'}</td>`:'')+'</tr>';
+  });
+  B.innerHTML=h+'</table>';
+  B.scrollTop=B.scrollHeight;
+}
+function combBench(B,F){
+  F.style.display='none';
+  $('#bNote').textContent=ui('bNoFF');
+  const ins=level.ins,n=ins.length;
+  if(n>5){B.innerHTML='';return}
+  const rows=[];
+  for(let m=0;m<(1<<n);m++){
+    resetSim();
+    const vals=ins.map((_,j)=>(m>>(n-1-j))&1);if(level.clk)vals.push(0);
+    settle(vals);
+    const o=readOuts();rows.push({m,out:level.outs.map(k=>o[k]|0)});
+  }
+  resetSim();settle(liveIn);
+  const fmts=level.outs.map((k,oi)=>mathHTML(esc(disp(k))+' = '+qmExpr(n,rows.filter(r=>r.out[oi]).map(r=>r.m),ins)));
+  let h='<div class="bforms">'+fmts.map(f=>`<div class="bf math">${f}</div>`).join('')+'</div>';
+  h+='<table class="bj"><tr>'+ins.map(k=>`<th>${mathHTML(subH(esc(k)))}</th>`).join('')+level.outs.map(k=>`<th class="o">${mathHTML(subH(esc(disp(k))))}</th>`).join('')+'</tr>';
+  rows.forEach(r=>{
+    const iv=ins.map((_,j)=>(r.m>>(n-1-j))&1);
+    h+='<tr>'+iv.map(v=>`<td>${v}</td>`).join('')+r.out.map(v=>`<td class="o${v?' one':''}">${v}</td>`).join('')+'</tr>';
+  });
+  B.innerHTML=h+'</table>';
+}
+/* Quine-McCluskey minimisation to a sum of products; literals join by concatenation (AB = A& B), terms by OR */
+function qmExpr(n,minterms,ins){
+  if(!minterms.length)return'0';
+  if(minterms.length>=(1<<n))return'1';
+  const full=(1<<n)-1;
+  let terms=minterms.map(b=>({b,m:full}));
+  const primes=[],pseen=new Set();
+  for(;;){
+    const used=new Set(),nt=[],nseen=new Set();let merged=false;
+    for(let i=0;i<terms.length;i++)for(let j=i+1;j<terms.length;j++){
+      const a=terms[i],b=terms[j];
+      if(a.m!==b.m)continue;
+      const d=(a.b^b.b)&a.m;
+      if(d&&!(d&(d-1))){
+        const nm=a.m&~d,nb=a.b&nm,key=nb+'/'+nm;
+        if(!nseen.has(key)){nseen.add(key);nt.push({b:nb,m:nm})}
+        used.add(i);used.add(j);merged=true;
+      }
+    }
+    terms.forEach((t,i)=>{if(!used.has(i)){const k=t.b+'/'+t.m;if(!pseen.has(k)){pseen.add(k);primes.push(t)}}});
+    if(!merged)break;
+    terms=nt;
+  }
+  const cov=(p,mt)=>(mt&p.m)===p.b;
+  const pickT=[];
+  for(const mt of minterms){const c=primes.filter(p=>cov(p,mt));if(c.length===1&&!pickT.includes(c[0]))pickT.push(c[0])}
+  const covd=mt=>pickT.some(p=>cov(p,mt));
+  for(const mt of minterms){
+    if(covd(mt))continue;
+    let best=null,bc=0;
+    for(const p of primes){
+      if(pickT.includes(p)||!cov(p,mt))continue;
+      const c=minterms.filter(x=>!covd(x)&&cov(p,x)).length;
+      if(c>bc){bc=c;best=p}
+    }
+    if(best)pickT.push(best);
+    else{const q=primes.find(p=>cov(p,mt));if(q&&!pickT.includes(q))pickT.push(q)}
+  }
+  const cnt=p=>{let c=0;for(let j=0;j<n;j++)if(p.m&(1<<j))c++;return c};
+  pickT.sort((a,b)=>cnt(a)-cnt(b));
+  return pickT.map(p=>{
+    const ls=[];
+    for(let j=0;j<n;j++){
+      const bit=1<<(n-1-j);
+      if(p.m&bit)ls.push((p.b&bit)?esc(ins[j]):ov(esc(ins[j])));
+    }
+    return ls.join('')||'1';
+  }).join(' \u2228 ');
+}
+
 /* ========== audio: everything is synthesized, no sound files ==========
    Buses: music (lab hum + generative theme per chapter), sfx (materials: relay, toggle switch,
    stamp, buzzer, spark), voice (Bit's chatter). A compressor glues the mix; sound fades when hidden. */
@@ -3757,7 +3924,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   $$('[data-t]').forEach(el=>el.textContent=ui(el.dataset.t));toolTips();ttHidden(!!store.get('ll_ttHide',false));toolsHidden(!!store.get('ll_toolsHide',false));$('#taskCard').title=ui('ttMove');
   $('#quitBtn').style.display=isDesk?'':'none';
-  $('#verify').textContent=demoOn?ui('skip'):ui('verify');
+  $('#verify').textContent=demoOn?ui('skip'):ui(level&&level.sandbox?'run':'verify');
   updHud();drawMachine();
   if(level){buildChrome();render()}
   if(curScr==='levels')drawTree();if(curScr==='profile')drawProfile();if(curScr==='quiz'&&QZ)drawQuiz();

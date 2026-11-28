@@ -13,7 +13,7 @@
 
 <header id="top" class="zz">
   <div class="tb"><button class="tbtn" id="btnMenu" data-t="menu"></button><div class="tgrp" id="navGrp"><button class="ib" id="btnLevels" data-tl="levels"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h3M14 6h3M7 18h3M19 8v4H5v4"/></svg></button><button class="ib" id="btnSettings" data-tl="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div></div>
-  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
+  <div class="tb r"><button class="tbtn" id="hud"></button><button class="tbtn" id="btnClear" data-t="clear"></button><button class="tbtn" id="benchBtn" style="display:none"></button><button class="tbtn primary" id="verify" data-t="verify"></button></div>
 </header>
 <div id="toolDock" class="zz"><div class="tgrp" id="tools" role="toolbar">
     <button class="ib" id="undo" data-tl="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
@@ -38,6 +38,12 @@
     <div id="stampTbl"></div>
   </div>
 </section>
+
+<div id="bench" class="zz">
+  <div id="bHead"><b id="bTitle"></b><span id="bNote"></span><button id="bX" data-tl="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="bBody"></div>
+  <div id="bFoot"><button class="tbtn primary" id="bTick"></button><button class="tbtn" id="bReset"></button></div>
+</div>
 
 <div id="toast" class="zz"></div>
 <button id="selPop" data-t="delete"></button>

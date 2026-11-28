@@ -60,7 +60,7 @@ function loadLevel(l){
   const s=saves[l.id];
   C=s?JSON.parse(JSON.stringify(s)):{gates:[],wires:[]};
   nextId=1+Math.max(0,...C.gates.map(g=>+g.id.slice(1)),...C.wires.map(w=>+w.id.slice(1)));
-  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;
+  undoS=[];redoS=[];sel=null;multi.clear();rowMark=null;journal=[];benchOpen(false);
   liveIn=ioIns().map(()=>0);
   resetSim();
   if(!l.sandbox)store.set('ll_last',l.id,true);
@@ -77,7 +77,7 @@ function loadLevel(l){
 function snapshot(){undoS.push(JSON.stringify(C));if(undoS.length>200)undoS.shift();redoS=[]}
 function undo(){if(!undoS.length)return;prog.st.undo=(prog.st.undo||0)+1;if(prog.st.undo>=50)badge('UNDO_50');redoS.push(JSON.stringify(C));C=JSON.parse(undoS.pop());changed()}
 function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(C));C=JSON.parse(redoS.pop());changed()}
-function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount()}
+function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount();if(typeof benchOn!=='undefined'&&benchOn)benchRender()}
 
 /* ========== geometry ========== */
 function nodePos(id){
@@ -356,6 +356,7 @@ function render(){
     s+=`<g class="gate${sel&&sel.g===g.id||NH&&!NH.src&&NH.n.has(g.id)||multi.has(g.id)?' sel':NH&&NH.n.has(g.id)?' src':''}${dm.gates.has(g.id)?' doom':''}" data-gate="${g.id}" transform="translate(${g.x},${g.y})">`;
     s+=`<rect x="10" y="-4" width="40" height="${GATES[g.type].h+8}" fill="transparent"/>`;
     s+=gateSVG(g.type,gost);
+    if(g.type==='DFF'){const q_=(sim.ff[g.id]||{q:0}).q;s+=`<text class="ffq${q_?' on':''}" x="30" y="56" text-anchor="middle">${q_}</text>`}
     s+=`</g>`;K('g'+g.id);
   }
   const sh=new Set(shorts());
@@ -508,7 +509,8 @@ function buildChrome(){
   $('#taskText').innerHTML=mathHTML(tx(level.task));
   $('#hint').innerHTML=mathHTML(tx(level.hint));$('#hint').classList.toggle('on',hintBought());
   $('#hintBtn').style.display=level.hint?'':'none';hintBtnDraw();
-  $('#verify').style.display=level.sandbox?'none':'';
+  $('#verify').textContent=ui(level.sandbox?'run':'verify');
+  {const bb=$('#benchBtn'),sh=!level.sandbox&&!!level.clk;bb.style.display=sh?'':'none';bb.textContent=ui('tickDo');bb.classList.toggle('on',sh&&benchOn)}
   const pal=$('#palette');const gt=$('#gtip');if(gt)gt.classList.remove('on');
   pal.innerHTML=level.gates.map(t=>`<div class="pi" data-type="${t}"><svg viewBox="-2 -2 64 ${GATES[t].h+4}" style="height:${t==='DFF'?44:32}px">${gateSVG(t,settings.gost)}</svg><span>${tx(GATES[t].n)}</span></div>`).join('')+(level.max?`<div class="pcount" id="pcount"></div>`:'')
     +(level.sandbox&&level.gates.length<ALL_GATES.length?`<div class="pnote">${ui('sbMore',{n:ALL_GATES.length-level.gates.length})}</div>`:'');
@@ -932,6 +934,7 @@ let tT;function toast(t,ms=2600){const el=$('#toast');el.textContent=t;el.classL
 /* ========== verify / demo ========== */
 $('#verify').onclick=async()=>{
   if(demoOn){demoSkip=true;return}
+  if(level.sandbox){benchOpen(!benchOn);sfx('ui');return}
   if(shorts().length){toast(ui('shortFirst'));say([STORY.short],{hint:1});return}
   if(!C.wires.length){toast(ui('emptyToast'));say([STORY.empty],{hint:1});return}
   if(level.max&&C.gates.length>level.max){toast(ui('limitToast',{m:level.max}));say([STORY.over],{hint:1});return}
@@ -958,6 +961,129 @@ $('#verify').onclick=async()=>{
   else{sfx('stamp',false);onFailed(fails,n)}
 };
 function scrollRow(ri){const td=$('#ttWrap td[data-row="'+ri+'"]');if(td)td.scrollIntoView({block:'nearest',inline:'nearest'})}
+/* ========== bench: manual ticks, tick log, sandbox analysis ========== */
+let journal=[],benchOn=false;
+const benchHasFF=()=>C.gates.some(g=>g.type==='DFF');
+const benchSeq=()=>level&&(level.sandbox?benchHasFF():!!level.clk);
+function capRow(){const o=readOuts();return{in:liveIn.slice(),out:level.outs.map(k=>o[k]|0),ff:C.gates.filter(g=>g.type==='DFF').map(g=>(sim.ff[g.id]||{q:0}).q)}}
+function doTick(){
+  if(!level||demoOn)return;ensureAudio();
+  if(shorts().length){toast(ui('shortFirst'));return}
+  if(!journal.length)journal.push(capRow());
+  if(level.clk){
+    const ci=ioIns().length-1;
+    liveIn[ci]=0;settle(liveIn);
+    liveIn[ci]=1;settle(liveIn);
+    journal.push(capRow());
+    liveIn[ci]=0;settle(liveIn);
+    sfx('clock');
+  }else{settle(liveIn);journal.push(capRow());sfx('tick',true)}
+  if(journal.length>200)journal.shift();
+  benchOpen(true);render();
+}
+function benchOpen(on){
+  benchOn=!!on;$('#bench').classList.toggle('on',benchOn);
+  const bb=$('#benchBtn');if(bb)bb.classList.toggle('on',benchOn&&bb.style.display!=='none');
+  if(benchOn){if(benchSeq()&&!journal.length&&C.gates.length)journal.push(capRow());benchRender()}
+}
+$('#benchBtn').onclick=()=>doTick();
+$('#bX').onclick=()=>{benchOpen(false);sfx('ui')};
+$('#bTick').onclick=()=>doTick();
+$('#bReset').onclick=()=>{resetSim();settle(liveIn);journal=[];render();benchRender();sfx('remove')};
+$('#bench').addEventListener('pointerdown',e=>e.stopPropagation());
+function benchRender(){
+  if(!benchOn)return;
+  $('#bTitle').textContent=ui('bench');
+  const B=$('#bBody'),F=$('#bFoot');
+  if(!C.gates.length&&!C.wires.length){B.innerHTML=`<div class="bempty">${ui('bEmpty')}</div>`;F.style.display='none';$('#bNote').textContent='';return}
+  if(benchSeq())seqBench(B,F);else combBench(B,F);
+}
+function seqBench(B,F){
+  F.style.display='';
+  $('#bTick').textContent=ui('tickDo');$('#bReset').textContent=ui('bReset');
+  $('#bNote').textContent=ui('bSeqN');
+  let ins=ioIns();if(level.clk)ins=ins.slice(0,-1);
+  const nf=C.gates.filter(g=>g.type==='DFF').length;
+  let h='<table class="bj"><tr><th></th>'+ins.map(k=>`<th>${mathHTML(subH(esc(k)))}</th>`).join('')+level.outs.map(k=>`<th class="o">${mathHTML(subH(esc(disp(k))))}</th>`).join('')+(nf?`<th class="o">${ui('bStates')}</th>`:'')+'</tr>';
+  journal.forEach((r,ri)=>{
+    const inp=level.clk?r.in.slice(0,-1):r.in;
+    h+='<tr><td>'+(ri||ui('bInit'))+'</td>'+inp.map(v=>`<td>${v}</td>`).join('')+r.out.map(v=>`<td class="o${v?' one':''}">${v}</td>`).join('')+(nf?`<td class="o st${r.ff.some(x=>x)?' one':''}">${r.ff.length?r.ff.join(''):'—'}</td>`:'')+'</tr>';
+  });
+  B.innerHTML=h+'</table>';
+  B.scrollTop=B.scrollHeight;
+}
+function combBench(B,F){
+  F.style.display='none';
+  $('#bNote').textContent=ui('bNoFF');
+  const ins=level.ins,n=ins.length;
+  if(n>5){B.innerHTML='';return}
+  const rows=[];
+  for(let m=0;m<(1<<n);m++){
+    resetSim();
+    const vals=ins.map((_,j)=>(m>>(n-1-j))&1);if(level.clk)vals.push(0);
+    settle(vals);
+    const o=readOuts();rows.push({m,out:level.outs.map(k=>o[k]|0)});
+  }
+  resetSim();settle(liveIn);
+  const fmts=level.outs.map((k,oi)=>mathHTML(esc(disp(k))+' = '+qmExpr(n,rows.filter(r=>r.out[oi]).map(r=>r.m),ins)));
+  let h='<div class="bforms">'+fmts.map(f=>`<div class="bf math">${f}</div>`).join('')+'</div>';
+  h+='<table class="bj"><tr>'+ins.map(k=>`<th>${mathHTML(subH(esc(k)))}</th>`).join('')+level.outs.map(k=>`<th class="o">${mathHTML(subH(esc(disp(k))))}</th>`).join('')+'</tr>';
+  rows.forEach(r=>{
+    const iv=ins.map((_,j)=>(r.m>>(n-1-j))&1);
+    h+='<tr>'+iv.map(v=>`<td>${v}</td>`).join('')+r.out.map(v=>`<td class="o${v?' one':''}">${v}</td>`).join('')+'</tr>';
+  });
+  B.innerHTML=h+'</table>';
+}
+/* Quine-McCluskey minimisation to a sum of products; literals join by concatenation (AB = A& B), terms by OR */
+function qmExpr(n,minterms,ins){
+  if(!minterms.length)return'0';
+  if(minterms.length>=(1<<n))return'1';
+  const full=(1<<n)-1;
+  let terms=minterms.map(b=>({b,m:full}));
+  const primes=[],pseen=new Set();
+  for(;;){
+    const used=new Set(),nt=[],nseen=new Set();let merged=false;
+    for(let i=0;i<terms.length;i++)for(let j=i+1;j<terms.length;j++){
+      const a=terms[i],b=terms[j];
+      if(a.m!==b.m)continue;
+      const d=(a.b^b.b)&a.m;
+      if(d&&!(d&(d-1))){
+        const nm=a.m&~d,nb=a.b&nm,key=nb+'/'+nm;
+        if(!nseen.has(key)){nseen.add(key);nt.push({b:nb,m:nm})}
+        used.add(i);used.add(j);merged=true;
+      }
+    }
+    terms.forEach((t,i)=>{if(!used.has(i)){const k=t.b+'/'+t.m;if(!pseen.has(k)){pseen.add(k);primes.push(t)}}});
+    if(!merged)break;
+    terms=nt;
+  }
+  const cov=(p,mt)=>(mt&p.m)===p.b;
+  const pickT=[];
+  for(const mt of minterms){const c=primes.filter(p=>cov(p,mt));if(c.length===1&&!pickT.includes(c[0]))pickT.push(c[0])}
+  const covd=mt=>pickT.some(p=>cov(p,mt));
+  for(const mt of minterms){
+    if(covd(mt))continue;
+    let best=null,bc=0;
+    for(const p of primes){
+      if(pickT.includes(p)||!cov(p,mt))continue;
+      const c=minterms.filter(x=>!covd(x)&&cov(p,x)).length;
+      if(c>bc){bc=c;best=p}
+    }
+    if(best)pickT.push(best);
+    else{const q=primes.find(p=>cov(p,mt));if(q&&!pickT.includes(q))pickT.push(q)}
+  }
+  const cnt=p=>{let c=0;for(let j=0;j<n;j++)if(p.m&(1<<j))c++;return c};
+  pickT.sort((a,b)=>cnt(a)-cnt(b));
+  return pickT.map(p=>{
+    const ls=[];
+    for(let j=0;j<n;j++){
+      const bit=1<<(n-1-j);
+      if(p.m&bit)ls.push((p.b&bit)?esc(ins[j]):ov(esc(ins[j])));
+    }
+    return ls.join('')||'1';
+  }).join(' \u2228 ');
+}
+
 /* ========== audio: everything is synthesized, no sound files ==========
    Buses: music (lab hum + generative theme per chapter), sfx (materials: relay, toggle switch,
    stamp, buzzer, spark), voice (Bit's chatter). A compressor glues the mix; sound fades when hidden. */
