@@ -4488,7 +4488,7 @@ function openMenu(s){
   musicChapter(s==='quiz'&&QZ?QZ.ch:topChapter(),s==='quiz')
   $('#ov').scrollTop=0;
 }
-function closeMenu(){$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
+function closeMenu(){qTimerStop();$('#ov').classList.remove('on');document.body.classList.remove('mainScr');menuBitStop();hideBubble();levelIntro();if(level)musicChapter(level.sandbox?topChapter():level.ch)}
 $('#btnMenu').onclick=()=>openMenu('main');
 $('#btnLevels').onclick=()=>openMenu('levels');$('#btnSettings').onclick=()=>openMenu('settings');
 $('#hud').onclick=()=>openMenu('profile');
