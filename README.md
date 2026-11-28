@@ -18,7 +18,7 @@
 |---|---|
 | [`downloads/LogicLab-3.5.html`](downloads/LogicLab-3.5.html) | Вся игра одним файлом. Откройте в браузере, интернет не нужен. |
 | [`downloads/LogicLab-Windows-lite-3.5.zip`](downloads/LogicLab-Windows-lite-3.5.zip) | Windows 10/11, 1,3 МБ. Распакуйте и запустите `LogicLab.exe` (файл `resources.neu` должен лежать рядом). |
-| [`downloads/LogicLab-Portable-3.5.0.exe`](downloads/LogicLab-Portable-3.5.0.exe) | Windows, полная версия на Electron (74 МБ), запускается без установки. Это та же сборка, что пойдёт в Steam. |
+| [`downloads/LogicLab-Portable-3.5.1.exe`](downloads/LogicLab-Portable-3.5.1.exe) | Windows, полная версия на Electron (74 МБ), запускается без установки. Это та же сборка, что пойдёт в Steam. |
 | [`downloads/LogicLab-3.5.0.apk`](downloads/LogicLab-3.5.0.apk) | Android 5.1 и новее. Отладочная подпись: при установке разрешите «Установку из неизвестных источников». |
 
 Программы не подписаны сертификатом, поэтому Windows может показать окно SmartScreen: «Подробнее» → «Выполнить в любом случае».

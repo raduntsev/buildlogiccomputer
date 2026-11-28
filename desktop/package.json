@@ -1,7 +1,7 @@
 {
   "name": "logic-lab",
   "productName": "Logic Lab",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "description": "Logic Lab — logic gate puzzle game",
   "main": "main.js",
   "author": "Logic Lab",
