@@ -1733,7 +1733,7 @@ function loadLevel(l){
 function snapshot(){undoS.push(JSON.stringify(C));if(undoS.length>200)undoS.shift();redoS=[]}
 function undo(){if(!undoS.length)return;prog.st.undo=(prog.st.undo||0)+1;if(prog.st.undo>=50)badge('UNDO_50');redoS.push(JSON.stringify(C));C=JSON.parse(undoS.pop());changed()}
 function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(C));C=JSON.parse(redoS.pop());changed()}
-function changed(){rowMark=null;persist();resetSim();update();resetIdle();updCount();if(typeof benchOn!=='undefined'&&benchOn)benchRender()}
+function changed(){rowMark=null;sbTTc=null;persist();resetSim();update();resetIdle();updCount();if(typeof benchOn!=='undefined'&&benchOn)benchRender()}
 
 /* ========== geometry ========== */
 function nodePos(id){
@@ -2195,9 +2195,47 @@ $('#ttTog').onclick=e=>{e.stopPropagation();ttHidden(!$('#taskCard').classList.c
   c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
   c.addEventListener('dblclick',e=>{if(e.target.closest('td,button'))return;cardPos=null;store.set('ll_cardPos',null,true);placeCard()});
 })();
+/* sandbox: the card shows the live formula and truth table of the circuit under test.
+   Recomputed only when the circuit changes; clicking a column sets the input flags, like in the campaign. */
+let sbTTc=null;
+function sandboxTT(){
+  if(sbTTc)return sbTTc;
+  const ins=level.ins,n=ins.length,rows=[];
+  for(let m=0;m<(1<<n);m++){
+    resetSim();
+    const vals=ins.map((_,j)=>(m>>(n-1-j))&1);if(level.clk)vals.push(0);
+    settle(vals);
+    const o=readOuts();rows.push({m,out:level.outs.map(k=>o[k]|0)});
+  }
+  resetSim();settle(liveIn);
+  const fmts=level.outs.map((k,oi)=>mathHTML(esc(disp(k))+' = '+qmExpr(n,rows.filter(r=>r.out[oi]).map(r=>r.m),ins)));
+  return sbTTc={rows,fmts,n};
+}
+function renderSbTable(w,card){
+  const F=$('#formula');
+  if(!C.wires.length){w.innerHTML='';w._h='';F.innerHTML='';card.classList.add('notable');card.style.display='none';return}
+  card.classList.remove('notable');card.style.display='';
+  if(benchHasFF()){
+    F.innerHTML=`<span class="sbseq">${ui('bSeqN')}</span>`;
+    if(w._h!==''){w.innerHTML='';w._h=''}
+    placeCard();return;
+  }
+  const ins=level.ins,n=ins.length,T=sandboxTT();
+  F.innerHTML=T.fmts.join('<span class="sep"></span>');
+  const live=T.rows.findIndex(r=>ins.every((_,j)=>((r.m>>(n-1-j))&1)===(liveIn[j]|0)));
+  const cc=ri=>ri===live?'live':'';
+  const lab=k=>mathHTML(subH(esc(k)));
+  let h='<table class="tt">';
+  ins.forEach((k,j)=>h+=`<tr><th>${lab(k)}</th>${T.rows.map((r,ri)=>`<td class="${cc(ri)}" data-srow="${r.m}">${(r.m>>(n-1-j))&1}</td>`).join('')}</tr>`);
+  if(ins.length)h+=`<tr class="ttsep"><th></th><td colspan="${T.rows.length}"></td></tr>`;
+  level.outs.forEach((k,oi)=>h+=`<tr class="out"><th>${lab(disp(k))}</th>${T.rows.map((r,ri)=>`<td class="${cc(ri)}" data-srow="${r.m}">${r.out[oi]}</td>`).join('')}</tr>`);
+  h+='</table>';
+  if(h!==w._h){w.innerHTML=h;w._h=h;placeCard()}
+}
 function renderTable(){
   const w=$('#ttWrap'),card=$('#taskCard');
-  if(level.sandbox||!level.vec.length){w.innerHTML='';w._h='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
+  if(level.sandbox)return renderSbTable(w,card);
+  if(!level.vec.length){w.innerHTML='';w._h='';card.classList.add('notable');card.style.display=level.f?'':'none';return}
   card.classList.remove('notable');card.style.display='';
   const ins=level.ins,outs=level.outs,isSeq=level.seq||level.clk,V=level.vec;
   const live=isSeq?-1:V.findIndex(r=>ins.every((k,i)=>r.in[k]===liveIn[i]));
@@ -2213,6 +2251,8 @@ function renderTable(){
   if(h!==w._h){w.innerHTML=h;w._h=h;placeCard()}
 }
 $('#ttWrap').addEventListener('click',e=>{
+  const sd=e.target.closest('[data-srow]');
+  if(sd&&level.sandbox&&!demoOn){const m=+sd.dataset.srow,n=level.ins.length;liveIn=level.ins.map((_,j)=>(m>>(n-1-j))&1);if(level.clk)liveIn.push(liveIn[liveIn.length-1]|0);rowMark=null;update();return}
   const tr=e.target.closest('tr[data-row]');if(!tr||demoOn||level.seq||level.clk)return;
   const r=level.vec[+tr.dataset.row];liveIn=ioIns().map(k=>r.in[k]|0);rowMark=null;update();
 });
@@ -2673,15 +2713,7 @@ function combBench(B,F){
   $('#bNote').textContent=ui('bNoFF');
   const ins=level.ins,n=ins.length;
   if(n>5){B.innerHTML='';return}
-  const rows=[];
-  for(let m=0;m<(1<<n);m++){
-    resetSim();
-    const vals=ins.map((_,j)=>(m>>(n-1-j))&1);if(level.clk)vals.push(0);
-    settle(vals);
-    const o=readOuts();rows.push({m,out:level.outs.map(k=>o[k]|0)});
-  }
-  resetSim();settle(liveIn);
-  const fmts=level.outs.map((k,oi)=>mathHTML(esc(disp(k))+' = '+qmExpr(n,rows.filter(r=>r.out[oi]).map(r=>r.m),ins)));
+  const T=sandboxTT(),rows=T.rows,fmts=T.fmts;
   let h='<div class="bforms">'+fmts.map(f=>`<div class="bf math">${f}</div>`).join('')+'</div>';
   h+='<table class="bj"><tr>'+ins.map(k=>`<th>${mathHTML(subH(esc(k)))}</th>`).join('')+level.outs.map(k=>`<th class="o">${mathHTML(subH(esc(disp(k))))}</th>`).join('')+'</tr>';
   rows.forEach(r=>{
